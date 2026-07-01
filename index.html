@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3f63d6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mission Control">
+<title>Satya · Daily Check-In</title>
+<style>
+  :root{
+    --bg:#e7e9f1; --card:#f7f8fc; --card2:#eef0f7; --line:#d4d9e7;
+    --text:#1e2640; --mut:#5d6788; --accent:#3f63d6; --accent2:#6b46e0;
+    --good:#1ca766; --warn:#bf7a12; --bad:#d23b4e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1100px 560px at 82% -12%,#dfe3f2 0,transparent 60%),var(--bg);
+    color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    padding:26px;max-width:960px;margin:auto;font-size:18px;line-height:1.5}
+  h1{font-size:34px;margin:0;font-weight:800}
+  .mission{background:linear-gradient(120deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .dateline{color:var(--mut);font-size:16px;margin-top:4px}
+  .why{font-size:17px;color:var(--text);margin-top:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+  .why b{color:#10193a}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:18px;box-shadow:0 2px 10px rgba(40,52,90,.05)}
+  h2{font-size:15px;text-transform:uppercase;letter-spacing:.1em;color:var(--mut);margin:0 0 14px;font-weight:700}
+  .tile{flex:1;min-width:160px;background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:18px;cursor:pointer;transition:.15s}
+  .tile:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(63,99,214,.12)}
+  .tile .big{font-size:42px;font-weight:800;line-height:1.05}
+  .tile .cap{color:var(--mut);font-size:15px;margin-top:8px}
+  .tile .edit{color:var(--accent);font-size:13px;margin-top:6px;opacity:0;transition:.15s}
+  .tile:hover .edit{opacity:.9}
+  .warn .big{color:var(--warn)} .bad .big{color:var(--bad)} .good .big{color:var(--good)}
+  .check{display:flex;align-items:center;gap:16px;padding:16px 18px;border:1px solid var(--line);border-radius:14px;margin-bottom:11px;cursor:pointer;transition:.15s;background:var(--card2)}
+  .check:hover{border-color:var(--accent)}
+  .check.done{background:rgba(28,167,102,.12);border-color:var(--good)}
+  .box{width:32px;height:32px;border-radius:9px;border:3px solid var(--mut);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:20px;color:transparent;transition:.15s}
+  .check.done .box{background:var(--good);border-color:var(--good);color:#fff}
+  .check .lbl{font-size:19px}
+  .check.done .lbl{color:var(--mut);text-decoration:line-through}
+  .streakbar{display:flex;align-items:center;gap:14px;margin-top:6px}
+  .streaknum{font-size:30px;font-weight:800}
+  .msg{font-size:18px;margin-top:10px;color:var(--text)}
+  .chip{display:inline-block;font-size:15px;background:var(--card2);border:1px solid var(--line);border-radius:22px;padding:9px 15px;color:var(--mut);margin:5px 6px 0 0}
+  .chip b{color:#10193a}
+  footer{color:var(--mut);font-size:14px;text-align:center;margin:22px 0 6px}
+  .hint{color:var(--mut);font-size:14px;margin-top:-6px}
+</style>
+</head>
+<body>
+  <h1>Satya · <span class="mission">Daily Check-In</span></h1>
+  <div class="dateline" id="dateline"></div>
+  <div class="why">🎯 <b>Why:</b> PR by 2027 · Debt-free · Healthy · Built for real — <b>no shortcuts.</b></div>
+
+  <div class="card">
+    <h2>⏳ Countdowns & numbers — tap any tile to set your real figure</h2>
+    <div class="row" id="tiles"></div>
+  </div>
+
+  <div class="card">
+    <h2>✅ Today — the daily non-negotiables</h2>
+    <div id="checks"></div>
+    <div class="streakbar"><span style="font-size:34px">🔥</span><span class="streaknum" id="streak">0</span>
+      <span style="color:var(--mut)">day streak · best <span id="best">0</span></span></div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <h2>📌 Open action items — your real to-dos (stay until done)</h2>
+    <div id="actions"></div>
+    <div class="hint">These don't reset daily. Knock them out one at a time.</div>
+  </div>
+
+  <div class="card">
+    <h2>🛡️ Guardrails</h2>
+    <div>
+      <span class="chip"><b>I don't fake</b> — my real record is enough</span>
+      <span class="chip"><b>No</b> instant / payday loans</span>
+      <span class="chip"><b>Insulin on time</b> · eat enough</span>
+      <span class="chip"><b>One lane:</b> Cyber → PR</span>
+      <span class="chip"><b>Plan Sunday,</b> don't panic Monday</span>
+    </div>
+  </div>
+
+  <footer>Tip: add to your home screen. Progress saves on this device. Tap the tiles once to enter your private numbers.</footer>
+
+<script>
+(function(){
+  const KEY='satya_daily_web';
+  let mem={};
+  const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return mem}};
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){mem=S}};
+  const todayStr=d=>{d=d||new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+  const addDays=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return todayStr(d)};
+  const daysUntilDate=s=>{if(!s)return null;const a=new Date(todayStr()+'T00:00:00'),b=new Date(s+'T00:00:00');return Math.round((b-a)/86400000)};
+  const daysToMonthDay=day=>{if(!day)return null;const now=new Date();const y=now.getFullYear(),m=now.getMonth();const t=new Date(y,m,now.getDate());let d=new Date(y,m,day);if(d<t)d=new Date(y,m+1,day);return Math.round((d-t)/86400000)};
+
+  let S=load();
+  S.config=Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0},S.config||{});
+  S.actions=Object.assign({wfg:false,carfax:false,pcc:false,celpip:false,innobox:false},S.actions||{});
+  S.days=S.days||{};S.streak=S.streak||0;S.best=S.best||0;S.lastComplete=S.lastComplete||null;
+  const T=todayStr();
+  S.days[T]=S.days[T]||{nouber:false,workout:false,eat:false,insulin:false,celpip:false,completed:false};
+
+  const CHECKS=[
+    ["nouber","🚫 No Uber / Uber Eats today"],
+    ["workout","🏋️ Worked out / moved my body"],
+    ["eat","🍽️ Ate enough — proper meals"],
+    ["insulin","💉 Insulin on time"],
+    ["celpip","📚 CELPIP 20 min (Thu/Fri/Sat/Sun)"]
+  ];
+  const CORE=["nouber","workout","eat","insulin"];
+  const ACTIONS=[
+    ["wfg","WFG: get WRITTEN “$0 balance + nothing reported to credit bureaus”"],
+    ["carfax","CARFAX: reference letter WITH duties (NOC 21220)"],
+    ["pcc","PCC India: start the police-clearance application"],
+    ["celpip","CELPIP: book the test for ~Aug 15, 2026 at celpip.ca → target CLB 9"],
+    ["innobox","Innobox: get the India experience letter"]
+  ];
+
+  function recalc(){
+    const day=S.days[T];
+    if(CORE.every(k=>day[k]) && !day.completed){
+      day.completed=true;
+      S.streak = (S.lastComplete===addDays(T,-1))? S.streak+1 : 1;
+      S.lastComplete=T; S.best=Math.max(S.best,S.streak);
+    }
+  }
+  function editCfg(key,label,isDate){
+    const v=prompt(label,S.config[key]??'');
+    if(v===null)return;
+    S.config[key]= isDate? v.trim() : (parseFloat(String(v).replace(/[^0-9.\-]/g,''))||0);
+    save();render();
+  }
+
+  function render(){
+    const now=new Date();
+    document.getElementById('dateline').textContent=now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    const pDays=daysUntilDate(S.config.permit);
+    const eDays=daysUntilDate(S.config.celpipExam);
+    const rDays=daysToMonthDay(S.config.rentDay);
+    const cDays=daysToMonthDay(S.config.ccDay);
+    const util=S.config.cardLimit>0? Math.round(S.config.cardBal/S.config.cardLimit*100):null;
+    const doneActions=ACTIONS.filter(([k])=>S.actions[k]).length;
+    const tiles=[
+      {big:(pDays!=null?pDays:'—'),cap:'days · work permit expiry',cls:(pDays!=null&&pDays<150?'bad':'warn'),act:()=>editCfg('permit','Work-permit expiry date (YYYY-MM-DD):',true)},
+      {big:(eDays!=null?eDays:'—'),cap:'days · CELPIP exam',cls:(eDays!=null&&eDays<14?'bad':eDays!=null&&eDays<35?'warn':'good'),act:()=>editCfg('celpipExam','CELPIP exam date (YYYY-MM-DD):',true)},
+      {big:doneActions+'/5',cap:'PR action items done',cls:(doneActions>=5?'good':''),act:()=>document.getElementById('actions').scrollIntoView({behavior:'smooth'})},
+      {big:(rDays!=null?rDays:'—'),cap:'days · rent due',cls:(rDays!=null&&rDays<=3?'warn':''),act:()=>editCfg('rentDay','Rent is due on which day of the month? (1-31):',false)},
+      {big:(cDays!=null?cDays:'—'),cap:'days · credit card due',cls:(cDays!=null&&cDays<=3?'bad':''),act:()=>editCfg('ccDay','Credit-card payment due day of month? (1-31):',false)},
+      {big:S.config.score||'—',cap:'credit score',cls:(S.config.score>=720?'good':S.config.score&&S.config.score<660?'bad':'warn'),act:()=>editCfg('score','Latest credit score:',false)},
+      {big:(util!=null?util+'%':'set'),cap:'card utilization',cls:(util==null?'':util>30?'bad':util>10?'warn':'good'),act:()=>{const b=prompt('Current card BALANCE ($):',S.config.cardBal||'');if(b!==null){S.config.cardBal=parseFloat(String(b).replace(/[^0-9.\-]/g,''))||0;const l=prompt('Card LIMIT ($):',S.config.cardLimit||'');if(l!==null)S.config.cardLimit=parseFloat(String(l).replace(/[^0-9.\-]/g,''))||0;save();render();}}},
+      {big:(S.config.budgetLeft?'$'+S.config.budgetLeft:'set'),cap:'budget left this month',cls:'',act:()=>editCfg('budgetLeft','How much budget is left this month? ($):',false)},
+      {big:(S.config.efund?'$'+S.config.efund:'$0'),cap:'emergency fund',cls:(S.config.efund>=2000?'good':'warn'),act:()=>editCfg('efund','Emergency fund balance ($):',false)}
+    ];
+    const tc=document.getElementById('tiles');tc.innerHTML='';
+    tiles.forEach(t=>{const el=document.createElement('div');el.className='tile '+(t.cls||'');
+      el.innerHTML='<div class="big">'+t.big+'</div><div class="cap">'+t.cap+'</div><div class="edit">tap to set ✎</div>';
+      el.onclick=t.act;tc.appendChild(el);});
+    const cc=document.getElementById('checks');cc.innerHTML='';
+    CHECKS.forEach(([k,lbl])=>{const el=document.createElement('div');el.className='check'+(S.days[T][k]?' done':'');
+      el.innerHTML='<div class="box">✓</div><div class="lbl">'+lbl+'</div>';
+      el.onclick=()=>{S.days[T][k]=!S.days[T][k];recalc();save();render()};cc.appendChild(el);});
+    const cd=CORE.filter(k=>S.days[T][k]).length;
+    document.getElementById('streak').textContent=S.streak;
+    document.getElementById('best').textContent=S.best;
+    document.getElementById('msg').textContent= cd===CORE.length?"Core done — streak locked for today. 🔥":"Core habits: "+cd+"/"+CORE.length+" done (no Uber, workout, ate enough, insulin).";
+    const ac=document.getElementById('actions');ac.innerHTML='';
+    ACTIONS.forEach(([k,lbl])=>{const el=document.createElement('div');el.className='check'+(S.actions[k]?' done':'');
+      el.innerHTML='<div class="box">✓</div><div class="lbl">'+lbl+'</div>';
+      el.onclick=()=>{S.actions[k]=!S.actions[k];save();render()};ac.appendChild(el);});
+  }
+  render();
+})();
+</script>
+</body>
+</html>
