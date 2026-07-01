@@ -53,9 +53,22 @@
   #authGate button{width:100%;padding:12px;margin-top:14px;border:none;border-radius:10px;font-size:16px;font-weight:700;background:var(--accent);color:#fff;cursor:pointer}
   #authGate button.secondary{background:transparent;color:var(--accent);margin-top:8px;font-weight:600}
   #syncStatus{color:var(--mut);font-size:13px;text-align:right;margin-bottom:-8px}
+  #authGate{max-width:340px;margin:100px auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:0 2px 10px rgba(40,52,90,.05);text-align:center}
+  #authGate h2{margin:0 0 16px;font-size:20px}
+  #authGate input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-size:16px;margin-bottom:12px;box-sizing:border-box}
+  #authGate button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+  #authGate .err{color:var(--bad);font-size:14px;margin-top:10px;min-height:18px}
+  #appRoot{display:none}
 </style>
 </head>
 <body>
+  <div id="authGate">
+    <h2>🔒 Enter password</h2>
+    <input type="password" id="authPass" placeholder="Password" autocomplete="current-password">
+    <button id="authSubmit">Unlock</button>
+    <div class="err" id="authErr"></div>
+  </div>
+
   <div id="appRoot">
   <h1>Satya · <span class="mission">Daily Check-In</span></h1>
   <div class="dateline" id="dateline"></div>
@@ -98,7 +111,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
-  getAuth, signInAnonymously
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc
@@ -112,18 +125,49 @@ const firebaseConfig = {
   messagingSenderId: "772443408217",
   appId: "1:772443408217:web:fa78c2bb719a883e382e48"
 };
+const AUTH_EMAIL = 'satya.dashboard@internal.app';
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 const syncStatus = document.getElementById('syncStatus');
+const authGate = document.getElementById('authGate');
+const appRoot = document.getElementById('appRoot');
+const authPass = document.getElementById('authPass');
+const authErr = document.getElementById('authErr');
+const authSubmit = document.getElementById('authSubmit');
 
-try {
-  await signInAnonymously(auth);
-} catch (e) {
-  syncStatus.textContent = 'Offline — using local data';
-}
-initApp();
+authSubmit.onclick = async () => {
+  authErr.textContent = '';
+  const pass = authPass.value;
+  if (!pass) { authErr.textContent = 'Enter the password.'; return; }
+  authSubmit.disabled = true;
+  try {
+    await signInWithEmailAndPassword(auth, AUTH_EMAIL, pass);
+  } catch (e) {
+    const codeMap = {
+      'auth/invalid-credential': 'Wrong password.',
+      'auth/wrong-password': 'Wrong password.',
+      'auth/too-many-requests': 'Too many attempts. Wait a bit and try again.',
+      'auth/network-request-failed': 'Network error — check your connection.'
+    };
+    authErr.textContent = codeMap[e.code] || 'Wrong password.';
+  }
+  authSubmit.disabled = false;
+};
+authPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') authSubmit.click(); });
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    authGate.style.display = 'none';
+    appRoot.style.display = 'block';
+    await initApp();
+  } else {
+    appRoot.style.display = 'none';
+    authGate.style.display = 'block';
+    authPass.value = '';
+  }
+});
 
 async function initApp(){
   const userDocRef = doc(db, 'dashboard', 'satya');
