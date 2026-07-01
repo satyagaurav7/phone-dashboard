@@ -52,26 +52,11 @@
   #authGate input{width:100%;padding:12px 14px;margin-top:10px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--card2);color:var(--text)}
   #authGate button{width:100%;padding:12px;margin-top:14px;border:none;border-radius:10px;font-size:16px;font-weight:700;background:var(--accent);color:#fff;cursor:pointer}
   #authGate button.secondary{background:transparent;color:var(--accent);margin-top:8px;font-weight:600}
-  #authGate .err{color:var(--bad);font-size:14px;margin-top:10px;min-height:18px}
-  #authGate .swap{color:var(--mut);font-size:14px;margin-top:16px;text-align:center}
-  #authGate .swap a{color:var(--accent);cursor:pointer;text-decoration:underline}
-  #appRoot{display:none}
   #syncStatus{color:var(--mut);font-size:13px;text-align:right;margin-bottom:-8px}
-  #signOutBtn{background:none;border:1px solid var(--line);border-radius:20px;padding:6px 14px;color:var(--mut);font-size:13px;cursor:pointer;float:right}
 </style>
 </head>
 <body>
-  <div id="authGate">
-    <h2>🔒 Sign in</h2>
-    <input type="email" id="authEmail" placeholder="Email" autocomplete="username">
-    <input type="password" id="authPass" placeholder="Password" autocomplete="current-password">
-    <button id="authSubmit">Sign in</button>
-    <button class="secondary" id="authToggleMode">Need an account? Create one</button>
-    <div class="err" id="authErr"></div>
-  </div>
-
   <div id="appRoot">
-  <button id="signOutBtn">Sign out</button>
   <h1>Satya · <span class="mission">Daily Check-In</span></h1>
   <div class="dateline" id="dateline"></div>
   <div id="syncStatus"></div>
@@ -113,8 +98,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
-  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-  createUserWithEmailAndPassword, signOut
+  getAuth, signInAnonymously
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc
@@ -132,66 +116,17 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
-
-const authGate = document.getElementById('authGate');
-const appRoot = document.getElementById('appRoot');
-const authEmail = document.getElementById('authEmail');
-const authPass = document.getElementById('authPass');
-const authErr = document.getElementById('authErr');
-const authSubmit = document.getElementById('authSubmit');
-const authToggleMode = document.getElementById('authToggleMode');
 const syncStatus = document.getElementById('syncStatus');
-const signOutBtn = document.getElementById('signOutBtn');
 
-let mode = 'signin';
-authToggleMode.onclick = () => {
-  mode = mode === 'signin' ? 'signup' : 'signin';
-  authSubmit.textContent = mode === 'signin' ? 'Sign in' : 'Create account';
-  authToggleMode.textContent = mode === 'signin' ? 'Need an account? Create one' : 'Already have an account? Sign in';
-  authErr.textContent = '';
-};
-authSubmit.onclick = async () => {
-  authErr.textContent = '';
-  const email = authEmail.value.trim();
-  const pass = authPass.value;
-  if (!email || !pass) { authErr.textContent = 'Enter email and password.'; return; }
-  try {
-    if (mode === 'signin') {
-      await signInWithEmailAndPassword(auth, email, pass);
-    } else {
-      await createUserWithEmailAndPassword(auth, email, pass);
-    }
-  } catch (e) {
-    const codeMap = {
-      'auth/invalid-email': 'That email address looks invalid.',
-      'auth/missing-password': 'Enter a password.',
-      'auth/invalid-credential': 'Wrong email or password.',
-      'auth/wrong-password': 'Wrong email or password.',
-      'auth/user-not-found': 'No account with that email. Try "Create one" below.',
-      'auth/email-already-in-use': 'That email already has an account. Try signing in instead.',
-      'auth/weak-password': 'Password must be at least 6 characters.',
-      'auth/too-many-requests': 'Too many attempts. Wait a bit and try again.',
-      'auth/network-request-failed': 'Network error — check your connection.'
-    };
-    authErr.textContent = codeMap[e.code] || (e.message || 'Something went wrong. Try again.');
-  }
-};
-signOutBtn.onclick = () => signOut(auth);
+try {
+  await signInAnonymously(auth);
+} catch (e) {
+  syncStatus.textContent = 'Offline — using local data';
+}
+initApp();
 
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    authGate.style.display = 'none';
-    appRoot.style.display = 'block';
-    await initAppForUser(user);
-  } else {
-    appRoot.style.display = 'none';
-    authGate.style.display = 'block';
-    authEmail.value = ''; authPass.value = '';
-  }
-});
-
-async function initAppForUser(user){
-  const userDocRef = doc(db, 'users', user.uid);
+async function initApp(){
+  const userDocRef = doc(db, 'dashboard', 'satya');
   const KEY='satya_daily_web';
   let mem={};
   const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return mem}};
