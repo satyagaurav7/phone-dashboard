@@ -125,7 +125,7 @@ const firebaseConfig = {
   messagingSenderId: "772443408217",
   appId: "1:772443408217:web:fa78c2bb719a883e382e48"
 };
-const AUTH_EMAIL = 'satya.dashboard@internal.app';
+const AUTH_EMAIL = 'booms.satya@gmail.com';
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
@@ -148,10 +148,12 @@ authSubmit.onclick = async () => {
     const codeMap = {
       'auth/invalid-credential': 'Wrong password.',
       'auth/wrong-password': 'Wrong password.',
+      'auth/user-not-found': 'Account not found — check the Firebase console setup.',
       'auth/too-many-requests': 'Too many attempts. Wait a bit and try again.',
-      'auth/network-request-failed': 'Network error — check your connection.'
+      'auth/network-request-failed': 'Network error — check your connection.',
+      'auth/user-disabled': 'This account is disabled in Firebase console.'
     };
-    authErr.textContent = codeMap[e.code] || 'Wrong password.';
+    authErr.textContent = (codeMap[e.code] || ('Error: ' + e.code)) ;
   }
   authSubmit.disabled = false;
 };
