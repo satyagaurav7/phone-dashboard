@@ -47,11 +47,34 @@
   .chip b{color:#10193a}
   footer{color:var(--mut);font-size:14px;text-align:center;margin:22px 0 6px}
   .hint{color:var(--mut);font-size:14px;margin-top:-6px}
+  #authGate{max-width:400px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:0 2px 10px rgba(40,52,90,.05)}
+  #authGate h2{margin-top:0;text-transform:none;letter-spacing:0;font-size:22px;color:var(--text)}
+  #authGate input{width:100%;padding:12px 14px;margin-top:10px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--card2);color:var(--text)}
+  #authGate button{width:100%;padding:12px;margin-top:14px;border:none;border-radius:10px;font-size:16px;font-weight:700;background:var(--accent);color:#fff;cursor:pointer}
+  #authGate button.secondary{background:transparent;color:var(--accent);margin-top:8px;font-weight:600}
+  #authGate .err{color:var(--bad);font-size:14px;margin-top:10px;min-height:18px}
+  #authGate .swap{color:var(--mut);font-size:14px;margin-top:16px;text-align:center}
+  #authGate .swap a{color:var(--accent);cursor:pointer;text-decoration:underline}
+  #appRoot{display:none}
+  #syncStatus{color:var(--mut);font-size:13px;text-align:right;margin-bottom:-8px}
+  #signOutBtn{background:none;border:1px solid var(--line);border-radius:20px;padding:6px 14px;color:var(--mut);font-size:13px;cursor:pointer;float:right}
 </style>
 </head>
 <body>
+  <div id="authGate">
+    <h2>🔒 Sign in</h2>
+    <input type="email" id="authEmail" placeholder="Email" autocomplete="username">
+    <input type="password" id="authPass" placeholder="Password" autocomplete="current-password">
+    <button id="authSubmit">Sign in</button>
+    <button class="secondary" id="authToggleMode">Need an account? Create one</button>
+    <div class="err" id="authErr"></div>
+  </div>
+
+  <div id="appRoot">
+  <button id="signOutBtn">Sign out</button>
   <h1>Satya · <span class="mission">Daily Check-In</span></h1>
   <div class="dateline" id="dateline"></div>
+  <div id="syncStatus"></div>
   <div class="why">🎯 <b>Why:</b> PR by 2027 · Debt-free · Healthy · Built for real — <b>no shortcuts.</b></div>
 
   <div class="card">
@@ -84,25 +107,117 @@
     </div>
   </div>
 
-  <footer>Tip: add to your home screen. Progress saves on this device. Tap the tiles once to enter your private numbers.</footer>
+  <footer>Tip: add to your home screen. Progress syncs across your devices. Tap the tiles once to enter your private numbers.</footer>
+  </div>
 
-<script>
-(function(){
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, signOut
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAiFSwmMc-qYYtXgsiaENQ3nRBBrmy7dc8",
+  authDomain: "newt-90ca4.firebaseapp.com",
+  projectId: "newt-90ca4",
+  storageBucket: "newt-90ca4.firebasestorage.app",
+  messagingSenderId: "772443408217",
+  appId: "1:772443408217:web:fa78c2bb719a883e382e48"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+
+const authGate = document.getElementById('authGate');
+const appRoot = document.getElementById('appRoot');
+const authEmail = document.getElementById('authEmail');
+const authPass = document.getElementById('authPass');
+const authErr = document.getElementById('authErr');
+const authSubmit = document.getElementById('authSubmit');
+const authToggleMode = document.getElementById('authToggleMode');
+const syncStatus = document.getElementById('syncStatus');
+const signOutBtn = document.getElementById('signOutBtn');
+
+let mode = 'signin';
+authToggleMode.onclick = () => {
+  mode = mode === 'signin' ? 'signup' : 'signin';
+  authSubmit.textContent = mode === 'signin' ? 'Sign in' : 'Create account';
+  authToggleMode.textContent = mode === 'signin' ? 'Need an account? Create one' : 'Already have an account? Sign in';
+  authErr.textContent = '';
+};
+authSubmit.onclick = async () => {
+  authErr.textContent = '';
+  const email = authEmail.value.trim();
+  const pass = authPass.value;
+  if (!email || !pass) { authErr.textContent = 'Enter email and password.'; return; }
+  try {
+    if (mode === 'signin') {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } else {
+      await createUserWithEmailAndPassword(auth, email, pass);
+    }
+  } catch (e) {
+    authErr.textContent = e.message.replace('Firebase: ', '').replace(/\s*\(auth\/.*\)\.?/, '');
+  }
+};
+signOutBtn.onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    authGate.style.display = 'none';
+    appRoot.style.display = 'block';
+    await initAppForUser(user);
+  } else {
+    appRoot.style.display = 'none';
+    authGate.style.display = 'block';
+    authEmail.value = ''; authPass.value = '';
+  }
+});
+
+async function initAppForUser(user){
+  const userDocRef = doc(db, 'users', user.uid);
   const KEY='satya_daily_web';
   let mem={};
   const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return mem}};
-  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){mem=S}};
+  const saveLocal=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){mem=S}};
+  const saveCloud=async()=>{
+    try{
+      syncStatus.textContent='Saving…';
+      await setDoc(userDocRef, S, { merge:false });
+      syncStatus.textContent='Synced ✓';
+    }catch(e){
+      syncStatus.textContent='Sync error — saved locally only';
+    }
+  };
+  const save=()=>{ saveLocal(); saveCloud(); };
   const todayStr=d=>{d=d||new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
   const addDays=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return todayStr(d)};
   const daysUntilDate=s=>{if(!s)return null;const a=new Date(todayStr()+'T00:00:00'),b=new Date(s+'T00:00:00');return Math.round((b-a)/86400000)};
   const daysToMonthDay=day=>{if(!day)return null;const now=new Date();const y=now.getFullYear(),m=now.getMonth();const t=new Date(y,m,now.getDate());let d=new Date(y,m,day);if(d<t)d=new Date(y,m+1,day);return Math.round((d-t)/86400000)};
 
   let S=load();
-  S.config=Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0},S.config||{});
-  S.actions=Object.assign({wfg:false,carfax:false,pcc:false,celpip:false,innobox:false},S.actions||{});
-  S.days=S.days||{};S.streak=S.streak||0;S.best=S.best||0;S.lastComplete=S.lastComplete||null;
+  try{
+    syncStatus.textContent='Loading…';
+    const snap=await getDoc(userDocRef);
+    if(snap.exists()){ S=snap.data(); }
+    syncStatus.textContent='Synced ✓';
+  }catch(e){
+    syncStatus.textContent='Offline — using local data';
+  }
   const T=todayStr();
-  S.days[T]=S.days[T]||{nouber:false,workout:false,eat:false,insulin:false,celpip:false,completed:false};
+  normalize();
+
+  function normalize(){
+    S.config=Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0},S.config||{});
+    S.actions=Object.assign({wfg:false,carfax:false,pcc:false,celpip:false,innobox:false},S.actions||{});
+    S.days=S.days||{};S.streak=S.streak||0;S.best=S.best||0;S.lastComplete=S.lastComplete||null;
+    S.days[T]=S.days[T]||{nouber:false,workout:false,eat:false,insulin:false,celpip:false,completed:false};
+  }
 
   const CHECKS=[
     ["nouber","🚫 No Uber / Uber Eats today"],
@@ -172,8 +287,9 @@
       el.innerHTML='<div class="box">✓</div><div class="lbl">'+lbl+'</div>';
       el.onclick=()=>{S.actions[k]=!S.actions[k];save();render()};ac.appendChild(el);});
   }
+  saveLocal();
   render();
-})();
+}
 </script>
 </body>
 </html>
