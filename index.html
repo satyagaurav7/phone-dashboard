@@ -111,7 +111,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
-  getAuth, onAuthStateChanged, signInWithEmailAndPassword
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc
@@ -158,10 +158,13 @@ authSubmit.onclick = async () => {
 authPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') authSubmit.click(); });
 
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
+  if (user && user.email === AUTH_EMAIL) {
     authGate.style.display = 'none';
     appRoot.style.display = 'block';
     await initApp();
+  } else if (user) {
+    // Leftover session from an older version of this app (e.g. anonymous auth) — clear it.
+    await signOut(auth);
   } else {
     appRoot.style.display = 'none';
     authGate.style.display = 'block';
