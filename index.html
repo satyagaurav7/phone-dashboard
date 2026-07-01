@@ -162,7 +162,18 @@ authSubmit.onclick = async () => {
       await createUserWithEmailAndPassword(auth, email, pass);
     }
   } catch (e) {
-    authErr.textContent = e.message.replace('Firebase: ', '').replace(/\s*\(auth\/.*\)\.?/, '');
+    const codeMap = {
+      'auth/invalid-email': 'That email address looks invalid.',
+      'auth/missing-password': 'Enter a password.',
+      'auth/invalid-credential': 'Wrong email or password.',
+      'auth/wrong-password': 'Wrong email or password.',
+      'auth/user-not-found': 'No account with that email. Try "Create one" below.',
+      'auth/email-already-in-use': 'That email already has an account. Try signing in instead.',
+      'auth/weak-password': 'Password must be at least 6 characters.',
+      'auth/too-many-requests': 'Too many attempts. Wait a bit and try again.',
+      'auth/network-request-failed': 'Network error — check your connection.'
+    };
+    authErr.textContent = codeMap[e.code] || (e.message || 'Something went wrong. Try again.');
   }
 };
 signOutBtn.onclick = () => signOut(auth);
