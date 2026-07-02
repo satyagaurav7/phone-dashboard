@@ -34,7 +34,7 @@
     color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
     -webkit-tap-highlight-color:transparent;
   }
-  #appRoot{max-width:780px;margin:0 auto;padding:14px 14px 104px;display:none}
+  #appRoot{max-width:780px;margin:0 auto;padding:14px 14px calc(104px + env(safe-area-inset-bottom));display:none}
   button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer;text-align:left}
   :focus-visible{outline:3px solid var(--foil);outline-offset:2px;border-radius:4px}
 
@@ -109,7 +109,7 @@
   .hcard .sub{color:var(--sub);font-size:13px}
 
   /* ============ bottom nav ============ */
-  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--passport);border-top:3px solid var(--foil)}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--passport);border-top:3px solid var(--foil);padding-bottom:env(safe-area-inset-bottom)}
   .navIn{max-width:780px;margin:0 auto;display:flex}
   .navBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 12px;color:#8FA0BF;position:relative}
   .navBtn .nEmo{font-size:19px;line-height:1}
@@ -260,8 +260,8 @@ async function initApp(){
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
 
   function normalize(){
-    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0}, S.config||{});
-    S.actions = Object.assign({wfg:false,carfax:false,pcc:false,celpip:false,innobox:false}, S.actions||{});
+    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0}, S.config||{});
+    S.actions = Object.assign({oinp:false,wfg:false,carfax:false,pcc:false,celpip:false,innobox:false,resume:false,permitdoc:false}, S.actions||{});
     S.days = S.days || {};
     S.streak = S.streak || 0; S.best = S.best || 0; S.lastComplete = S.lastComplete || null;
     S.days[T] = Object.assign(blankDay(), S.days[T]||{});
@@ -301,9 +301,22 @@ async function initApp(){
       const d = this.state.days[this.today] || {};
       if (CORE.every(k => d[k] === true) && !d.completed) {
         d.completed = true;
+        d.prevStreak = { streak: this.state.streak, best: this.state.best, lastComplete: this.state.lastComplete };
         this.state.streak = (this.state.lastComplete === addDays(this.today,-1)) ? this.state.streak+1 : 1;
         this.state.lastComplete = this.today;
         this.state.best = Math.max(this.state.best, this.state.streak);
+      } else if (d.completed && !CORE.every(k => d[k] === true)) {
+        // A core item was un-done or denied after the day locked — revert the lock honestly.
+        d.completed = false;
+        if (d.prevStreak) {
+          this.state.streak = d.prevStreak.streak;
+          this.state.best = d.prevStreak.best;
+          this.state.lastComplete = d.prevStreak.lastComplete;
+          delete d.prevStreak;
+        } else {
+          this.state.streak = Math.max(0, this.state.streak - 1);
+          this.state.lastComplete = this.state.streak > 0 ? addDays(this.today,-1) : null;
+        }
       }
       saveLocal(); saveCloud();
       if (this._fn) this._fn(this.state);
@@ -343,11 +356,14 @@ async function initApp(){
       ['Plan Sunday,','don’t panic Monday'],
     ];
     const ACTIONS = [
+      ['oinp','HR — ask about OINP employer support (+600 CRS, primary path)'],
       ['wfg','WFG — written “$0 balance, nothing reported to bureaus”'],
       ['carfax','CARFAX — reference letter WITH duties (NOC 21220)'],
       ['pcc','PCC India — start police clearance'],
-      ['celpip','CELPIP — book retest → target CLB 9'],
+      ['celpip','CELPIP — book retest → fix Reading, target CLB 9'],
       ['innobox','Innobox — India experience letter'],
+      ['resume','Resume — updated PDF (CEC and OINP both need it)'],
+      ['permitdoc','Work permit copy — add to PR folder'],
     ];
 
     let tab='today', prevCore=null, prevBusted=null, modalSpec=null;
@@ -404,7 +420,7 @@ async function initApp(){
     function rowHTML(path, emo, lbl, sub, state, inkClass, extra){
       const cls = state===true?'done':state==='fail'?'fail':'';
       const stamp = state===true?'DONE ✓':state==='fail'?'DENIED ✗':'STAMP';
-      return `<div class="row ${cls} ${inkClass||''}" role="button" tabindex="0" aria-pressed="${state===true}" data-toggle="${path}">
+      return `<div class="row ${cls} ${inkClass||''}" role="button" tabindex="0" aria-pressed="${state===true}" aria-label="${lbl}: ${state===true?'done':state==='fail'?'denied':'not stamped'}" data-toggle="${path}">
         <span class="emo" aria-hidden="true">${emo}</span>
         <span><span class="lbl">${lbl}</span>${sub?`<div class="subt">${sub}</div>`:''}</span>
         <span class="spacer"></span>${extra||''}
@@ -494,17 +510,30 @@ async function initApp(){
     }
 
     function prHTML(s){
-      const pD=daysUntil(s.config.permit), eD=daysUntil(s.config.celpipExam);
+      const c=s.config;
+      const pD=daysUntil(c.permit), eD=daysUntil(c.celpipExam), kD=daysUntil(c.cecDate);
       const aDone=ACTIONS.filter(([k])=>s.actions[k]).length;
       const rows=ACTIONS.map(([k,l])=>rowHTML(`actions.${k}`,'🍁',l,'',!!s.actions[k],'mapleInk')).join('');
+      const langTile=(score,cap)=>tileHTML('celpipScores', score??'—', cap, score>=9?'good':'bad');
       return `
         <div class="card">
           ${secTitle('VISA','Countdowns')}
           <div class="tiles">
+            ${tileHTML('cec', kD==null?'SET':kD<=0?'NOW':kD, kD!=null&&kD<=0?'CEC — eligible now':'days · CEC eligible (1 yr CARFAX)', kD==null?'idle':kD<=45?'good':'warn')}
             ${tileHTML('permit', pD==null?'—':pD, 'days · work permit', pD!=null&&pD<150?'bad':'warn')}
-            ${tileHTML('celpipExam', eD==null?'SET':eD, 'days · CELPIP exam', eD==null?'idle':eD<14?'bad':eD<35?'warn':'good')}
+            ${tileHTML('celpipExam', eD==null?'SET':eD, 'days · CELPIP retest', eD==null?'idle':eD<14?'bad':eD<35?'warn':'good')}
             ${tileHTML('actionsCount', aDone+'/'+ACTIONS.length, 'action items done', aDone===ACTIONS.length?'good':aDone>0?'warn':'idle')}
           </div>
+        </div>
+        <div class="card">
+          ${secTitle('LANG','CELPIP · 31 May 2026', c.celpipR>=9?'CLB 9 ✓':'Reading blocks CLB 9', c.celpipR>=9?'var(--customs)':'var(--maple)')}
+          <div class="tiles">
+            ${langTile(c.celpipL,'listening')}
+            ${langTile(c.celpipR,'reading')}
+            ${langTile(c.celpipW,'writing')}
+            ${langTile(c.celpipS,'speaking')}
+          </div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:10px">Writing and Speaking are excellent — Reading ${c.celpipR??'—'} is the one gap to CLB 9 across the board. That's what the daily reading practice is for. Tap a tile after the retest to update scores.</div>
         </div>
         <div class="card" id="actionCard">
           ${secTitle('FILE','Open Action Items',`${aDone}/${ACTIONS.length}`, aDone===ACTIONS.length?'var(--customs)':'var(--maple)')}
@@ -556,7 +585,9 @@ async function initApp(){
 
     const EDITS={
       permit:{title:'Work Permit Expiry',fields:[{path:'config.permit',label:'Expiry date',type:'date'}]},
-      celpipExam:{title:'CELPIP Exam',fields:[{path:'config.celpipExam',label:'Exam date',type:'date'}]},
+      celpipExam:{title:'CELPIP Retest',fields:[{path:'config.celpipExam',label:'Exam date',type:'date'}]},
+      cec:{title:'CEC Eligibility',fields:[{path:'config.cecDate',label:'Eligibility date (1 yr Canadian work)',type:'date'}]},
+      celpipScores:{title:'CELPIP Scores',fields:[{path:'config.celpipL',label:'Listening',type:'number'},{path:'config.celpipR',label:'Reading',type:'number'},{path:'config.celpipW',label:'Writing',type:'number'},{path:'config.celpipS',label:'Speaking',type:'number'}]},
       score:{title:'Credit Score',fields:[{path:'config.score',label:'Latest score',type:'number'}]},
       card:{title:'Credit Card',fields:[{path:'config.cardBal',label:'Balance ($)',type:'number'},{path:'config.cardLimit',label:'Limit ($)',type:'number'}]},
       efund:{title:'Emergency Fund',fields:[{path:'config.efund',label:'Balance ($)',type:'number'}]},
