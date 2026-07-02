@@ -3,181 +3,167 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b0d17">
+<meta name="theme-color" content="#14213D">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mission Control">
-<title>Satya · Daily Check-In</title>
+<title>Satya · Mission Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;600;700&family=B612+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* Dark, bold "mission control" theme. OKLCH-composed, deep indigo base. */
-    --bg:#0b0d17;              /* near-black indigo canvas */
-    --bg-glow:#1a1f3d;         /* radial glow behind header */
-    --surface:#14172a;         /* primary panel */
-    --surface-2:#1b1f38;       /* raised tile */
-    --surface-3:#232847;       /* hover */
-    --line:#2a2f4d;            /* hairline border */
-    --line-soft:#20243d;
-    --text:#eef1ff;            /* high-contrast ink */
-    --mut:#9aa2c8;             /* muted, still AA on surfaces */
-    --mut-2:#6b7299;           /* deep muted / captions */
-    --accent:#6d8bff;          /* electric periwinkle */
-    --accent-2:#a06bff;        /* violet */
-    --accent-ink:#0b0d17;
-    --good:#34d99b; --good-dim:#123a2e;
-    --warn:#ffb648; --warn-dim:#3a2c12;
-    --bad:#ff5d7a;  --bad-dim:#3a1420;
-    --r-lg:22px; --r-md:16px; --r-sm:12px;
-    --ease:cubic-bezier(.22,1,.36,1);
-    --shadow:0 18px 40px -18px rgba(0,0,0,.7);
+    /* — token palette: "Road to PR" passport/customs — */
+    --passport:#14213D;   /* navy passport cover   */
+    --page:#ECF0F6;       /* pale guilloche page   */
+    --ink:#1C2B4A;        /* document ink          */
+    --maple:#C8271C;      /* maple red stamp ink   */
+    --customs:#1F7A4D;    /* approved-stamp green  */
+    --foil:#C9A227;       /* gold foil             */
+    --line:#C9D3E4; --sub:#51618A; --card:#FFFFFF;
+    --disp:'Barlow Condensed',ui-sans-serif,sans-serif;
+    --body:'Public Sans',system-ui,sans-serif;
+    --mono:'B612 Mono',ui-monospace,monospace;
   }
   *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
+  html,body{margin:0;padding:0}
   body{
-    margin:0;color:var(--text);
-    font-family:'Segoe UI',system-ui,-apple-system,'Inter',sans-serif;
-    font-size:17px;line-height:1.55;letter-spacing:-.005em;
     background:
-      radial-gradient(900px 520px at 88% -10%, color-mix(in oklab,var(--accent-2) 22%, transparent) 0, transparent 62%),
-      radial-gradient(820px 480px at 6% -6%, color-mix(in oklab,var(--accent) 20%, transparent) 0, transparent 60%),
-      var(--bg);
-    min-height:100dvh;
-    padding:max(20px,env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));
-    -webkit-font-smoothing:antialiased;
+      repeating-radial-gradient(circle at 50% -60%, rgba(20,33,61,.05) 0 1px, transparent 1px 12px),
+      var(--page);
+    color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+    -webkit-tap-highlight-color:transparent;
   }
-  .wrap{max-width:900px;margin:0 auto}
+  #appRoot{max-width:780px;margin:0 auto;padding:14px 14px 104px;display:none}
+  button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer;text-align:left}
+  :focus-visible{outline:3px solid var(--foil);outline-offset:2px;border-radius:4px}
 
-  /* ---------- Header ---------- */
-  .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
-  h1{font-size:clamp(26px,7vw,38px);margin:0;font-weight:800;letter-spacing:-.03em;text-wrap:balance}
-  .mission{color:var(--accent)}
-  .dateline{color:var(--mut);font-size:15px;margin-top:6px;font-variant-numeric:tabular-nums}
-  #syncStatus{
-    font-size:12px;font-weight:600;color:var(--mut-2);white-space:nowrap;
-    display:inline-flex;align-items:center;gap:7px;padding:6px 11px;
-    border:1px solid var(--line);border-radius:999px;background:color-mix(in oklab,var(--surface) 70%, transparent);
-    backdrop-filter:blur(6px)
-  }
-  #syncStatus::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mut-2);box-shadow:0 0 0 0 currentColor}
-  #syncStatus[data-state="ok"]{color:var(--good)} #syncStatus[data-state="ok"]::before{background:var(--good);box-shadow:0 0 10px var(--good)}
-  #syncStatus[data-state="busy"]{color:var(--accent)} #syncStatus[data-state="busy"]::before{background:var(--accent);animation:pulse 1.1s var(--ease) infinite}
-  #syncStatus[data-state="off"]{color:var(--warn)} #syncStatus[data-state="off"]::before{background:var(--warn)}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--accent) 60%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  /* ============ hero (passport cover) ============ */
+  .cover{background:var(--passport);border-radius:10px;color:#fff;padding:18px 18px 0;
+    border-top:4px solid var(--foil);border-bottom:4px solid var(--foil);overflow:hidden}
+  .cover .kicker{font-family:var(--disp);font-weight:600;letter-spacing:.22em;font-size:13px;color:var(--foil);text-transform:uppercase}
+  .cover h1{font-family:var(--disp);font-weight:700;font-size:30px;margin:2px 0 0;letter-spacing:.02em;text-transform:uppercase}
+  .cover .date{font-family:var(--mono);font-size:12.5px;color:#B9C6DE;margin-top:3px}
+  .heroRow{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:16px 0 14px}
+  .streakBig{font-family:var(--mono);font-weight:700;font-size:52px;line-height:1;color:#fff}
+  .streakLbl{font-family:var(--disp);font-weight:600;letter-spacing:.18em;font-size:13px;color:#B9C6DE;text-transform:uppercase}
+  .bestLbl{font-family:var(--mono);font-size:12.5px;color:var(--foil);margin-top:6px}
+  .statusLine{font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.04em;color:#EAD9A0;padding:0 0 14px}
+  .mrz{background:#fff;color:var(--passport);font-family:var(--mono);font-size:12px;letter-spacing:2px;
+    padding:8px 12px;margin:0 -18px;white-space:nowrap;overflow:hidden;border-top:2px dashed var(--line)}
+  #syncStatus{font-family:var(--mono);font-size:11px;color:var(--foil);opacity:.85;margin-top:2px}
 
-  .why{
-    font-size:15.5px;color:var(--text);margin-top:16px;
-    background:linear-gradient(135deg,color-mix(in oklab,var(--accent) 14%,var(--surface)),var(--surface));
-    border:1px solid var(--line);border-left:3px solid transparent;
-    border-radius:var(--r-md);padding:14px 18px;position:relative;overflow:hidden
-  }
-  .why b{color:#fff;font-weight:700}
+  /* ============ form cards ============ */
+  .card{background:var(--card);border:1.5px solid var(--line);border-radius:8px;padding:16px;margin-top:14px}
+  .secTitle{display:flex;align-items:baseline;gap:8px;margin:0 0 12px}
+  .secTitle .no{font-family:var(--mono);font-size:11px;color:var(--sub)}
+  .secTitle h2{font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:.14em;text-transform:uppercase;margin:0}
+  .secTitle .tally{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:13px}
 
-  /* ---------- Cards ---------- */
-  .card{
-    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-    padding:22px;margin-top:16px;box-shadow:var(--shadow)
-  }
-  h2{
-    font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--mut-2);
-    margin:0 0 16px;font-weight:700;display:flex;align-items:center;gap:8px
-  }
+  /* stamp rows */
+  .row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border:1.5px solid var(--line);
+    border-radius:6px;margin-bottom:8px;background:#FBFCFE;cursor:pointer;user-select:none;transition:background .15s}
+  .row:active{transform:scale(.99)}
+  .row .emo{font-size:19px;flex:0 0 auto}
+  .row .lbl{font-weight:600;font-size:15.5px}
+  .row .subt{font-size:12.5px;color:var(--sub);font-weight:400;margin-top:1px}
+  .row .spacer{flex:1}
+  .stamp{flex:0 0 auto;font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.08em;
+    border:2px dashed #A7B4CC;color:var(--sub);border-radius:6px;padding:7px 10px;transform:rotate(0)}
+  .row.done{background:rgba(31,122,77,.07);border-color:rgba(31,122,77,.45)}
+  .row.done .stamp{border:2px solid var(--customs);box-shadow:inset 0 0 0 1.5px #fff,inset 0 0 0 3px rgba(31,122,77,.35);
+    color:var(--customs);background:rgba(31,122,77,.06);transform:rotate(-5deg);animation:slam .28s cubic-bezier(.2,1.6,.5,1)}
+  .row.navyInk.done{background:rgba(20,33,61,.05);border-color:rgba(20,33,61,.4)}
+  .row.navyInk.done .stamp{border-color:var(--passport);box-shadow:inset 0 0 0 1.5px #fff,inset 0 0 0 3px rgba(20,33,61,.3);color:var(--passport);background:rgba(20,33,61,.04)}
+  .row.mapleInk.done{background:rgba(200,39,28,.05);border-color:rgba(200,39,28,.4)}
+  .row.mapleInk.done .stamp{border-color:var(--maple);box-shadow:inset 0 0 0 1.5px #fff,inset 0 0 0 3px rgba(200,39,28,.3);color:var(--maple);background:rgba(200,39,28,.04)}
+  @keyframes slam{0%{transform:rotate(9deg) scale(1.7);opacity:0}60%{transform:rotate(-7deg) scale(.95);opacity:1}100%{transform:rotate(-5deg) scale(1)}}
+  .timeWrap{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-right:2px}
+  .timeWrap input{font-family:var(--mono);font-size:13px;border:1.5px solid var(--line);border-radius:5px;padding:5px 6px;color:var(--ink);background:#fff}
 
-  /* ---------- Tiles ---------- */
-  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px}
-  .tile{
-    background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-md);
-    padding:16px 16px 15px;cursor:pointer;transition:transform .18s var(--ease),border-color .18s,background .18s;
-    position:relative;overflow:hidden;min-height:112px;display:flex;flex-direction:column;justify-content:flex-start
-  }
-  .tile::after{content:"";position:absolute;inset:0;border-radius:inherit;opacity:0;transition:opacity .2s;
-    background:radial-gradient(120px 80px at 80% 0%,color-mix(in oklab,var(--accent) 30%,transparent),transparent 70%);pointer-events:none}
-  .tile:hover{transform:translateY(-2px);border-color:var(--accent)}
-  .tile:hover::after{opacity:1}
-  .tile:active{transform:translateY(0) scale(.99)}
-  .tile .big{font-size:clamp(30px,8vw,40px);font-weight:800;line-height:1.02;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--text)}
-  .tile .cap{color:var(--mut);font-size:13.5px;margin-top:8px;line-height:1.3}
-  .tile .edit{color:var(--accent);font-size:12px;margin-top:auto;padding-top:8px;opacity:0;transition:opacity .18s}
-  .tile:hover .edit,.tile:focus-visible .edit{opacity:.95}
-  .tile.warn{border-color:color-mix(in oklab,var(--warn) 45%,var(--line))}
-  .tile.bad{border-color:color-mix(in oklab,var(--bad) 45%,var(--line))}
-  .tile.good{border-color:color-mix(in oklab,var(--good) 40%,var(--line))}
-  .warn .big{color:var(--warn)} .bad .big{color:var(--bad)} .good .big{color:var(--good)}
+  /* chips */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-size:13px;border:1.5px solid var(--line);background:#FBFCFE;border-radius:4px;padding:8px 12px;color:var(--ink)}
+  .chip b{color:var(--passport)}
 
-  /* ---------- Checks ---------- */
-  .check{
-    display:flex;align-items:center;gap:14px;padding:15px 16px;
-    border:1px solid var(--line-soft);border-radius:var(--r-sm);margin-bottom:10px;
-    cursor:pointer;transition:border-color .16s,background .16s,transform .12s var(--ease);
-    background:var(--surface-2);-webkit-tap-highlight-color:transparent
-  }
-  .check:hover{border-color:var(--accent)}
-  .check:active{transform:scale(.995)}
-  .check.done{background:linear-gradient(90deg,var(--good-dim),color-mix(in oklab,var(--good-dim) 40%,var(--surface-2)));border-color:color-mix(in oklab,var(--good) 55%,var(--line))}
-  .box{
-    width:30px;height:30px;border-radius:9px;border:2.5px solid var(--mut-2);
-    display:flex;align-items:center;justify-content:center;flex:0 0 auto;
-    font-size:18px;color:transparent;transition:.18s var(--ease)
-  }
-  .check.done .box{background:var(--good);border-color:var(--good);color:var(--accent-ink);box-shadow:0 0 16px color-mix(in oklab,var(--good) 55%,transparent);transform:scale(1.05)}
-  .check .lbl{font-size:16.5px;line-height:1.35}
-  .check.done .lbl{color:var(--mut)}
+  /* tiles */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .tile{border:1.5px solid var(--line);background:#FBFCFE;border-radius:8px;padding:14px;position:relative;cursor:pointer;transition:border-color .15s;width:100%}
+  .tile:hover{border-color:var(--passport)}
+  .tile .dot{position:absolute;top:10px;right:10px;width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 2px #fff}
+  .tile .big{font-family:var(--mono);font-weight:700;font-size:30px;line-height:1.05}
+  .tile .cap{font-family:var(--disp);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:12.5px;color:var(--sub);margin-top:7px}
+  .tile .amend{font-family:var(--mono);font-size:10.5px;color:var(--passport);margin-top:6px;opacity:.75}
+  .t-good .big{color:var(--customs)} .t-warn .big{color:#8A5A00} .t-bad .big{color:var(--maple)} .t-idle .big{color:var(--ink)}
+  .d-good{background:var(--customs)} .d-warn{background:#C98A00} .d-bad{background:var(--maple)} .d-idle{background:#8FA0BF}
 
-  /* ---------- Streak ---------- */
-  .streakbar{
-    display:flex;align-items:center;gap:14px;margin-top:14px;padding:14px 16px;
-    border-radius:var(--r-md);background:linear-gradient(120deg,color-mix(in oklab,var(--warn) 16%,var(--surface-2)),var(--surface-2));
-    border:1px solid color-mix(in oklab,var(--warn) 30%,var(--line))
-  }
-  .streakbar .flame{font-size:30px;filter:drop-shadow(0 0 10px color-mix(in oklab,var(--warn) 60%,transparent))}
-  .streaknum{font-size:32px;font-weight:800;letter-spacing:-.03em;color:var(--warn);font-variant-numeric:tabular-nums;line-height:1}
-  .streakmeta{color:var(--mut);font-size:14px}
-  .streakmeta b{color:var(--text)}
-  .msg{font-size:15.5px;margin-top:12px;color:var(--mut)}
+  /* two-up on wide screens */
+  .grid2{display:grid;grid-template-columns:1fr;gap:0}
+  @media(min-width:760px){ .grid2{grid-template-columns:1fr 1fr;gap:14px;align-items:start} .grid2 > .card{margin-top:14px} }
 
-  /* ---------- Chips ---------- */
-  .chip{display:inline-block;font-size:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:9px 14px;color:var(--mut);margin:6px 6px 0 0}
-  .chip b{color:var(--text);font-weight:700}
-  .hint{color:var(--mut-2);font-size:13.5px;margin-top:2px}
-  footer{color:var(--mut-2);font-size:13px;text-align:center;margin:26px 0 6px;line-height:1.6}
+  /* health */
+  .hcard p{margin:6px 0 0;font-size:14.5px;color:var(--ink)}
+  .hcard .sub{color:var(--sub);font-size:13px}
 
-  /* ---------- Auth gate ---------- */
+  /* ============ bottom nav ============ */
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--passport);border-top:3px solid var(--foil)}
+  .navIn{max-width:780px;margin:0 auto;display:flex}
+  .navBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 12px;color:#8FA0BF;position:relative}
+  .navBtn .nEmo{font-size:19px;line-height:1}
+  .navBtn .nLbl{font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  .navBtn.on{color:#fff}
+  .navBtn.on::after{content:"";position:absolute;top:-3px;left:22%;right:22%;height:3px;background:var(--foil)}
+
+  /* ============ modal ============ */
+  .overlay{position:fixed;inset:0;z-index:60;background:rgba(20,33,61,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px}
+  .modal{width:100%;max-width:340px;background:#fff;border-radius:8px;border:1.5px solid var(--line);overflow:hidden;animation:mIn .22s cubic-bezier(.3,1.4,.6,1)}
+  @keyframes mIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+  .modal header{background:var(--passport);color:#fff;padding:12px 16px;font-family:var(--disp);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:14.5px}
+  .modal .body{padding:16px}
+  .modal label{display:block;font-family:var(--disp);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:0 0 5px}
+  .modal input{width:100%;font-family:var(--mono);font-size:16px;padding:10px 12px;border:1.5px solid var(--line);border-radius:6px;color:var(--ink);margin-bottom:14px;background:#FBFCFE}
+  .modal input:focus{outline:none;border-color:var(--passport)}
+  .mBtns{display:flex;gap:10px}
+  .mBtns .cancel{flex:1;text-align:center;padding:11px;border:1.5px solid var(--line);border-radius:6px;color:var(--sub);font-weight:600}
+  .mBtns .save{flex:1;text-align:center;padding:11px;border-radius:6px;background:var(--customs);color:#fff;font-weight:700;font-family:var(--disp);letter-spacing:.12em;text-transform:uppercase}
+
+  /* ============ celebration ============ */
+  .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:80;background:var(--passport);color:#fff;
+    border:2px solid var(--foil);border-radius:8px;padding:12px 18px;font-weight:700;font-size:15px;white-space:nowrap;
+    box-shadow:0 10px 30px rgba(20,33,61,.35);animation:tIn .35s cubic-bezier(.3,1.5,.6,1)}
+  @keyframes tIn{from{opacity:0;transform:translate(-50%,-16px)}to{opacity:1;transform:translate(-50%,0)}}
+  .burstBox{position:fixed;top:66px;left:50%;width:0;height:0;z-index:75;pointer-events:none}
+  .pc{position:absolute;left:0;top:0;font-size:15px;animation:fly 1.3s ease-out forwards}
+  .pcSq{position:absolute;left:0;top:0;width:8px;height:8px;border-radius:1px;animation:fly 1.3s ease-out forwards}
+  @keyframes fly{from{opacity:1;transform:translate(0,0) rotate(0)}to{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
+  .lockCard{position:fixed;inset:0;z-index:78;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .lockCard .inner{background:#fff;border:4px double var(--maple);color:var(--maple);border-radius:10px;padding:22px 30px;
+    font-family:var(--mono);font-weight:700;font-size:20px;letter-spacing:.1em;transform:rotate(-6deg);text-align:center}
+
+  /* ============ auth gate ============ */
   #authGate{
-    max-width:360px;margin:14vh auto 0;background:var(--surface);border:1px solid var(--line);
-    border-radius:var(--r-lg);padding:32px 28px;box-shadow:var(--shadow);text-align:center;
-    animation:rise .5s var(--ease) both
+    max-width:360px;margin:14vh auto 0;background:var(--card);border:1.5px solid var(--line);
+    border-radius:10px;padding:32px 28px;box-shadow:0 18px 40px -18px rgba(20,33,61,.35);text-align:center;
+    border-top:4px solid var(--foil);animation:mIn .3s cubic-bezier(.3,1.4,.6,1)
   }
-  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-  #authGate .lock{font-size:34px;filter:drop-shadow(0 0 14px color-mix(in oklab,var(--accent) 55%,transparent))}
-  #authGate h2{margin:14px 0 4px;font-size:20px;font-weight:700;color:var(--text);text-transform:none;letter-spacing:-.01em}
-  #authGate .sub{color:var(--mut);font-size:14px;margin:0 0 20px}
+  #authGate .lock{font-size:34px}
+  #authGate h2{margin:14px 0 4px;font-family:var(--disp);font-weight:700;font-size:20px;color:var(--passport);letter-spacing:.02em;text-transform:uppercase}
+  #authGate .sub{color:var(--sub);font-size:14px;margin:0 0 20px}
   #authGate input{
-    width:100%;padding:14px 16px;border:1px solid var(--line);border-radius:12px;font-size:16px;
-    margin-bottom:12px;background:var(--surface-2);color:var(--text);transition:border-color .16s,box-shadow .16s
+    width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:6px;font-size:16px;
+    margin-bottom:12px;background:#FBFCFE;color:var(--ink);font-family:var(--mono)
   }
-  #authGate input::placeholder{color:var(--mut-2)}
-  #authGate input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in oklab,var(--accent) 28%,transparent)}
+  #authGate input:focus{outline:none;border-color:var(--passport)}
   #authGate button{
-    width:100%;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;
-    color:var(--accent-ink);background:linear-gradient(120deg,var(--accent),var(--accent-2));
-    transition:transform .14s var(--ease),filter .16s;box-shadow:0 8px 24px -8px color-mix(in oklab,var(--accent) 70%,transparent)
+    width:100%;padding:13px;border:none;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;
+    color:#fff;background:var(--passport);font-family:var(--disp);letter-spacing:.12em;text-transform:uppercase;transition:filter .16s
   }
-  #authGate button:hover{filter:brightness(1.08)}
-  #authGate button:active{transform:scale(.98)}
+  #authGate button:hover{filter:brightness(1.2)}
   #authGate button:disabled{opacity:.6;cursor:default}
-  #authGate .err{color:var(--bad);font-size:13.5px;margin-top:12px;min-height:18px}
-  #appRoot{display:none;animation:fade .4s var(--ease)}
-  @keyframes fade{from{opacity:0}to{opacity:1}}
+  #authGate .err{color:var(--maple);font-size:13.5px;margin-top:12px;min-height:18px}
 
-  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
-
-  @media (max-width:520px){
-    .card{padding:18px}
-    .topbar{flex-direction:column-reverse;align-items:stretch}
-    #syncStatus{align-self:flex-end}
-  }
-  @media (prefers-reduced-motion:reduce){
-    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
-    .tile:hover{transform:none}
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition:none !important}
   }
 </style>
 </head>
@@ -191,53 +177,7 @@
     <div class="err" id="authErr"></div>
   </div>
 
-  <div id="appRoot">
-  <div class="wrap">
-  <div class="topbar">
-    <div>
-      <h1>Satya · <span class="mission">Daily Check-In</span></h1>
-      <div class="dateline" id="dateline"></div>
-    </div>
-    <div id="syncStatus"></div>
-  </div>
-  <div class="why">🎯 <b>Why:</b> PR by 2027 · Debt-free · Healthy · Built for real — <b>no shortcuts.</b></div>
-
-  <div class="card">
-    <h2>⏳ Countdowns & numbers <span style="color:var(--mut-2);text-transform:none;letter-spacing:0;font-weight:500;font-size:11px">· tap a tile to set it</span></h2>
-    <div class="row" id="tiles"></div>
-  </div>
-
-  <div class="card">
-    <h2>✅ Today · the daily non-negotiables</h2>
-    <div id="checks"></div>
-    <div class="streakbar">
-      <span class="flame">🔥</span>
-      <span class="streaknum" id="streak">0</span>
-      <span class="streakmeta">day streak · best <b id="best">0</b></span>
-    </div>
-    <div class="msg" id="msg"></div>
-  </div>
-
-  <div class="card">
-    <h2>📌 Open action items · stay until done</h2>
-    <div id="actions"></div>
-    <div class="hint">These don't reset daily. Knock them out one at a time.</div>
-  </div>
-
-  <div class="card">
-    <h2>🛡️ Guardrails</h2>
-    <div>
-      <span class="chip"><b>I don't fake</b> — my real record is enough</span>
-      <span class="chip"><b>No</b> instant / payday loans</span>
-      <span class="chip"><b>Insulin on time</b> · eat enough</span>
-      <span class="chip"><b>One lane:</b> Cyber → PR</span>
-      <span class="chip"><b>Plan Sunday,</b> don't panic Monday</span>
-    </div>
-  </div>
-
-  <footer>Tip: add to your home screen. Progress syncs across your devices.<br>Tap the tiles once to enter your private numbers.</footer>
-  </div>
-  </div>
+  <div id="appRoot" aria-live="polite"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
@@ -261,7 +201,6 @@ const AUTH_EMAIL = 'booms.satya@gmail.com';
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
-const syncStatus = document.getElementById('syncStatus');
 const authGate = document.getElementById('authGate');
 const appRoot = document.getElementById('appRoot');
 const authPass = document.getElementById('authPass');
@@ -284,7 +223,7 @@ authSubmit.onclick = async () => {
       'auth/network-request-failed': 'Network error — check your connection.',
       'auth/user-disabled': 'This account is disabled in Firebase console.'
     };
-    authErr.textContent = (codeMap[e.code] || ('Error: ' + e.code)) ;
+    authErr.textContent = (codeMap[e.code] || ('Error: ' + e.code));
   }
   authSubmit.disabled = false;
 };
@@ -307,115 +246,403 @@ onAuthStateChanged(auth, async (user) => {
 
 async function initApp(){
   const userDocRef = doc(db, 'dashboard', 'satya');
-  const KEY='satya_daily_web';
-  let mem={};
-  const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return mem}};
-  const saveLocal=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){mem=S}};
-  const setSync=(text,state)=>{ syncStatus.textContent=text; syncStatus.dataset.state=state; };
-  const saveCloud=async()=>{
-    try{
-      setSync('Saving…','busy');
-      await setDoc(userDocRef, S, { merge:false });
-      setSync('Synced','ok');
-    }catch(e){
-      setSync('Saved on this device','off');
-    }
-  };
-  const save=()=>{ saveLocal(); saveCloud(); };
-  const todayStr=d=>{d=d||new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
-  const addDays=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return todayStr(d)};
-  const daysUntilDate=s=>{if(!s)return null;const a=new Date(todayStr()+'T00:00:00'),b=new Date(s+'T00:00:00');return Math.round((b-a)/86400000)};
-  const daysToMonthDay=day=>{if(!day)return null;const now=new Date();const y=now.getFullYear(),m=now.getMonth();const t=new Date(y,m,now.getDate());let d=new Date(y,m,day);if(d<t)d=new Date(y,m+1,day);return Math.round((d-t)/86400000)};
+  const KEY = 'satya_daily_web';
+  const todayStr = d => { d = d || new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+  const addDays = (s,n) => { const d = new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return todayStr(d); };
+  const T = todayStr();
 
-  let S=load();
-  try{
-    setSync('Loading…','busy');
-    const snap=await getDoc(userDocRef);
-    if(snap.exists()){ S=snap.data(); }
-    setSync('Synced','ok');
-  }catch(e){
-    setSync('On this device','off');
-  }
-  const T=todayStr();
-  normalize();
+  const blankDay = () => ({nouber:false,workout:false,language:false,shower:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,b12:false,multivit:false,bonehealth:false,vitcd:false,showerTime:'',completed:false});
+
+  let S = {};
+  try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
 
   function normalize(){
-    S.config=Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0},S.config||{});
-    S.actions=Object.assign({wfg:false,carfax:false,pcc:false,celpip:false,innobox:false},S.actions||{});
-    S.days=S.days||{};S.streak=S.streak||0;S.best=S.best||0;S.lastComplete=S.lastComplete||null;
-    S.days[T]=S.days[T]||{nouber:false,workout:false,eat:false,insulin:false,celpip:false,completed:false};
+    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0}, S.config||{});
+    S.actions = Object.assign({wfg:false,carfax:false,pcc:false,celpip:false,innobox:false}, S.actions||{});
+    S.days = S.days || {};
+    S.streak = S.streak || 0; S.best = S.best || 0; S.lastComplete = S.lastComplete || null;
+    S.days[T] = Object.assign(blankDay(), S.days[T]||{});
+  }
+  normalize();
+
+  const syncEl = () => document.getElementById('syncStatus');
+  const setSyncUI = (text) => { const el = syncEl(); if (el) el.textContent = text; };
+
+  try {
+    setSyncUI('Loading…');
+    const snap = await getDoc(userDocRef);
+    if (snap.exists()) { S = snap.data(); }
+    normalize();
+    setSyncUI('Synced');
+  } catch (e) {
+    setSyncUI('On this device');
   }
 
-  const CHECKS=[
-    ["nouber","🚫 No Uber / Uber Eats today"],
-    ["workout","🏋️ Worked out / moved my body"],
-    ["eat","🍽️ Ate enough — proper meals"],
-    ["insulin","💉 Insulin on time"],
-    ["celpip","📚 CELPIP 20 min (Thu/Fri/Sat/Sun)"]
-  ];
-  const CORE=["nouber","workout","eat","insulin"];
-  const ACTIONS=[
-    ["wfg","WFG: get WRITTEN “$0 balance + nothing reported to credit bureaus”"],
-    ["carfax","CARFAX: reference letter WITH duties (NOC 21220)"],
-    ["pcc","PCC India: start the police-clearance application"],
-    ["celpip","CELPIP: book the test for ~Aug 15, 2026 at celpip.ca → target CLB 9"],
-    ["innobox","Innobox: get the India experience letter"]
-  ];
+  const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify(Dash.state)); } catch(e) {} };
+  const saveCloud = async () => {
+    try { setSyncUI('Saving…'); await setDoc(userDocRef, Dash.state, { merge:false }); setSyncUI('Synced'); }
+    catch(e) { setSyncUI('Saved on this device'); }
+  };
 
-  function recalc(){
-    const day=S.days[T];
-    if(CORE.every(k=>day[k]) && !day.completed){
-      day.completed=true;
-      S.streak = (S.lastComplete===addDays(T,-1))? S.streak+1 : 1;
-      S.lastComplete=T; S.best=Math.max(S.best,S.streak);
-    }
-  }
-  function editCfg(key,label,isDate){
-    const v=prompt(label,S.config[key]??'');
-    if(v===null)return;
-    S.config[key]= isDate? v.trim() : (parseFloat(String(v).replace(/[^0-9.\-]/g,''))||0);
-    save();render();
-  }
+  const CORE = ['nouber','workout','language','shower','breakfast','lunch','dinner'];
+  const getPath = (o,p) => String(p).split('.').reduce((a,k)=>a==null?a:a[k], o);
 
-  function render(){
-    const now=new Date();
-    document.getElementById('dateline').textContent=now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-    const pDays=daysUntilDate(S.config.permit);
-    const eDays=daysUntilDate(S.config.celpipExam);
-    const rDays=daysToMonthDay(S.config.rentDay);
-    const cDays=daysToMonthDay(S.config.ccDay);
-    const util=S.config.cardLimit>0? Math.round(S.config.cardBal/S.config.cardLimit*100):null;
-    const doneActions=ACTIONS.filter(([k])=>S.actions[k]).length;
-    const tiles=[
-      {big:(pDays!=null?pDays:'—'),cap:'days · work permit expiry',cls:(pDays!=null&&pDays<150?'bad':'warn'),act:()=>editCfg('permit','Work-permit expiry date (YYYY-MM-DD):',true)},
-      {big:(eDays!=null?eDays:'—'),cap:'days · CELPIP exam',cls:(eDays!=null&&eDays<14?'bad':eDays!=null&&eDays<35?'warn':'good'),act:()=>editCfg('celpipExam','CELPIP exam date (YYYY-MM-DD):',true)},
-      {big:doneActions+'/5',cap:'PR action items done',cls:(doneActions>=5?'good':''),act:()=>document.getElementById('actions').scrollIntoView({behavior:'smooth'})},
-      {big:(rDays!=null?rDays:'—'),cap:'days · rent due',cls:(rDays!=null&&rDays<=3?'warn':''),act:()=>editCfg('rentDay','Rent is due on which day of the month? (1-31):',false)},
-      {big:(cDays!=null?cDays:'—'),cap:'days · credit card due',cls:(cDays!=null&&cDays<=3?'bad':''),act:()=>editCfg('ccDay','Credit-card payment due day of month? (1-31):',false)},
-      {big:S.config.score||'—',cap:'credit score',cls:(S.config.score>=720?'good':S.config.score&&S.config.score<660?'bad':'warn'),act:()=>editCfg('score','Latest credit score:',false)},
-      {big:(util!=null?util+'%':'set'),cap:'card utilization',cls:(util==null?'':util>30?'bad':util>10?'warn':'good'),act:()=>{const b=prompt('Current card BALANCE ($):',S.config.cardBal||'');if(b!==null){S.config.cardBal=parseFloat(String(b).replace(/[^0-9.\-]/g,''))||0;const l=prompt('Card LIMIT ($):',S.config.cardLimit||'');if(l!==null)S.config.cardLimit=parseFloat(String(l).replace(/[^0-9.\-]/g,''))||0;save();render();}}},
-      {big:(S.config.budgetLeft?'$'+S.config.budgetLeft:'set'),cap:'budget left this month',cls:'',act:()=>editCfg('budgetLeft','How much budget is left this month? ($):',false)},
-      {big:(S.config.efund?'$'+S.config.efund:'$0'),cap:'emergency fund',cls:(S.config.efund>=2000?'good':'warn'),act:()=>editCfg('efund','Emergency fund balance ($):',false)}
-    ];
-    const tc=document.getElementById('tiles');tc.innerHTML='';
-    tiles.forEach(t=>{const el=document.createElement('div');el.className='tile '+(t.cls||'');
-      el.innerHTML='<div class="big">'+t.big+'</div><div class="cap">'+t.cap+'</div><div class="edit">tap to set ✎</div>';
-      el.onclick=t.act;tc.appendChild(el);});
-    const cc=document.getElementById('checks');cc.innerHTML='';
-    CHECKS.forEach(([k,lbl])=>{const el=document.createElement('div');el.className='check'+(S.days[T][k]?' done':'');
-      el.innerHTML='<div class="box">✓</div><div class="lbl">'+lbl+'</div>';
-      el.onclick=()=>{S.days[T][k]=!S.days[T][k];recalc();save();render()};cc.appendChild(el);});
-    const cd=CORE.filter(k=>S.days[T][k]).length;
-    document.getElementById('streak').textContent=S.streak;
-    document.getElementById('best').textContent=S.best;
-    document.getElementById('msg').textContent= cd===CORE.length?"Core done — streak locked for today. 🔥":"Core habits: "+cd+"/"+CORE.length+" done (no Uber, workout, ate enough, insulin).";
-    const ac=document.getElementById('actions');ac.innerHTML='';
-    ACTIONS.forEach(([k,lbl])=>{const el=document.createElement('div');el.className='check'+(S.actions[k]?' done':'');
-      el.innerHTML='<div class="box">✓</div><div class="lbl">'+lbl+'</div>';
-      el.onclick=()=>{S.actions[k]=!S.actions[k];save();render()};ac.appendChild(el);});
-  }
+  window.Dash = {
+    today: T,
+    state: S,
+    _fn: null,
+    set(path, value){
+      const parts = String(path).split('.'); let o = this.state;
+      for (let i=0; i<parts.length-1; i++){ if (o[parts[i]] == null) o[parts[i]] = {}; o = o[parts[i]]; }
+      o[parts[parts.length-1]] = value;
+      const d = this.state.days[this.today] || {};
+      if (CORE.every(k => d[k]) && !d.completed) {
+        d.completed = true;
+        this.state.streak = (this.state.lastComplete === addDays(this.today,-1)) ? this.state.streak+1 : 1;
+        this.state.lastComplete = this.today;
+        this.state.best = Math.max(this.state.best, this.state.streak);
+      }
+      saveLocal(); saveCloud();
+      if (this._fn) this._fn(this.state);
+    },
+    render(fn){ this._fn = fn; fn(this.state); }
+  };
   saveLocal();
-  render();
+
+  /* ================================ UI (Mission Dashboard design) ================================ */
+  (function(){
+    'use strict';
+    const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const WINS = [
+      ['nouber','🚫','No Uber / Uber Eats',''],
+      ['workout','🏋️','Moved my body',''],
+      ['language','📚','Language / French study',''],
+      ['shower','🚿','Shower + brush','cold if possible'],
+    ];
+    const FUEL = [
+      ['breakfast','🌅','Breakfast','core'],
+      ['lunch','☀️','Lunch','core'],
+      ['dinner','🌙','Dinner','core'],
+      ['insulin','💉','Insulin done','logged · not part of streak'],
+    ];
+    const SUPPS = [
+      ['omega3','Omega-3','Fish Oil 1300 mg'],
+      ['creatine','Creatine','MuscleTech Platinum 100% Creatine'],
+      ['b12','B12','Jamieson B12 100 mg'],
+      ['multivit','Multivitamin','daily'],
+      ['bonehealth','Bone Health','Ca+Mg+Zn · Webber Naturals 333/167/17 mg'],
+      ['vitcd','Vitamin C + D3','Jamieson Chewable 500/500'],
+    ];
+    const GUARDRAILS = [
+      ['I don’t fake','— my real record is enough'],
+      ['No','instant / payday loans'],
+      ['Insulin on time','· eat enough'],
+      ['One lane:','Cyber → PR'],
+      ['Plan Sunday,','don’t panic Monday'],
+    ];
+    const ACTIONS = [
+      ['wfg','WFG — written “$0 balance, nothing reported to bureaus”'],
+      ['carfax','CARFAX — reference letter WITH duties (NOC 21220)'],
+      ['pcc','PCC India — start police clearance'],
+      ['celpip','CELPIP — book retest → target CLB 9'],
+      ['innobox','Innobox — India experience letter'],
+    ];
+
+    let tab='today', prevCore=null, modalSpec=null;
+
+    const daysUntil = s => { if(!s) return null;
+      const a=new Date(Dash.today+'T00:00:00'), b=new Date(String(s)+'T00:00:00');
+      return isNaN(b) ? null : Math.round((b-a)/864e5); };
+    const daysToDay = day => { day=parseInt(day,10); if(!day) return null;
+      const n=new Date(), t=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+      let d=new Date(n.getFullYear(),n.getMonth(),day);
+      if(d<t) d=new Date(n.getFullYear(),n.getMonth()+1,day);
+      return Math.round((d-t)/864e5); };
+    const getPath=(o,p)=>String(p).split('.').reduce((a,k)=>a==null?a:a[k],o);
+    const pad=(n,w)=>String(n).padStart(w,'0');
+
+    function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];}
+    function arc(cx,cy,r,a0,a1){const [x0,y0]=polar(cx,cy,r,a0),[x1,y1]=polar(cx,cy,r,a1);
+      return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;}
+    function sealSVG(done, total, complete){
+      const cx=80, cy=80, segR=56, gap=7, span=360/total;
+      let segs='';
+      for(let i=0;i<total;i++){
+        const a0=i*span+gap/2, a1=(i+1)*span-gap/2;
+        segs+=`<path d="${arc(cx,cy,segR,a0,a1)}" fill="none" stroke="${i<done?'#3FBF7F':'rgba(255,255,255,.18)'}" stroke-width="9" stroke-linecap="butt"></path>`;
+      }
+      const ringTxt=`DAILY ENTRY · CANADA BOUND · DAILY ENTRY · CANADA BOUND · `;
+      const center = complete
+        ? `<g transform="rotate(-12 ${cx} ${cy})">
+             <circle cx="${cx}" cy="${cy}" r="41" fill="none" stroke="#E5533F" stroke-width="2.5"></circle>
+             <circle cx="${cx}" cy="${cy}" r="36" fill="none" stroke="#E5533F" stroke-width="1.2"></circle>
+             <text x="${cx}" y="${cy-4}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="13" fill="#E5533F" letter-spacing="1">DAY</text>
+             <text x="${cx}" y="${cy+12}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="13" fill="#E5533F" letter-spacing="1">LOCKED</text>
+           </g>`
+        : `<text x="${cx}" y="${cy+2}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="26" fill="#fff">${done}/${total}</text>
+           <text x="${cx}" y="${cy+20}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="9.5" fill="#C9A227" letter-spacing="2.5">CORE STAMPED</text>`;
+      return `<svg width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Core progress: ${done} of ${total}">
+        <defs><path id="sealTxtPath" d="M ${cx} ${cy-70} A 70 70 0 1 1 ${cx-0.01} ${cy-70}"></path></defs>
+        <text font-family="B612 Mono,monospace" font-size="8.2" fill="rgba(255,255,255,.5)" letter-spacing="2.2">
+          <textPath href="#sealTxtPath">${ringTxt}</textPath>
+        </text>
+        ${segs}${center}
+      </svg>`;
+    }
+
+    function rowHTML(path, emo, lbl, sub, done, inkClass, extra){
+      return `<div class="row ${done?'done':''} ${inkClass||''}" role="button" tabindex="0" aria-pressed="${done}" data-toggle="${path}">
+        <span class="emo" aria-hidden="true">${emo}</span>
+        <span><span class="lbl">${lbl}</span>${sub?`<div class="subt">${sub}</div>`:''}</span>
+        <span class="spacer"></span>${extra||''}
+        <span class="stamp">${done?'DONE ✓':'STAMP'}</span>
+      </div>`;
+    }
+    function secTitle(no,txt,tally,tone){
+      return `<div class="secTitle"><span class="no">${no}</span><h2>${txt}</h2>${tally?`<span class="tally" style="color:${tone||'var(--sub)'}">${tally}</span>`:''}</div>`;
+    }
+    function tileHTML(key,big,cap,tone){
+      return `<button class="tile t-${tone}" data-edit="${key}">
+        <span class="dot d-${tone}" aria-hidden="true"></span>
+        <div class="big">${big}</div><div class="cap">${cap}</div>
+        <div class="amend">TAP TO AMEND ✎</div>
+      </button>`;
+    }
+
+    function todayHTML(s,d){
+      const done=WINS.concat(FUEL.filter(([k])=>k!=='insulin')).filter(([k])=>d[k]).length;
+      const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
+      const doneCore=CORE7.filter(k=>d[k]).length, complete=doneCore===CORE7.length;
+      const hr=new Date().getHours();
+      const greet=hr<5?'Late night':hr<12?'Good morning':hr<17?'Good afternoon':hr<22?'Good evening':'Late night';
+      const dateStr=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+      const status = complete ? `Day locked. Streak ${s.streak} and counting.`
+        : doneCore===0 ? 'Fresh page. First stamp sets the tone.'
+        : `${doneCore}/${CORE7.length} stamped — keep the ink wet.`;
+      const mrz=`P&lt;CAN&lt;&lt;SATYA&lt;&lt;GAURAV&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>STREAK${pad(s.streak,3)}&lt;BEST${pad(s.best,3)}&lt;&lt;CORE${doneCore}OF${CORE7.length}&lt;&lt;PR2027&lt;&lt;&lt;&lt;&lt;&lt;`;
+
+      const winRows = WINS.map(([k,e,l,sub])=>{
+        if(k!=='shower') return rowHTML(`days.${Dash.today}.${k}`,e,l,sub,!!d[k]);
+        const extra=`<span class="timeWrap"><input type="time" aria-label="Shower time" data-time="days.${Dash.today}.showerTime" value="${d.showerTime||''}"></span>`;
+        return rowHTML(`days.${Dash.today}.${k}`,e,l,sub,!!d[k],'',extra);
+      }).join('');
+
+      const fuelRows = FUEL.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub==='core'?'':sub,!!d[k],k==='insulin'?'navyInk':'')).join('');
+      const suppDone = SUPPS.filter(([k])=>d[k]).length;
+      const suppRows = SUPPS.map(([k,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,'💊',l,sub,!!d[k],'navyInk')).join('');
+      const chips = GUARDRAILS.map(([b,rest])=>`<span class="chip"><b>${b}</b> ${rest}</span>`).join('');
+
+      return `
+        <div class="cover">
+          <div class="kicker">Daily Declaration Form</div>
+          <h1>${greet}, Satya</h1>
+          <div class="date">${dateStr}</div>
+          <div id="syncStatus"></div>
+          <div class="heroRow">
+            ${sealSVG(doneCore,CORE7.length,complete)}
+            <div>
+              <div class="streakBig">🔥 ${s.streak}</div>
+              <div class="streakLbl">Day Streak</div>
+              <div class="bestLbl">BEST EVER · ${s.best} DAYS</div>
+            </div>
+          </div>
+          <div class="statusLine">${status}</div>
+          <div class="mrz" aria-hidden="true">${mrz}</div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            ${secTitle('SECTION A','Daily Wins',`${WINS.filter(([k])=>d[k]).length}/4`, 'var(--customs)')}
+            ${winRows}
+          </div>
+          <div class="card">
+            ${secTitle('SECTION B','Fuel',`${['breakfast','lunch','dinner'].filter(k=>d[k]).length}/3 meals`, 'var(--customs)')}
+            ${fuelRows}
+          </div>
+        </div>
+        <div class="card">
+          ${secTitle('SECTION C','Supplements',`${suppDone}/${SUPPS.length}`, suppDone===SUPPS.length?'var(--customs)':'var(--sub)')}
+          ${suppRows}
+        </div>
+        <div class="card">
+          ${secTitle('SECTION D','Guardrails')}
+          <div class="chips">${chips}</div>
+        </div>`;
+    }
+
+    function prHTML(s){
+      const pD=daysUntil(s.config.permit), eD=daysUntil(s.config.celpipExam);
+      const aDone=ACTIONS.filter(([k])=>s.actions[k]).length;
+      const rows=ACTIONS.map(([k,l])=>rowHTML(`actions.${k}`,'🍁',l,'',!!s.actions[k],'mapleInk')).join('');
+      return `
+        <div class="card">
+          ${secTitle('VISA','Countdowns')}
+          <div class="tiles">
+            ${tileHTML('permit', pD==null?'—':pD, 'days · work permit', pD!=null&&pD<150?'bad':'warn')}
+            ${tileHTML('celpipExam', eD==null?'SET':eD, 'days · CELPIP exam', eD==null?'idle':eD<14?'bad':eD<35?'warn':'good')}
+            ${tileHTML('actionsCount', aDone+'/'+ACTIONS.length, 'action items done', aDone===ACTIONS.length?'good':aDone>0?'warn':'idle')}
+          </div>
+        </div>
+        <div class="card" id="actionCard">
+          ${secTitle('FILE','Open Action Items',`${aDone}/${ACTIONS.length}`, aDone===ACTIONS.length?'var(--customs)':'var(--maple)')}
+          ${rows}
+          <div style="font-size:12.5px;color:var(--sub)">These don’t reset daily. Knock them out one at a time.</div>
+        </div>`;
+    }
+
+    function moneyHTML(s){
+      const c=s.config;
+      const util=c.cardLimit>0?Math.round(c.cardBal/c.cardLimit*100):null;
+      const rD=daysToDay(c.rentDay), cD=daysToDay(c.ccDay);
+      return `
+        <div class="card">
+          ${secTitle('LEDGER','Numbers')}
+          <div class="tiles">
+            ${tileHTML('score', c.score||'—', 'credit score', c.score>=720?'good':c.score&&c.score<660?'bad':'warn')}
+            ${tileHTML('card', util==null?'SET':util+'%', 'card utilization', util==null?'idle':util>30?'bad':util>10?'warn':'good')}
+            ${tileHTML('efund', '$'+(c.efund||0), 'emergency fund', c.efund>=2000?'good':'warn')}
+            ${tileHTML('budgetLeft', c.budgetLeft?'$'+c.budgetLeft:'SET', 'budget left', 'idle')}
+            ${tileHTML('rentDay', rD==null?'—':rD, 'days · rent due', rD!=null&&rD<=3?'warn':'idle')}
+            ${tileHTML('ccDay', cD==null?'—':cD, 'days · card due', cD!=null&&cD<=3?'bad':'idle')}
+          </div>
+        </div>`;
+    }
+
+    function healthHTML(){
+      return `
+        <div class="card hcard">
+          ${secTitle('MED','Type 1 Diabetes')}
+          <p><b>NovoRapid</b> (bolus) + <b>Lantus</b> (basal) · CGM: Dexcom / Libre.</p>
+          <p class="sub">Keep insulin timing steady · cut smoking — the quiet long-term wins.</p>
+        </div>
+        <div class="card hcard">
+          ${secTitle('CLAIM','Disability Tax Credit')}
+          <p>💡 T1D usually qualifies — refund <b>+ RDSP access</b>. Apply.</p>
+        </div>
+        <div class="card hcard">
+          ${secTitle('NOTE','Daily checks')}
+          <p class="sub">Insulin + meal stamps live on the <b>Today</b> tab — the streak <i>is</i> the medicine schedule. Not medical advice — loop in your diabetes team for anything clinical.</p>
+        </div>`;
+    }
+
+    const TABS=[['today','✓','Today'],['pr','🍁','PR'],['money','💵','Money'],['health','🩺','Health']];
+    function navHTML(){
+      return `<nav aria-label="Sections"><div class="navIn">${TABS.map(([k,e,l])=>
+        `<button class="navBtn ${tab===k?'on':''}" data-tab="${k}" aria-current="${tab===k}"><span class="nEmo" aria-hidden="true">${e}</span><span class="nLbl">${l}</span></button>`).join('')}</div></nav>`;
+    }
+
+    const EDITS={
+      permit:{title:'Work Permit Expiry',fields:[{path:'config.permit',label:'Expiry date',type:'date'}]},
+      celpipExam:{title:'CELPIP Exam',fields:[{path:'config.celpipExam',label:'Exam date',type:'date'}]},
+      score:{title:'Credit Score',fields:[{path:'config.score',label:'Latest score',type:'number'}]},
+      card:{title:'Credit Card',fields:[{path:'config.cardBal',label:'Balance ($)',type:'number'},{path:'config.cardLimit',label:'Limit ($)',type:'number'}]},
+      efund:{title:'Emergency Fund',fields:[{path:'config.efund',label:'Balance ($)',type:'number'}]},
+      budgetLeft:{title:'Budget Left',fields:[{path:'config.budgetLeft',label:'Amount left ($)',type:'number'}]},
+      rentDay:{title:'Rent Due Day',fields:[{path:'config.rentDay',label:'Day of month (1–31)',type:'number'}]},
+      ccDay:{title:'Card Due Day',fields:[{path:'config.ccDay',label:'Day of month (1–31)',type:'number'}]},
+    };
+    function openModal(key){
+      const spec=EDITS[key]; if(!spec) return;
+      modalSpec=spec;
+      const ov=document.createElement('div'); ov.className='overlay'; ov.id='dashModal';
+      ov.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="${spec.title}">
+        <header>Amendment — ${spec.title}</header>
+        <div class="body">
+          ${spec.fields.map((f,i)=>`<label for="mf${i}">${f.label}</label>
+            <input id="mf${i}" type="${f.type}" value="${getPath(Dash.state,f.path)??''}" ${f.type==='number'?'inputmode="decimal"':''}>`).join('')}
+          <div class="mBtns"><button class="cancel" data-mclose>Cancel</button><button class="save" data-msave>Stamp It</button></div>
+        </div></div>`;
+      ov.addEventListener('click',e=>{ if(e.target===ov) closeModal(); });
+      ov.querySelector('[data-mclose]').onclick=closeModal;
+      ov.querySelector('[data-msave]').onclick=saveModal;
+      document.body.appendChild(ov);
+      const first=ov.querySelector('input'); if(first) first.focus();
+    }
+    function closeModal(){ const m=document.getElementById('dashModal'); if(m) m.remove(); modalSpec=null; }
+    function saveModal(){
+      if(!modalSpec) return;
+      modalSpec.fields.forEach((f,i)=>{
+        const el=document.getElementById('mf'+i); if(!el) return;
+        let v=el.value;
+        v = f.type==='number' ? (parseFloat(String(v).replace(/[^0-9.\-]/g,''))||0) : String(v).trim();
+        Dash.set(f.path,v);
+      });
+      closeModal();
+    }
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+    function celebrate(streak){
+      const toast=document.createElement('div'); toast.className='toast'; toast.setAttribute('role','status');
+      toast.textContent=`Day locked — streak ${streak}! 🔥`;
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(), 3200);
+      if(REDUCED){
+        const lc=document.createElement('div'); lc.className='lockCard';
+        lc.innerHTML=`<div class="inner">✦ DAY LOCKED ✦<br>STREAK ${pad(streak,3)}</div>`;
+        document.body.appendChild(lc); setTimeout(()=>lc.remove(), 3200);
+        return;
+      }
+      const box=document.createElement('div'); box.className='burstBox';
+      const cols=['#C8271C','#1F7A4D','#C9A227','#14213D'];
+      for(let i=0;i<20;i++){
+        const leaf=i%3===0;
+        const el=document.createElement('span');
+        el.className=leaf?'pc':'pcSq';
+        if(leaf) el.textContent='🍁'; else el.style.background=cols[i%cols.length];
+        const ang=Math.PI*2*i/20 + Math.random()*.4, dist=90+Math.random()*90;
+        el.style.setProperty('--dx',(Math.cos(ang)*dist).toFixed(0)+'px');
+        el.style.setProperty('--dy',(Math.sin(ang)*dist*0.8+40).toFixed(0)+'px');
+        el.style.setProperty('--rot',(Math.random()*300-150).toFixed(0)+'deg');
+        box.appendChild(el);
+      }
+      document.body.appendChild(box); setTimeout(()=>box.remove(), 1500);
+    }
+
+    function draw(s){
+      const root=document.getElementById('appRoot');
+      const d=(s.days&&s.days[Dash.today])||{};
+      const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
+      const doneCount=CORE7.filter(k=>d[k]).length;
+
+      root.innerHTML =
+        (tab==='today'?todayHTML(s,d)
+        :tab==='pr'?prHTML(s)
+        :tab==='money'?moneyHTML(s)
+        :healthHTML()) + navHTML();
+
+      root.querySelectorAll('[data-toggle]').forEach(el=>{
+        const fire=()=>Dash.set(el.dataset.toggle, !getPath(Dash.state, el.dataset.toggle));
+        el.addEventListener('click',fire);
+        el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fire(); } });
+      });
+      root.querySelectorAll('[data-time]').forEach(inp=>{
+        inp.addEventListener('click',e=>e.stopPropagation());
+        inp.addEventListener('keydown',e=>e.stopPropagation());
+        inp.addEventListener('change',()=>Dash.set(inp.dataset.time, inp.value));
+      });
+      root.querySelectorAll('[data-edit]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          if(el.dataset.edit==='actionsCount'){
+            const card=document.getElementById('actionCard');
+            if(card){ window.scrollTo({top:card.offsetTop-70, behavior:REDUCED?'auto':'smooth'});
+              card.style.outline='3px solid var(--foil)'; setTimeout(()=>card.style.outline='',1200); }
+            return;
+          }
+          openModal(el.dataset.edit);
+        });
+      });
+      root.querySelectorAll('[data-tab]').forEach(el=>{
+        el.addEventListener('click',()=>{ tab=el.dataset.tab; draw(Dash.state); window.scrollTo({top:0}); });
+      });
+
+      const allCore=doneCount===CORE7.length;
+      if(prevCore===false && allCore) celebrate(s.streak);
+      prevCore=allCore;
+    }
+
+    Dash.render(draw);
+  })();
 }
 </script>
 </body>
