@@ -254,7 +254,7 @@ async function initApp(){
   const addDays = (s,n) => { const d = new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return todayStr(d); };
   const T = todayStr();
 
-  const blankDay = () => ({nouber:false,workout:false,language:false,shower:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,b12:false,multivit:false,bonehealth:false,vitcd:false,showerTime:'',completed:false});
+  const blankDay = () => ({nouber:false,workout:false,language:false,shower:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,showerTime:'',completed:false});
 
   let S = {};
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
@@ -320,7 +320,7 @@ async function initApp(){
     const WINS = [
       ['nouber','🚫','No Uber / Uber Eats',''],
       ['workout','🏋️','Moved my body',''],
-      ['language','📚','Language / French study',''],
+      ['language','📚','CELPIP English — reading practice',''],
       ['shower','🚿','Shower + brush','cold if possible'],
     ];
     const FUEL = [
@@ -332,8 +332,6 @@ async function initApp(){
     const SUPPS = [
       ['omega3','Omega-3','Fish Oil 1300 mg'],
       ['creatine','Creatine','MuscleTech Platinum 100% Creatine'],
-      ['b12','B12','Jamieson B12 100 mg'],
-      ['multivit','Multivitamin','daily'],
       ['bonehealth','Bone Health','Ca+Mg+Zn · Webber Naturals 333/167/17 mg'],
       ['vitcd','Vitamin C + D3','Jamieson Chewable 500/500'],
     ];
@@ -439,7 +437,7 @@ async function initApp(){
         : doneCore===0 ? 'Fresh page. First stamp sets the tone.'
         : `${doneCore}/${CORE7.length} stamped — keep the ink wet.`;
       const mrzPad = t => (t + '<'.repeat(44)).slice(0,44).replace(/</g,'&lt;');
-      const mrz1 = mrzPad('P<CANPALAKOLLU<<SATYA<GAURAV');
+      const mrz1 = mrzPad('PALAKOLLU<<SATYA<GAURAV');
       const mrz2 = mrzPad( busted
         ? `ENTRY<REFUSED<<DENIED<${pad(failedCore,2)}<<PR<2027`
         : `STREAK<${pad(shownStreak,3)}<BEST<${pad(s.best,3)}<DONE<${doneCore}<OF<${CORE7.length}<PR<2027` );
