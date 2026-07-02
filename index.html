@@ -77,6 +77,9 @@
   .row.navyInk.done .stamp{border-color:var(--passport);box-shadow:inset 0 0 0 1.5px #fff,inset 0 0 0 3px rgba(20,33,61,.3);color:var(--passport);background:rgba(20,33,61,.04)}
   .row.mapleInk.done{background:rgba(200,39,28,.05);border-color:rgba(200,39,28,.4)}
   .row.mapleInk.done .stamp{border-color:var(--maple);box-shadow:inset 0 0 0 1.5px #fff,inset 0 0 0 3px rgba(200,39,28,.3);color:var(--maple);background:rgba(200,39,28,.04)}
+  .row.fail{background:rgba(200,39,28,.07);border-color:rgba(200,39,28,.55)}
+  .row.fail .lbl{color:var(--maple)}
+  .row.fail .stamp{border:2px solid var(--maple);color:#fff;background:var(--maple);transform:rotate(4deg);animation:slam .28s cubic-bezier(.2,1.6,.5,1)}
   @keyframes slam{0%{transform:rotate(9deg) scale(1.7);opacity:0}60%{transform:rotate(-7deg) scale(.95);opacity:1}100%{transform:rotate(-5deg) scale(1)}}
   .timeWrap{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-right:2px}
   .timeWrap input{font-family:var(--mono);font-size:13px;border:1.5px solid var(--line);border-radius:5px;padding:5px 6px;color:var(--ink);background:#fff}
@@ -296,7 +299,7 @@ async function initApp(){
       for (let i=0; i<parts.length-1; i++){ if (o[parts[i]] == null) o[parts[i]] = {}; o = o[parts[i]]; }
       o[parts[parts.length-1]] = value;
       const d = this.state.days[this.today] || {};
-      if (CORE.every(k => d[k]) && !d.completed) {
+      if (CORE.every(k => d[k] === true) && !d.completed) {
         d.completed = true;
         this.state.streak = (this.state.lastComplete === addDays(this.today,-1)) ? this.state.streak+1 : 1;
         this.state.lastComplete = this.today;
@@ -349,7 +352,7 @@ async function initApp(){
       ['innobox','Innobox — India experience letter'],
     ];
 
-    let tab='today', prevCore=null, modalSpec=null;
+    let tab='today', prevCore=null, prevBusted=null, modalSpec=null;
 
     const daysUntil = s => { if(!s) return null;
       const a=new Date(Dash.today+'T00:00:00'), b=new Date(String(s)+'T00:00:00');
@@ -365,20 +368,29 @@ async function initApp(){
     function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];}
     function arc(cx,cy,r,a0,a1){const [x0,y0]=polar(cx,cy,r,a0),[x1,y1]=polar(cx,cy,r,a1);
       return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;}
-    function sealSVG(done, total, complete){
+    function sealSVG(done, total, complete, failed){
+      failed = failed || 0;
       const cx=80, cy=80, segR=56, gap=7, span=360/total;
       let segs='';
       for(let i=0;i<total;i++){
         const a0=i*span+gap/2, a1=(i+1)*span-gap/2;
-        segs+=`<path d="${arc(cx,cy,segR,a0,a1)}" fill="none" stroke="${i<done?'#3FBF7F':'rgba(255,255,255,.18)'}" stroke-width="9" stroke-linecap="butt"></path>`;
+        const col = i<done ? '#3FBF7F' : i<done+failed ? '#E5533F' : 'rgba(255,255,255,.18)';
+        segs+=`<path d="${arc(cx,cy,segR,a0,a1)}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="butt"></path>`;
       }
       const ringTxt=`DAILY ENTRY · CANADA BOUND · DAILY ENTRY · CANADA BOUND · `;
-      const center = complete
-        ? `<g transform="rotate(-12 ${cx} ${cy})">
+      const center = failed>0
+        ? `<g transform="rotate(8 ${cx} ${cy})">
              <circle cx="${cx}" cy="${cy}" r="41" fill="none" stroke="#E5533F" stroke-width="2.5"></circle>
              <circle cx="${cx}" cy="${cy}" r="36" fill="none" stroke="#E5533F" stroke-width="1.2"></circle>
-             <text x="${cx}" y="${cy-4}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="13" fill="#E5533F" letter-spacing="1">DAY</text>
-             <text x="${cx}" y="${cy+12}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="13" fill="#E5533F" letter-spacing="1">LOCKED</text>
+             <text x="${cx}" y="${cy-4}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="12" fill="#E5533F" letter-spacing="1">ENTRY</text>
+             <text x="${cx}" y="${cy+12}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="12" fill="#E5533F" letter-spacing="1">REFUSED</text>
+           </g>`
+        : complete
+        ? `<g transform="rotate(-12 ${cx} ${cy})">
+             <circle cx="${cx}" cy="${cy}" r="41" fill="none" stroke="#3FBF7F" stroke-width="2.5"></circle>
+             <circle cx="${cx}" cy="${cy}" r="36" fill="none" stroke="#3FBF7F" stroke-width="1.2"></circle>
+             <text x="${cx}" y="${cy-4}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="13" fill="#3FBF7F" letter-spacing="1">DAY</text>
+             <text x="${cx}" y="${cy+12}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="13" fill="#3FBF7F" letter-spacing="1">LOCKED</text>
            </g>`
         : `<text x="${cx}" y="${cy+2}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="26" fill="#fff">${done}/${total}</text>
            <text x="${cx}" y="${cy+20}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="9.5" fill="#C9A227" letter-spacing="2.5">CORE STAMPED</text>`;
@@ -391,12 +403,14 @@ async function initApp(){
       </svg>`;
     }
 
-    function rowHTML(path, emo, lbl, sub, done, inkClass, extra){
-      return `<div class="row ${done?'done':''} ${inkClass||''}" role="button" tabindex="0" aria-pressed="${done}" data-toggle="${path}">
+    function rowHTML(path, emo, lbl, sub, state, inkClass, extra){
+      const cls = state===true?'done':state==='fail'?'fail':'';
+      const stamp = state===true?'DONE ✓':state==='fail'?'DENIED ✗':'STAMP';
+      return `<div class="row ${cls} ${inkClass||''}" role="button" tabindex="0" aria-pressed="${state===true}" data-toggle="${path}">
         <span class="emo" aria-hidden="true">${emo}</span>
         <span><span class="lbl">${lbl}</span>${sub?`<div class="subt">${sub}</div>`:''}</span>
         <span class="spacer"></span>${extra||''}
-        <span class="stamp">${done?'DONE ✓':'STAMP'}</span>
+        <span class="stamp">${stamp}</span>
       </div>`;
     }
     function secTitle(no,txt,tally,tone){
@@ -411,26 +425,35 @@ async function initApp(){
     }
 
     function todayHTML(s,d){
-      const done=WINS.concat(FUEL.filter(([k])=>k!=='insulin')).filter(([k])=>d[k]).length;
       const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
-      const doneCore=CORE7.filter(k=>d[k]).length, complete=doneCore===CORE7.length;
+      const doneCore=CORE7.filter(k=>d[k]===true).length;
+      const failedCore=CORE7.filter(k=>d[k]==='fail').length;
+      const busted=failedCore>0;
+      const complete=doneCore===CORE7.length;
+      const shownStreak=busted?0:s.streak;
       const hr=new Date().getHours();
       const greet=hr<5?'Late night':hr<12?'Good morning':hr<17?'Good afternoon':hr<22?'Good evening':'Late night';
       const dateStr=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-      const status = complete ? `Day locked. Streak ${s.streak} and counting.`
+      const status = busted ? `Entry refused — ${failedCore} denied. Streak broken. Clean page tomorrow.`
+        : complete ? `Day locked. Streak ${s.streak} and counting.`
         : doneCore===0 ? 'Fresh page. First stamp sets the tone.'
         : `${doneCore}/${CORE7.length} stamped — keep the ink wet.`;
-      const mrz=`P&lt;CAN&lt;&lt;SATYA&lt;&lt;GAURAV&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>STREAK${pad(s.streak,3)}&lt;BEST${pad(s.best,3)}&lt;&lt;CORE${doneCore}OF${CORE7.length}&lt;&lt;PR2027&lt;&lt;&lt;&lt;&lt;&lt;`;
+      const mrzPad = t => (t + '<'.repeat(44)).slice(0,44).replace(/</g,'&lt;');
+      const mrz1 = mrzPad('P<CANPALAKOLLU<<SATYA<GAURAV');
+      const mrz2 = mrzPad( busted
+        ? `ENTRY<REFUSED<<DENIED<${pad(failedCore,2)}<<PR<2027`
+        : `STREAK<${pad(shownStreak,3)}<BEST<${pad(s.best,3)}<DONE<${doneCore}<OF<${CORE7.length}<PR<2027` );
+      const mrz=`${mrz1}<br>${mrz2}`;
 
       const winRows = WINS.map(([k,e,l,sub])=>{
-        if(k!=='shower') return rowHTML(`days.${Dash.today}.${k}`,e,l,sub,!!d[k]);
+        if(k!=='shower') return rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k]);
         const extra=`<span class="timeWrap"><input type="time" aria-label="Shower time" data-time="days.${Dash.today}.showerTime" value="${d.showerTime||''}"></span>`;
-        return rowHTML(`days.${Dash.today}.${k}`,e,l,sub,!!d[k],'',extra);
+        return rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k],'',extra);
       }).join('');
 
-      const fuelRows = FUEL.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub==='core'?'':sub,!!d[k],k==='insulin'?'navyInk':'')).join('');
-      const suppDone = SUPPS.filter(([k])=>d[k]).length;
-      const suppRows = SUPPS.map(([k,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,'💊',l,sub,!!d[k],'navyInk')).join('');
+      const fuelRows = FUEL.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub==='core'?'':sub,d[k],k==='insulin'?'navyInk':'')).join('');
+      const suppDone = SUPPS.filter(([k])=>d[k]===true).length;
+      const suppRows = SUPPS.map(([k,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,'💊',l,sub,d[k],'navyInk')).join('');
       const chips = GUARDRAILS.map(([b,rest])=>`<span class="chip"><b>${b}</b> ${rest}</span>`).join('');
 
       return `
@@ -440,24 +463,25 @@ async function initApp(){
           <div class="date">${dateStr}</div>
           <div id="syncStatus"></div>
           <div class="heroRow">
-            ${sealSVG(doneCore,CORE7.length,complete)}
+            ${sealSVG(doneCore,CORE7.length,complete,failedCore)}
             <div>
-              <div class="streakBig">🔥 ${s.streak}</div>
-              <div class="streakLbl">Day Streak</div>
+              <div class="streakBig">${busted?'💔':'🔥'} ${shownStreak}</div>
+              <div class="streakLbl">Day Streak${busted?' · BROKEN':''}</div>
               <div class="bestLbl">BEST EVER · ${s.best} DAYS</div>
             </div>
           </div>
-          <div class="statusLine">${status}</div>
+          <div class="statusLine"${busted?' style="color:#FF9A8A"':''}>${status}</div>
           <div class="mrz" aria-hidden="true">${mrz}</div>
         </div>
 
         <div class="grid2">
           <div class="card">
-            ${secTitle('SECTION A','Daily Wins',`${WINS.filter(([k])=>d[k]).length}/4`, 'var(--customs)')}
+            ${secTitle('SECTION A','Daily Wins',`${WINS.filter(([k])=>d[k]===true).length}/4`, 'var(--customs)')}
             ${winRows}
+            <div style="font-size:12px;color:var(--sub);margin-top:4px">Tap once = DONE · tap again = DENIED (breaks your streak) · tap again = clear</div>
           </div>
           <div class="card">
-            ${secTitle('SECTION B','Fuel',`${['breakfast','lunch','dinner'].filter(k=>d[k]).length}/3 meals`, 'var(--customs)')}
+            ${secTitle('SECTION B','Fuel',`${['breakfast','lunch','dinner'].filter(k=>d[k]===true).length}/3 meals`, 'var(--customs)')}
             ${fuelRows}
           </div>
         </div>
@@ -599,11 +623,23 @@ async function initApp(){
       document.body.appendChild(box); setTimeout(()=>box.remove(), 1500);
     }
 
+    function deny(){
+      const toast=document.createElement('div'); toast.className='toast'; toast.setAttribute('role','status');
+      toast.style.background='var(--maple)'; toast.style.borderColor='#7A1410';
+      toast.textContent='Entry DENIED — streak broken. 💔';
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(), 3200);
+      const lc=document.createElement('div'); lc.className='lockCard';
+      lc.innerHTML=`<div class="inner">✗ ENTRY REFUSED ✗<br>CLEAN PAGE TOMORROW</div>`;
+      document.body.appendChild(lc); setTimeout(()=>lc.remove(), 2200);
+    }
+
     function draw(s){
       const root=document.getElementById('appRoot');
       const d=(s.days&&s.days[Dash.today])||{};
       const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
-      const doneCount=CORE7.filter(k=>d[k]).length;
+      const doneCount=CORE7.filter(k=>d[k]===true).length;
+      const busted=CORE7.some(k=>d[k]==='fail');
 
       root.innerHTML =
         (tab==='today'?todayHTML(s,d)
@@ -612,7 +648,14 @@ async function initApp(){
         :healthHTML()) + navHTML();
 
       root.querySelectorAll('[data-toggle]').forEach(el=>{
-        const fire=()=>Dash.set(el.dataset.toggle, !getPath(Dash.state, el.dataset.toggle));
+        const fire=()=>{
+          const path=el.dataset.toggle;
+          const cur=getPath(Dash.state,path);
+          const next = path.startsWith('days.')
+            ? (cur===true ? 'fail' : cur==='fail' ? false : true)
+            : !cur;
+          Dash.set(path,next);
+        };
         el.addEventListener('click',fire);
         el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fire(); } });
       });
@@ -639,6 +682,8 @@ async function initApp(){
       const allCore=doneCount===CORE7.length;
       if(prevCore===false && allCore) celebrate(s.streak);
       prevCore=allCore;
+      if(prevBusted===false && busted) deny();
+      prevBusted=busted;
     }
 
     Dash.render(draw);
