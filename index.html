@@ -634,6 +634,19 @@ async function initApp(){
           </div>
         </div>
         <div class="card">
+          ${secTitle('VAULT','What You Actually Have','≈ $13.8k','var(--customs)')}
+          <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--customs);margin:2px 0 4px">Accessible · ~$6,930</div>
+          ${li('CIBC chequing','$1,726')}
+          ${li('Wealthsimple — TFSA + FHSA + RRSP + crypto','$1,216')}
+          ${li('Sun Life TFSA (group)','$3,405')}
+          ${li('Sun Life non-registered','$582')}
+          <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:12px 0 4px">Locked — retirement, working for you</div>
+          ${li('Sun Life pension (DCPP ×2) — locked till retirement','$5,755')}
+          ${li('Sun Life RRSP — withdrawable but taxable','$1,093')}
+          ${li('Equitable Life TFSA — +$400/mo, growing','update')}
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">You are <b>not</b> broke — you're building. ~$14k in assets at 26, as a newcomer. The June problem was cash-flow discipline, not lack of money. Snapshot from your screenshots; tap a Numbers tile to keep the live ones current.</div>
+        </div>
+        <div class="card">
           ${secTitle('AUDIT','June Reality Check','51.7% of pay','var(--maple)')}
           ${li('Food delivery — 25 Uber Eats orders','$497',1)}
           ${li('Dining out + coffee (20 Tims runs)','$429',1)}
@@ -649,16 +662,15 @@ async function initApp(){
           ${secTitle('PLAN','Monthly Envelopes','net $4,249')}
           ${li('Mom — loan support. First after rent. Non-negotiable.','$2,000')}
           ${li('Rent (Centurion, 1st)','$930')}
-          ${li('Equitable Life — pending your verification','$400',1)}
+          ${li('Equitable Life TFSA — savings, not an expense ✓','$400')}
           ${li('Fixed: phone + insulin/pharmacy + bank fee','$140')}
           ${li('Groceries — this replaces delivery','$350')}
           ${li('Transport — bus pass first, no casual Ubers','$150')}
-          ${li('Emergency fund — auto on payday','$100')}
           ${li('Fun + earned treats ($50/level-up from here)','$60')}
           ${li('Subscriptions — Spotify + ONE AI tool','$40')}
           ${li('Cannabis — taper envelope, cash only','$20')}
-          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Buffer</span><b style="font-family:var(--mono);color:var(--customs)">~$59</b></div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Sending $2,000 home makes this tight — that's the honest math, not a punishment. Your two big levers: if the Equitable $400 turns out cancellable, e-fund jumps to $500/mo; and every delivery dollar you don't spend is the only slack this budget has.</div>
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Buffer / e-fund top-up</span><b style="font-family:var(--mono);color:var(--customs)">~$159</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">You already save $400/mo into the Equitable TFSA — that's real. $2,000 to mom + $400 savings on $4,249 is tight but honest. The only slack is delivery money you don't spend. Every skipped Uber Eats order = a real dollar toward the buffer.</div>
           <div class="chips" style="margin-top:12px">
             <span class="chip"><b>Uber Eats = $0.</b> Delete the app</span>
             <span class="chip"><b>Rentals:</b> only from an earned treat + fun envelope</span>
@@ -672,11 +684,11 @@ async function initApp(){
         <div class="card">
           ${secTitle('WATCH','Flags From Your Statements','act this week','var(--maple)')}
           ${li('WFG charged your card Jul 2 — while the $0-balance dispute is open. Demand a written explanation.','$271.20',1)}
-          ${li('Equitable Life pre-authorized ×2/mo — get the policy explained in writing before it continues.','$400/mo',1)}
           ${li('CIBC account fee — switch plan or meet the waiver minimum.','$16.95/mo',1)}
           ${li('DashPass subscription while “No Uber Eats” is your core habit. Cancel today.','$11.29/mo',1)}
-          ${li('Hertz rental pending — one booking = 12% of a month’s pay.','$504',1)}
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Your card-paying habit is genuinely good — frequent full payments, no interest. The leak is lifestyle, not debt.</div>
+          ${li('CIBC Payment Protector on the Visa — balance insurance is usually poor value. Review dropping it.','review',1)}
+          ${li('CIBC-DISATF — $200 draft twice a month, unlabeled. Find out exactly what it is.','$200 ×2',1)}
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Card is basically at zero (−$158 credit, they owe you). The $504 Hertz was a <b>hold</b> — ~$350 releases, real rental ~$150. Your card habit is genuinely good; the leak is lifestyle, not debt.</div>
         </div>`;
     }
 
