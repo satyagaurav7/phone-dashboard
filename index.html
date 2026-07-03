@@ -108,6 +108,20 @@
   .hcard p{margin:6px 0 0;font-size:14.5px;color:var(--ink)}
   .hcard .sub{color:var(--sub);font-size:13px}
 
+  /* ============ history heatmap ============ */
+  .hmWrap{overflow-x:auto;padding-bottom:4px}
+  .hmMonths{display:flex;gap:3px;height:14px;margin:0 0 4px;font-family:var(--mono);font-size:10px;color:var(--sub)}
+  .hmMonths span{width:13px;flex:0 0 auto;overflow:visible;white-space:nowrap}
+  .hmGrid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,13px);grid-auto-columns:13px;gap:3px}
+  .hmCell{width:13px;height:13px;border-radius:3px;border:1px solid var(--line);background:#FBFCFE;padding:0;cursor:pointer}
+  .hmCell.part{background:#E7C46A;border-color:#C98A00}
+  .hmCell.full{background:var(--customs);border-color:var(--customs)}
+  .hmCell.fail{background:var(--maple);border-color:var(--maple)}
+  .hmCell.today{outline:2px solid var(--passport);outline-offset:1px}
+  .hmDow{display:grid;grid-template-rows:repeat(7,13px);gap:3px;margin:18px 6px 0 0;font-family:var(--mono);font-size:9px;color:var(--sub);flex:0 0 auto}
+  .hmLegend{display:flex;gap:12px;align-items:center;margin-top:10px;font-size:12px;color:var(--sub);flex-wrap:wrap}
+  .hmLegend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
   /* ============ bottom nav ============ */
   nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--passport);border-top:3px solid var(--foil);padding-bottom:env(safe-area-inset-bottom)}
   .navIn{max-width:780px;margin:0 auto;display:flex}
@@ -378,6 +392,7 @@ async function initApp(){
       return Math.round((d-t)/864e5); };
     const getPath=(o,p)=>String(p).split('.').reduce((a,k)=>a==null?a:a[k],o);
     const pad=(n,w)=>String(n).padStart(w,'0');
+    const addDaysStr=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);const t=new Date(d.getTime()-d.getTimezoneOffset()*60000);return t.toISOString().slice(0,10);};
 
     function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];}
     function arc(cx,cy,r,a0,a1){const [x0,y0]=polar(cx,cy,r,a0),[x1,y1]=polar(cx,cy,r,a1);
@@ -560,6 +575,116 @@ async function initApp(){
         </div>`;
     }
 
+    function statTile(big,cap,tone){
+      return `<div class="tile t-${tone}" style="cursor:default"><span class="dot d-${tone}" aria-hidden="true"></span><div class="big">${big}</div><div class="cap">${cap}</div></div>`;
+    }
+
+    function historyHTML(s){
+      const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
+      const days=s.days||{};
+      const dayStat=k=>{const d=days[k];if(!d)return 'none';
+        if(CORE7.some(x=>d[x]==='fail'))return 'fail';
+        const n=CORE7.filter(x=>d[x]===true).length;
+        if(d.completed===true||n===CORE7.length)return 'full';
+        return n>0?'part':'none';};
+      const pctOver=n=>{let c=0;for(let i=0;i<n;i++){const d=days[addDaysStr(Dash.today,-i)];if(d&&d.completed===true)c++;}return Math.round(c/n*100);};
+      const p7=pctOver(7),p30=pctOver(30);
+
+      const WEEKS=16;
+      let start=addDaysStr(Dash.today,-(WEEKS*7-1));
+      const sdow=(new Date(start+'T00:00:00').getDay()+6)%7;
+      start=addDaysStr(start,-sdow);
+      const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      let cells='',months='';
+      for(let w=0;;w++){
+        const wk=addDaysStr(start,w*7);
+        if(wk>Dash.today)break;
+        const wd=new Date(wk+'T00:00:00');
+        months+=`<span>${wd.getDate()<=7?MON[wd.getMonth()]:''}</span>`;
+        for(let r=0;r<7;r++){
+          const ds=addDaysStr(start,w*7+r);
+          if(ds>Dash.today){cells+='<span></span>';continue;}
+          const st=dayStat(ds);
+          const nice=new Date(ds+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'});
+          cells+=`<button class="hmCell ${st==='none'?'':st}${ds===Dash.today?' today':''}" data-hday="${ds}" aria-label="${nice}: ${st==='full'?'day locked':st==='fail'?'entry refused':st==='part'?'partial entries':'no entries'}" title="${nice}"></button>`;
+        }
+      }
+      const DOW=['M','','W','','F','',''];
+      return `
+        <div class="card">
+          ${secTitle('RECORD','The Record')}
+          <div class="tiles">
+            ${statTile('🔥 '+s.streak,'current streak',s.streak>0?'good':'idle')}
+            ${statTile(s.best,'best ever',s.best>0?'good':'idle')}
+            ${statTile(p7+'%','locked · last 7 days',p7>=70?'good':p7>=40?'warn':'bad')}
+            ${statTile(p30+'%','locked · last 30 days',p30>=70?'good':p30>=40?'warn':'bad')}
+          </div>
+        </div>
+        <div class="card">
+          ${secTitle('LOG','Travel History','16 weeks')}
+          <div class="hmWrap">
+            <div style="display:flex">
+              <div class="hmDow">${DOW.map(x=>`<span>${x}</span>`).join('')}</div>
+              <div>
+                <div class="hmMonths">${months}</div>
+                <div class="hmGrid">${cells}</div>
+              </div>
+            </div>
+          </div>
+          <div class="hmLegend">
+            <span><i style="background:var(--customs)"></i>Locked</span>
+            <span><i style="background:#E7C46A"></i>Partial</span>
+            <span><i style="background:var(--maple)"></i>Refused</span>
+            <span><i style="background:#FBFCFE;border:1px solid var(--line)"></i>Empty</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Tap any day to inspect or amend its entries.</div>
+        </div>`;
+    }
+
+    function openDayModal(dstr){
+      const ov=document.createElement('div'); ov.className='overlay'; ov.id='dashModal';
+      const niceDate=new Date(dstr+'T00:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+      const groups=[
+        ['Daily Wins',WINS.map(([k,e,l])=>[k,e,l])],
+        ['Fuel',FUEL.map(([k,e,l])=>[k,e,l])],
+        ['Supplements',SUPPS.map(([k,l])=>[k,'💊',l])],
+      ];
+      const render=()=>{
+        const d=Dash.state.days[dstr]||{};
+        const rowsHtml=groups.map(([g,items])=>
+          `<div style="font-family:var(--disp);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:10px 0 6px">${g}</div>`+
+          items.map(([k,e,l])=>{
+            const st=d[k];
+            const cls=st===true?'done':st==='fail'?'fail':'';
+            const stamp=st===true?'DONE ✓':st==='fail'?'DENIED ✗':'STAMP';
+            return `<div class="row ${cls}" role="button" tabindex="0" aria-label="${l}: ${st===true?'done':st==='fail'?'denied':'not stamped'}" data-hedit="${k}" style="padding:8px 10px;margin-bottom:6px">
+              <span class="emo" aria-hidden="true">${e}</span><span class="lbl" style="font-size:14px">${l}</span><span class="spacer"></span><span class="stamp" style="font-size:10.5px;padding:5px 8px">${stamp}</span></div>`;
+          }).join('')
+        ).join('');
+        ov.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Entry ${niceDate}">
+          <header>Entry — ${niceDate}</header>
+          <div class="body" style="max-height:62vh;overflow-y:auto">
+            ${rowsHtml}
+            <div class="mBtns" style="margin-top:12px"><button class="cancel" data-mclose>Close</button></div>
+          </div></div>`;
+        ov.querySelector('[data-mclose]').onclick=()=>ov.remove();
+        ov.querySelectorAll('[data-hedit]').forEach(el=>{
+          const fire=()=>{
+            const k=el.dataset.hedit;
+            const cur=(Dash.state.days[dstr]||{})[k];
+            const next=cur===true?'fail':cur==='fail'?false:true;
+            Dash.set(`days.${dstr}.${k}`,next);
+            render();
+          };
+          el.addEventListener('click',fire);
+          el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fire();}});
+        });
+      };
+      ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+      render();
+      document.body.appendChild(ov);
+    }
+
     function healthHTML(){
       return `
         <div class="card hcard">
@@ -577,7 +702,7 @@ async function initApp(){
         </div>`;
     }
 
-    const TABS=[['today','✓','Today'],['pr','🍁','PR'],['money','💵','Money'],['health','🩺','Health']];
+    const TABS=[['today','✓','Today'],['pr','🍁','PR'],['money','💵','Money'],['health','🩺','Health'],['history','🗓️','History']];
     function navHTML(){
       return `<nav aria-label="Sections"><div class="navIn">${TABS.map(([k,e,l])=>
         `<button class="navBtn ${tab===k?'on':''}" data-tab="${k}" aria-current="${tab===k}"><span class="nEmo" aria-hidden="true">${e}</span><span class="nLbl">${l}</span></button>`).join('')}</div></nav>`;
@@ -674,6 +799,7 @@ async function initApp(){
         (tab==='today'?todayHTML(s,d)
         :tab==='pr'?prHTML(s)
         :tab==='money'?moneyHTML(s)
+        :tab==='history'?historyHTML(s)
         :healthHTML()) + navHTML();
 
       root.querySelectorAll('[data-toggle]').forEach(el=>{
@@ -703,6 +829,9 @@ async function initApp(){
           }
           openModal(el.dataset.edit);
         });
+      });
+      root.querySelectorAll('[data-hday]').forEach(el=>{
+        el.addEventListener('click',()=>openDayModal(el.dataset.hday));
       });
       root.querySelectorAll('[data-tab]').forEach(el=>{
         el.addEventListener('click',()=>{ tab=el.dataset.tab; draw(Dash.state); window.scrollTo({top:0}); });
