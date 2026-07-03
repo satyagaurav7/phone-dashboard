@@ -561,6 +561,7 @@ async function initApp(){
       const c=s.config;
       const util=c.cardLimit>0?Math.round(c.cardBal/c.cardLimit*100):null;
       const rD=daysToDay(c.rentDay), cD=daysToDay(c.ccDay);
+      const li=(lbl,amt,bad)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px dashed var(--line);font-size:14px"><span>${lbl}</span><b style="font-family:var(--mono);white-space:nowrap;color:${bad?'var(--maple)':'var(--ink)'}">${amt}</b></div>`;
       return `
         <div class="card">
           ${secTitle('LEDGER','Numbers')}
@@ -572,6 +573,49 @@ async function initApp(){
             ${tileHTML('rentDay', rD==null?'—':rD, 'days · rent due', rD!=null&&rD<=3?'warn':'idle')}
             ${tileHTML('ccDay', cD==null?'—':cD, 'days · card due', cD!=null&&cD<=3?'bad':'idle')}
           </div>
+        </div>
+        <div class="card">
+          ${secTitle('AUDIT','June Reality Check','51.7% of pay','var(--maple)')}
+          ${li('Food delivery — 25 Uber Eats orders','$497',1)}
+          ${li('Dining out + coffee (20 Tims runs)','$429',1)}
+          ${li('Groceries — actual food at home','$155')}
+          ${li('Car rentals ×4 weekends + gas','$835',1)}
+          ${li('Uber rides — 27 trips','$280',1)}
+          ${li('Subscriptions ×9 (three AI tools)','$160',1)}
+          ${li('Cannabis — 7 buys','$59',1)}
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Food + wheels vs net pay $4,249</span><b style="font-family:var(--mono);color:var(--maple)">$2,196 · 52%</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">From your real CIBC statements, June 1 – July 2. Half a paycheque went to convenience. Groceries were only $155 of $1,081 total food spend.</div>
+        </div>
+        <div class="card">
+          ${secTitle('PLAN','Monthly Envelopes','net $4,249')}
+          ${li('Rent (Centurion, 1st)','$930')}
+          ${li('Fixed: phone + insulin/pharmacy + insurance','$340')}
+          ${li('Groceries — this replaces delivery','$400')}
+          ${li('Eating out — 2 proper meals, not 45 orders','$150')}
+          ${li('Transport — bus pass + ONE rental weekend cap','$300')}
+          ${li('Subscriptions — Spotify + ONE AI tool','$60')}
+          ${li('Cannabis — taper envelope, cash only','$40')}
+          ${li('Fun / misc','$150')}
+          ${li('Family / home support','$800')}
+          ${li('Emergency fund — auto, payday, first','$500')}
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Left as buffer / CELPIP retest fund</span><b style="font-family:var(--mono);color:var(--customs)">~$580</b></div>
+          <div class="chips" style="margin-top:12px">
+            <span class="chip"><b>Uber Eats = $0.</b> Delete the app</span>
+            <span class="chip"><b>1 rental weekend</b>/mo · $150 all-in</span>
+            <span class="chip"><b>Payday order:</b> $500 e-fund first</span>
+            <span class="chip"><b>Tims cap</b> $20/mo — brew at home</span>
+            <span class="chip"><b>One AI sub</b> — cancel the rest</span>
+            <span class="chip"><b>24h rule</b> on any new money product</span>
+          </div>
+        </div>
+        <div class="card">
+          ${secTitle('WATCH','Flags From Your Statements','act this week','var(--maple)')}
+          ${li('WFG charged your card Jul 2 — while the $0-balance dispute is open. Demand a written explanation.','$271.20',1)}
+          ${li('Equitable Life pre-authorized ×2/mo — get the policy explained in writing before it continues.','$400/mo',1)}
+          ${li('CIBC account fee — switch plan or meet the waiver minimum.','$16.95/mo',1)}
+          ${li('DashPass subscription while “No Uber Eats” is your core habit. Cancel today.','$11.29/mo',1)}
+          ${li('Hertz rental pending — one booking = 12% of a month’s pay.','$504',1)}
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Your card-paying habit is genuinely good — frequent full payments, no interest. The leak is lifestyle, not debt.</div>
         </div>`;
     }
 
