@@ -52,6 +52,11 @@
   .mrz{background:#fff;color:var(--passport);font-family:var(--mono);font-size:12px;letter-spacing:2px;
     padding:8px 12px;margin:0 -18px;white-space:nowrap;overflow:hidden;border-top:2px dashed var(--line)}
   #syncStatus{font-family:var(--mono);font-size:11px;color:var(--foil);opacity:.85;margin-top:2px}
+  .xpWrap{padding:0 0 14px}
+  .xpTop{display:flex;justify-content:space-between;font-family:var(--disp);font-weight:600;letter-spacing:.14em;font-size:12px;color:var(--foil);text-transform:uppercase;margin-bottom:5px}
+  .xpBar{height:8px;background:rgba(255,255,255,.14);border-radius:4px;overflow:hidden}
+  .xpFill{height:100%;background:var(--foil)}
+  .xpSub{font-family:var(--mono);font-size:11px;color:#B9C6DE;margin-top:4px}
 
   /* ============ form cards ============ */
   .card{background:var(--card);border:1.5px solid var(--line);border-radius:8px;padding:16px;margin-top:14px}
@@ -274,7 +279,7 @@ async function initApp(){
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
 
   function normalize(){
-    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0}, S.config||{});
+    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0,treatsClaimed:0}, S.config||{});
     S.actions = Object.assign({oinp:false,wfg:false,carfax:false,pcc:false,celpip:false,innobox:false,resume:false,permitdoc:false}, S.actions||{});
     S.days = S.days || {};
     S.streak = S.streak || 0; S.best = S.best || 0; S.lastComplete = S.lastComplete || null;
@@ -394,6 +399,25 @@ async function initApp(){
     const pad=(n,w)=>String(n).padStart(w,'0');
     const addDaysStr=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);const t=new Date(d.getTime()-d.getTimezoneOffset()*60000);return t.toISOString().slice(0,10);};
 
+    /* ---------- Visa Points (XP) — derived from real record, never stored ---------- */
+    const LEVELS=[[0,'Visitor'],[150,'Student'],[400,'Worker'],[800,'Candidate'],[1400,'Nominee'],[2200,'Permanent Resident']];
+    function calcXP(s){
+      const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
+      let xp=0;
+      for(const k in (s.days||{})){
+        const d=s.days[k]; if(!d) continue;
+        if(d.completed===true) xp+=10;
+        else if(CORE7.some(x=>d[x]==='fail')) xp-=15;
+      }
+      for(const k in (s.actions||{})) if(s.actions[k]===true) xp+=100;
+      return Math.max(0,xp);
+    }
+    function levelInfo(xp){
+      let i=0; for(let j=0;j<LEVELS.length;j++) if(xp>=LEVELS[j][0]) i=j;
+      const next=LEVELS[i+1]||null;
+      return {idx:i,name:LEVELS[i][1],next,progress:next?(xp-LEVELS[i][0])/(next[0]-LEVELS[i][0]):1};
+    }
+
     function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];}
     function arc(cx,cy,r,a0,a1){const [x0,y0]=polar(cx,cy,r,a0),[x1,y1]=polar(cx,cy,r,a1);
       return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;}
@@ -474,6 +498,32 @@ async function initApp(){
         : `STREAK<${pad(shownStreak,3)}<BEST<${pad(s.best,3)}<DONE<${doneCore}<OF<${CORE7.length}<PR<2027` );
       const mrz=`${mrz1}<br>${mrz2}`;
 
+      const xp=calcXP(s), lv=levelInfo(xp);
+      const xpBlock=`<div class="xpWrap">
+        <div class="xpTop"><span>Visa Points · ${xp}</span><span>Lv${lv.idx+1} · ${lv.name}</span></div>
+        <div class="xpBar"><div class="xpFill" style="width:${Math.round(lv.progress*100)}%"></div></div>
+        <div class="xpSub">${lv.next?`${lv.next[0]-xp} pts to ${lv.next[1].toUpperCase()}`:'MAX LEVEL — you made it home'} · +10 lock · +100 action · −15 refusal</div>
+      </div>`;
+
+      const dow=new Date().getDay();
+      const protoName=dow===1||dow===2?'Office Day Protocol':dow>=3&&dow<=5?'WFH Day Protocol':dow===6?'Saturday Protocol':'Sunday Protocol';
+      const proto=(dow===1||dow===2)?[
+        ['06:45','Wake · insulin · cold shower'],['07:30','Breakfast at home'],['08:10','Bus to office — leave early, no Uber'],
+        ['12:30','Packed lunch (prepped Sunday)'],['17:30','Bus home'],['18:30','Workout / move'],
+        ['19:30','Cook dinner'],['21:00','CELPIP reading — 20 min'],['23:00','Lights out']
+      ]:(dow>=3&&dow<=5)?[
+        ['07:45','Wake · insulin · shower'],['08:30','Breakfast at home'],['09:00','Work — WFH'],
+        ['12:30','Cook lunch — no delivery'],['17:00','Log off'],['17:30','Workout / move'],
+        ['19:00','Cook dinner'],['21:00','CELPIP reading — 20 min'],['23:00','Lights out']
+      ]:(dow===6)?[
+        ['10:00','Groceries — full week in one run'],['13:00','Meal-prep 5 lunches'],
+        ['16:00','Free — friends / trip (use an earned treat)'],['21:00','CELPIP reading — 20 min']
+      ]:[
+        ['11:00','Slow morning'],['15:00','CELPIP reading — 20 min'],
+        ['17:00','PLAN SUNDAY — budget check · book the week'],['19:00','Prep clothes + lunch for office Monday'],['22:30','Early night']
+      ];
+      const protoRows=proto.map(([t,l])=>`<div style="display:flex;gap:12px;padding:6px 2px;border-bottom:1px dashed var(--line);font-size:14px"><b style="font-family:var(--mono);flex:0 0 52px">${t}</b><span>${l}</span></div>`).join('');
+
       const winRows = WINS.map(([k,e,l,sub])=>{
         if(k!=='shower') return rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k]);
         const extra=`<span class="timeWrap"><input type="time" aria-label="Shower time" data-time="days.${Dash.today}.showerTime" value="${d.showerTime||''}"></span>`;
@@ -500,6 +550,7 @@ async function initApp(){
             </div>
           </div>
           <div class="statusLine"${busted?' style="color:#FF9A8A"':''}>${status}</div>
+          ${xpBlock}
           <div class="mrz" aria-hidden="true">${mrz}</div>
         </div>
 
@@ -521,6 +572,11 @@ async function initApp(){
         <div class="card">
           ${secTitle('SECTION D','Guardrails')}
           <div class="chips">${chips}</div>
+        </div>
+        <div class="card">
+          ${secTitle('SECTION E',protoName)}
+          ${protoRows}
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Mon–Tue office · Wed–Fri WFH · 9–5. The protocol exists so decisions are already made — you just follow the timetable.</div>
         </div>`;
     }
 
@@ -561,6 +617,8 @@ async function initApp(){
       const c=s.config;
       const util=c.cardLimit>0?Math.round(c.cardBal/c.cardLimit*100):null;
       const rD=daysToDay(c.rentDay), cD=daysToDay(c.ccDay);
+      const xp=calcXP(s), lv=levelInfo(xp);
+      const treats=Math.max(0, lv.idx-(c.treatsClaimed||0));
       const li=(lbl,amt,bad)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px dashed var(--line);font-size:14px"><span>${lbl}</span><b style="font-family:var(--mono);white-space:nowrap;color:${bad?'var(--maple)':'var(--ink)'}">${amt}</b></div>`;
       return `
         <div class="card">
@@ -572,6 +630,7 @@ async function initApp(){
             ${tileHTML('budgetLeft', c.budgetLeft?'$'+c.budgetLeft:'SET', 'budget left', 'idle')}
             ${tileHTML('rentDay', rD==null?'—':rD, 'days · rent due', rD!=null&&rD<=3?'warn':'idle')}
             ${tileHTML('ccDay', cD==null?'—':cD, 'days · card due', cD!=null&&cD<=3?'bad':'idle')}
+            ${tileHTML('treats', treats, 'treats earned · $50 cap', treats>0?'good':'idle')}
           </div>
         </div>
         <div class="card">
@@ -588,23 +647,25 @@ async function initApp(){
         </div>
         <div class="card">
           ${secTitle('PLAN','Monthly Envelopes','net $4,249')}
+          ${li('Mom — loan support. First after rent. Non-negotiable.','$2,000')}
           ${li('Rent (Centurion, 1st)','$930')}
-          ${li('Fixed: phone + insulin/pharmacy + insurance','$340')}
-          ${li('Groceries — this replaces delivery','$400')}
-          ${li('Eating out — 2 proper meals, not 45 orders','$150')}
-          ${li('Transport — bus pass + ONE rental weekend cap','$300')}
-          ${li('Subscriptions — Spotify + ONE AI tool','$60')}
-          ${li('Cannabis — taper envelope, cash only','$40')}
-          ${li('Fun / misc','$150')}
-          ${li('Family / home support','$800')}
-          ${li('Emergency fund — auto, payday, first','$500')}
-          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Left as buffer / CELPIP retest fund</span><b style="font-family:var(--mono);color:var(--customs)">~$580</b></div>
+          ${li('Equitable Life — pending your verification','$400',1)}
+          ${li('Fixed: phone + insulin/pharmacy + bank fee','$140')}
+          ${li('Groceries — this replaces delivery','$350')}
+          ${li('Transport — bus pass first, no casual Ubers','$150')}
+          ${li('Emergency fund — auto on payday','$100')}
+          ${li('Fun + earned treats ($50/level-up from here)','$60')}
+          ${li('Subscriptions — Spotify + ONE AI tool','$40')}
+          ${li('Cannabis — taper envelope, cash only','$20')}
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Buffer</span><b style="font-family:var(--mono);color:var(--customs)">~$59</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Sending $2,000 home makes this tight — that's the honest math, not a punishment. Your two big levers: if the Equitable $400 turns out cancellable, e-fund jumps to $500/mo; and every delivery dollar you don't spend is the only slack this budget has.</div>
           <div class="chips" style="margin-top:12px">
             <span class="chip"><b>Uber Eats = $0.</b> Delete the app</span>
-            <span class="chip"><b>1 rental weekend</b>/mo · $150 all-in</span>
-            <span class="chip"><b>Payday order:</b> $500 e-fund first</span>
+            <span class="chip"><b>Rentals:</b> only from an earned treat + fun envelope</span>
+            <span class="chip"><b>Payday order:</b> mom → rent → e-fund → rest</span>
             <span class="chip"><b>Tims cap</b> $20/mo — brew at home</span>
             <span class="chip"><b>One AI sub</b> — cancel the rest</span>
+            <span class="chip"><b>Level-up =</b> 1 guilt-free treat · $50 cap</span>
             <span class="chip"><b>24h rule</b> on any new money product</span>
           </div>
         </div>
@@ -654,10 +715,13 @@ async function initApp(){
         }
       }
       const DOW=['M','','W','','F','',''];
+      const xp=calcXP(s), lv=levelInfo(xp);
       return `
         <div class="card">
           ${secTitle('RECORD','The Record')}
           <div class="tiles">
+            ${statTile(xp,'visa points',xp>0?'good':'idle')}
+            ${statTile('L'+(lv.idx+1),lv.name,'idle')}
             ${statTile('🔥 '+s.streak,'current streak',s.streak>0?'good':'idle')}
             ${statTile(s.best,'best ever',s.best>0?'good':'idle')}
             ${statTile(p7+'%','locked · last 7 days',p7>=70?'good':p7>=40?'warn':'bad')}
@@ -763,6 +827,7 @@ async function initApp(){
       budgetLeft:{title:'Budget Left',fields:[{path:'config.budgetLeft',label:'Amount left ($)',type:'number'}]},
       rentDay:{title:'Rent Due Day',fields:[{path:'config.rentDay',label:'Day of month (1–31)',type:'number'}]},
       ccDay:{title:'Card Due Day',fields:[{path:'config.ccDay',label:'Day of month (1–31)',type:'number'}]},
+      treats:{title:'Guilt-Free Treats',fields:[{path:'config.treatsClaimed',label:'Treats used so far (1 earned per level-up)',type:'number'}]},
     };
     function openModal(key){
       const spec=EDITS[key]; if(!spec) return;
