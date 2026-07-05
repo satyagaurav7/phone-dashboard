@@ -273,7 +273,7 @@ async function initApp(){
   const addDays = (s,n) => { const d = new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return todayStr(d); };
   const T = todayStr();
 
-  const blankDay = () => ({nouber:false,workout:false,language:false,shower:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,showerTime:'',completed:false});
+  const blankDay = () => ({smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,completed:false});
 
   let S = {};
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
@@ -306,7 +306,7 @@ async function initApp(){
     catch(e) { setSyncUI('Saved on this device'); }
   };
 
-  const CORE = ['nouber','workout','language','shower','breakfast','lunch','dinner'];
+  const CORE = ['smokefree','gym','language','cooked','sleep'];
   const getPath = (o,p) => String(p).split('.').reduce((a,k)=>a==null?a:a[k], o);
 
   window.Dash = {
@@ -350,10 +350,16 @@ async function initApp(){
     const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const WINS = [
-      ['nouber','🚫','No Uber / Uber Eats',''],
-      ['workout','🏋️','Moved my body',''],
-      ['language','📚','CELPIP English — reading practice',''],
-      ['shower','🚿','Shower + brush','cold if possible'],
+      ['smokefree','🚭','Smoke-free','no weed, no vape — clean day'],
+      ['gym','🏋️','Gym / workout','went, that’s the win'],
+      ['language','📚','CELPIP reading','20 min — the PR blocker'],
+      ['cooked','🍳','Cooked — zero delivery','no Uber Eats, period'],
+      ['sleep','😴','Sleep on schedule','in bed / woke on time'],
+    ];
+    const GROWTH = [
+      ['study','💻','Cyber upskill','30 min — CISSP / cloud / AppSec'],
+      ['money','💸','Money move','side income · invest · learn'],
+      ['meditate','🧘','Meditate / breathwork','10 min of quiet'],
     ];
     const FUEL = [
       ['breakfast','🌅','Breakfast','core'],
@@ -402,12 +408,14 @@ async function initApp(){
     /* ---------- Visa Points (XP) — derived from real record, never stored ---------- */
     const LEVELS=[[0,'Visitor'],[150,'Student'],[400,'Worker'],[800,'Candidate'],[1400,'Nominee'],[2200,'Permanent Resident']];
     function calcXP(s){
-      const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
+      const CORE7=['smokefree','gym','language','cooked','sleep'];
+      const GROWTHK=['study','money','meditate'];
       let xp=0;
       for(const k in (s.days||{})){
         const d=s.days[k]; if(!d) continue;
         if(d.completed===true) xp+=10;
         else if(CORE7.some(x=>d[x]==='fail')) xp-=15;
+        xp += GROWTHK.filter(x=>d[x]===true).length*5;  // bonus: growth beyond the 5 keystones
       }
       for(const k in (s.actions||{})) if(s.actions[k]===true) xp+=100;
       return Math.max(0,xp);
@@ -478,7 +486,7 @@ async function initApp(){
     }
 
     function todayHTML(s,d){
-      const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
+      const CORE7=['smokefree','gym','language','cooked','sleep'];
       const doneCore=CORE7.filter(k=>d[k]===true).length;
       const failedCore=CORE7.filter(k=>d[k]==='fail').length;
       const busted=failedCore>0;
@@ -524,11 +532,9 @@ async function initApp(){
       ];
       const protoRows=proto.map(([t,l])=>`<div style="display:flex;gap:12px;padding:6px 2px;border-bottom:1px dashed var(--line);font-size:14px"><b style="font-family:var(--mono);flex:0 0 52px">${t}</b><span>${l}</span></div>`).join('');
 
-      const winRows = WINS.map(([k,e,l,sub])=>{
-        if(k!=='shower') return rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k]);
-        const extra=`<span class="timeWrap"><input type="time" aria-label="Shower time" data-time="days.${Dash.today}.showerTime" value="${d.showerTime||''}"></span>`;
-        return rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k],'',extra);
-      }).join('');
+      const winRows = WINS.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k])).join('');
+      const growthRows = GROWTH.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k],'navyInk')).join('');
+      const growthDone = GROWTH.filter(([k])=>d[k]===true).length;
 
       const fuelRows = FUEL.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub==='core'?'':sub,d[k],k==='insulin'?'navyInk':'')).join('');
       const suppDone = SUPPS.filter(([k])=>d[k]===true).length;
@@ -556,9 +562,9 @@ async function initApp(){
 
         <div class="grid2">
           <div class="card">
-            ${secTitle('SECTION A','Daily Wins',`${WINS.filter(([k])=>d[k]===true).length}/4`, 'var(--customs)')}
+            ${secTitle('SECTION A','Daily Wins',`${WINS.filter(([k])=>d[k]===true).length}/${WINS.length} keystone`, 'var(--customs)')}
             ${winRows}
-            <div style="font-size:12px;color:var(--sub);margin-top:4px">Tap once = DONE · tap again = DENIED (breaks your streak) · tap again = clear</div>
+            <div style="font-size:12px;color:var(--sub);margin-top:4px">These 5 lock your day. Tap once = DONE · again = DENIED (breaks streak) · again = clear</div>
           </div>
           <div class="card">
             ${secTitle('SECTION B','Fuel',`${['breakfast','lunch','dinner'].filter(k=>d[k]===true).length}/3 meals`, 'var(--customs)')}
@@ -566,15 +572,20 @@ async function initApp(){
           </div>
         </div>
         <div class="card">
-          ${secTitle('SECTION C','Supplements',`${suppDone}/${SUPPS.length}`, suppDone===SUPPS.length?'var(--customs)':'var(--sub)')}
+          ${secTitle('SECTION C','Growth · Bonus',`${growthDone}/${GROWTH.length} · +5 pts each`, growthDone===GROWTH.length?'var(--customs)':'var(--sub)')}
+          ${growthRows}
+          <div style="font-size:12px;color:var(--sub);margin-top:4px">Not required to lock the day — but every one is Visa Points toward your next level. Ambition is optional; it's rewarded.</div>
+        </div>
+        <div class="card">
+          ${secTitle('SECTION D','Supplements',`${suppDone}/${SUPPS.length}`, suppDone===SUPPS.length?'var(--customs)':'var(--sub)')}
           ${suppRows}
         </div>
         <div class="card">
-          ${secTitle('SECTION D','Guardrails')}
+          ${secTitle('SECTION E','Guardrails')}
           <div class="chips">${chips}</div>
         </div>
         <div class="card">
-          ${secTitle('SECTION E',protoName)}
+          ${secTitle('SECTION F',protoName)}
           ${protoRows}
           <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Mon–Tue office · Wed–Fri WFH · 9–5. The protocol exists so decisions are already made — you just follow the timetable.</div>
         </div>`;
@@ -697,7 +708,7 @@ async function initApp(){
     }
 
     function historyHTML(s){
-      const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
+      const CORE7=['smokefree','gym','language','cooked','sleep'];
       const days=s.days||{};
       const dayStat=k=>{const d=days[k];if(!d)return 'none';
         if(CORE7.some(x=>d[x]==='fail'))return 'fail';
@@ -766,6 +777,7 @@ async function initApp(){
       const niceDate=new Date(dstr+'T00:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
       const groups=[
         ['Daily Wins',WINS.map(([k,e,l])=>[k,e,l])],
+        ['Growth',GROWTH.map(([k,e,l])=>[k,e,l])],
         ['Fuel',FUEL.map(([k,e,l])=>[k,e,l])],
         ['Supplements',SUPPS.map(([k,l])=>[k,'💊',l])],
       ];
@@ -912,7 +924,7 @@ async function initApp(){
     function draw(s){
       const root=document.getElementById('appRoot');
       const d=(s.days&&s.days[Dash.today])||{};
-      const CORE7=['nouber','workout','language','shower','breakfast','lunch','dinner'];
+      const CORE7=['smokefree','gym','language','cooked','sleep'];
       const doneCount=CORE7.filter(k=>d[k]===true).length;
       const busted=CORE7.some(k=>d[k]==='fail');
 
