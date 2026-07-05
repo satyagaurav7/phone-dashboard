@@ -273,7 +273,7 @@ async function initApp(){
   const addDays = (s,n) => { const d = new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return todayStr(d); };
   const T = todayStr();
 
-  const blankDay = () => ({smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,completed:false});
+  const blankDay = () => ({smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],completed:false});
 
   let S = {};
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
@@ -361,6 +361,12 @@ async function initApp(){
       ['money','💸','Money move','side income · invest · learn'],
       ['meditate','🧘','Meditate / breathwork','10 min of quiet'],
     ];
+    const FINES = [
+      ['cab','🚕','Cabbed it — overslept',12],
+      ['delivery','🍔','Ordered delivery',20],
+      ['smoke','🚬','Bought smokes / weed',15],
+      ['impulse','🛒','Impulse buy I didn’t need',15],
+    ];
     const FUEL = [
       ['breakfast','🌅','Breakfast','core'],
       ['lunch','☀️','Lunch','core'],
@@ -416,6 +422,7 @@ async function initApp(){
         if(d.completed===true) xp+=10;
         else if(CORE7.some(x=>d[x]==='fail')) xp-=15;
         xp += GROWTHK.filter(x=>d[x]===true).length*5;  // bonus: growth beyond the 5 keystones
+        xp -= (d.fines?d.fines.length:0)*15;             // penalty: each logged fine costs points
       }
       for(const k in (s.actions||{})) if(s.actions[k]===true) xp+=100;
       return Math.max(0,xp);
@@ -516,13 +523,19 @@ async function initApp(){
       const dow=new Date().getDay();
       const protoName=dow===1||dow===2?'Office Day Protocol':dow>=3&&dow<=5?'WFH Day Protocol':dow===6?'Saturday Protocol':'Sunday Protocol';
       const proto=(dow===1||dow===2)?[
-        ['06:45','Wake · insulin · cold shower'],['07:30','Breakfast at home'],['08:10','Bus to office — leave early, no Uber'],
-        ['12:30','Packed lunch (prepped Sunday)'],['17:30','Bus home'],['18:30','Workout / move'],
-        ['19:30','Cook dinner'],['21:00','CELPIP reading — 20 min'],['23:00','Lights out']
+        ['06:15','Wake · CGM + basal · water'],['06:20','Meditate 10 min'],['06:35','Shower + brush'],
+        ['06:50','Breakfast + bolus + supps'],['07:15','Pack lunch + gym bag'],['07:30','Leave — walk to stop'],
+        ['07:37','BUS to Kellogg Ln (confirm time)'],['09:00','Work'],['12:30','Packed lunch + bolus'],
+        ['17:00','Bus home'],['18:20','GYM — 710 Proudfoot Ln · 45 min'],['19:45','Cook dinner + insulin'],
+        ['20:30','CELPIP reading 20 min'],['21:00','Cyber upskill / money move'],['21:45','Prep tomorrow · creatine'],
+        ['22:45','Lights out — smoke-free ✓']
       ]:(dow>=3&&dow<=5)?[
-        ['07:45','Wake · insulin · shower'],['08:30','Breakfast at home'],['09:00','Work — WFH'],
-        ['12:30','Cook lunch — no delivery'],['17:00','Log off'],['17:30','Workout / move'],
-        ['19:00','Cook dinner'],['21:00','CELPIP reading — 20 min'],['23:00','Lights out']
+        ['06:45','Wake · CGM + basal · water'],['06:55','Leave for gym — 710 Proudfoot Ln'],
+        ['07:10','GYM — full session 60–70 min'],['08:20','Home · shower'],['08:50','Breakfast + bolus + supps'],
+        ['09:00','Work — WFH'],['12:30','COOK lunch + insulin (no delivery)'],['17:00','Log off'],
+        ['17:15','CELPIP reading 20 min'],['17:45','Cyber upskill + money move'],['18:45','Cook dinner + insulin'],
+        ['19:45','Free / earned treat'],['21:15','Meditate 10 min'],['21:45','Prep · creatine · wind down'],
+        ['22:30','Lights out — smoke-free ✓']
       ]:(dow===6)?[
         ['10:00','Groceries — full week in one run'],['13:00','Meal-prep 5 lunches'],
         ['16:00','Free — friends / trip (use an earned treat)'],['21:00','CELPIP reading — 20 min']
@@ -535,6 +548,15 @@ async function initApp(){
       const winRows = WINS.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k])).join('');
       const growthRows = GROWTH.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k],'navyInk')).join('');
       const growthDone = GROWTH.filter(([k])=>d[k]===true).length;
+
+      const fines=d.fines||[];
+      const fineTotal=fines.reduce((t,k)=>{const f=FINES.find(x=>x[0]===k);return t+(f?f[3]:0);},0);
+      const fineRows=FINES.map(([k,e,l,amt])=>`<div class="row mapleInk" role="button" tabindex="0" aria-label="Log fine: ${l}, minus $${amt}" data-fine="${k}" style="margin-bottom:8px">
+        <span class="emo" aria-hidden="true">${e}</span><span><span class="lbl">${l}</span></span><span class="spacer"></span>
+        <span class="stamp">−$${amt} · −15pts</span></div>`).join('');
+      const fineLog = fines.length
+        ? `<div style="font-size:12.5px;color:var(--maple);margin-top:6px;font-family:var(--mono)">Today: ${fines.map(k=>{const f=FINES.find(x=>x[0]===k);return f?f[1]:k;}).join(' ')} · −$${fineTotal} · −${fines.length*15}pts <button data-fineundo style="color:var(--sub);text-decoration:underline;font-family:var(--mono);font-size:12px">undo last</button></div>`
+        : `<div style="font-size:12.5px;color:var(--customs);margin-top:6px;font-family:var(--mono)">CLEAN — $0 in fines today. Keep it that way.</div>`;
 
       const fuelRows = FUEL.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub==='core'?'':sub,d[k],k==='insulin'?'navyInk':'')).join('');
       const suppDone = SUPPS.filter(([k])=>d[k]===true).length;
@@ -575,6 +597,12 @@ async function initApp(){
           ${secTitle('SECTION C','Growth · Bonus',`${growthDone}/${GROWTH.length} · +5 pts each`, growthDone===GROWTH.length?'var(--customs)':'var(--sub)')}
           ${growthRows}
           <div style="font-size:12px;color:var(--sub);margin-top:4px">Not required to lock the day — but every one is Visa Points toward your next level. Ambition is optional; it's rewarded.</div>
+        </div>
+        <div class="card">
+          ${secTitle('PENALTY','The Fine Box', fines.length?`−$${fineTotal} today`:'$0 · clean', fines.length?'var(--maple)':'var(--customs)')}
+          ${fineRows}
+          ${fineLog}
+          <div style="font-size:12px;color:var(--sub);margin-top:6px">Tap the moment you slip. It's the real money you burned plus 15 Visa Points. Logging it honestly IS the discipline — hiding it is the only real failure.</div>
         </div>
         <div class="card">
           ${secTitle('SECTION D','Supplements',`${suppDone}/${SUPPS.length}`, suppDone===SUPPS.length?'var(--customs)':'var(--sub)')}
@@ -962,6 +990,22 @@ async function initApp(){
           }
           openModal(el.dataset.edit);
         });
+      });
+      root.querySelectorAll('[data-fine]').forEach(el=>{
+        const fire=()=>{
+          const cur=(getPath(Dash.state,`days.${Dash.today}.fines`)||[]).slice();
+          cur.push(el.dataset.fine);
+          Dash.set(`days.${Dash.today}.fines`,cur);
+        };
+        el.addEventListener('click',fire);
+        el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fire(); } });
+      });
+      const undoBtn=root.querySelector('[data-fineundo]');
+      if(undoBtn) undoBtn.addEventListener('click',e=>{
+        e.stopPropagation();
+        const cur=(getPath(Dash.state,`days.${Dash.today}.fines`)||[]).slice();
+        cur.pop();
+        Dash.set(`days.${Dash.today}.fines`,cur);
       });
       root.querySelectorAll('[data-hday]').forEach(el=>{
         el.addEventListener('click',()=>openDayModal(el.dataset.hday));
