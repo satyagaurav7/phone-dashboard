@@ -113,6 +113,23 @@
   .hcard p{margin:6px 0 0;font-size:14.5px;color:var(--ink)}
   .hcard .sub{color:var(--sub);font-size:13px}
 
+  /* ============ timetable (Plan tab) ============ */
+  .tl{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:1.5px solid var(--line);
+    border-radius:6px;margin-bottom:6px;background:#FBFCFE;cursor:pointer;user-select:none}
+  .tl:active{transform:scale(.995)}
+  .tl .tlt{font-family:var(--mono);font-size:11.5px;color:var(--sub);flex:0 0 86px;line-height:1.3}
+  .tl .emo{font-size:16px;flex:0 0 auto}
+  .tl .lbl{font-weight:600;font-size:14px}
+  .tl .st{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;
+    border:2px dashed #A7B4CC;color:var(--sub);border-radius:5px;padding:4px 7px;flex:0 0 auto;white-space:nowrap}
+  .tl.done{background:rgba(31,122,77,.07);border-color:rgba(31,122,77,.45)}
+  .tl.done .st{border-style:solid;border-color:var(--customs);color:var(--customs);transform:rotate(-4deg)}
+  .tl.fail{background:rgba(200,39,28,.07);border-color:rgba(200,39,28,.55)}
+  .tl.fail .lbl{color:var(--maple)}
+  .tl.fail .st{border-style:solid;border-color:var(--maple);background:var(--maple);color:#fff;transform:rotate(3deg)}
+  .tl.now{border-color:var(--foil);background:rgba(201,162,39,.10);box-shadow:0 0 0 2px rgba(201,162,39,.3)}
+  .tl.now .st{border-color:var(--foil);color:#8A5A00}
+
   /* ============ history heatmap ============ */
   .hmWrap{overflow-x:auto;padding-bottom:4px}
   .hmMonths{display:flex;gap:3px;height:14px;margin:0 0 4px;font-family:var(--mono);font-size:10px;color:var(--sub)}
@@ -132,7 +149,7 @@
   .navIn{max-width:780px;margin:0 auto;display:flex}
   .navBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 12px;color:#8FA0BF;position:relative}
   .navBtn .nEmo{font-size:19px;line-height:1}
-  .navBtn .nLbl{font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  .navBtn .nLbl{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
   .navBtn.on{color:#fff}
   .navBtn.on::after{content:"";position:absolute;top:-3px;left:22%;right:22%;height:3px;background:var(--foil)}
 
@@ -273,7 +290,7 @@ async function initApp(){
   const addDays = (s,n) => { const d = new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return todayStr(d); };
   const T = todayStr();
 
-  const blankDay = () => ({smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],completed:false});
+  const blankDay = () => ({smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],sched:{},completed:false});
 
   let S = {};
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
@@ -520,31 +537,6 @@ async function initApp(){
         <div class="xpSub">${lv.next?`${lv.next[0]-xp} pts to ${lv.next[1].toUpperCase()}`:'MAX LEVEL — you made it home'} · +10 lock · +100 action · −15 refusal</div>
       </div>`;
 
-      const dow=new Date().getDay();
-      const protoName=dow===1||dow===2?'Office Day Protocol':dow>=3&&dow<=5?'WFH Day Protocol':dow===6?'Saturday Protocol':'Sunday Protocol';
-      const proto=(dow===1||dow===2)?[
-        ['06:15','Wake · CGM + basal · water'],['06:20','Meditate 10 min'],['06:35','Shower + brush'],
-        ['06:50','Breakfast + bolus + supps'],['07:15','Pack lunch + gym bag'],['07:30','Leave — walk to stop'],
-        ['07:37','BUS to Kellogg Ln (confirm time)'],['09:00','Work'],['12:30','Packed lunch + bolus'],
-        ['17:00','Bus home'],['18:20','GYM — 710 Proudfoot Ln · 45 min'],['19:45','Cook dinner + insulin'],
-        ['20:30','CELPIP reading 20 min'],['21:00','Cyber upskill / money move'],['21:45','Prep tomorrow · creatine'],
-        ['22:45','Lights out — smoke-free ✓']
-      ]:(dow>=3&&dow<=5)?[
-        ['06:45','Wake · CGM + basal · water'],['06:55','Leave for gym — 710 Proudfoot Ln'],
-        ['07:10','GYM — full session 60–70 min'],['08:20','Home · shower'],['08:50','Breakfast + bolus + supps'],
-        ['09:00','Work — WFH'],['12:30','COOK lunch + insulin (no delivery)'],['17:00','Log off'],
-        ['17:15','CELPIP reading 20 min'],['17:45','Cyber upskill + money move'],['18:45','Cook dinner + insulin'],
-        ['19:45','Free / earned treat'],['21:15','Meditate 10 min'],['21:45','Prep · creatine · wind down'],
-        ['22:30','Lights out — smoke-free ✓']
-      ]:(dow===6)?[
-        ['10:00','Groceries — full week in one run'],['13:00','Meal-prep 5 lunches'],
-        ['16:00','Free — friends / trip (use an earned treat)'],['21:00','CELPIP reading — 20 min']
-      ]:[
-        ['11:00','Slow morning'],['15:00','CELPIP reading — 20 min'],
-        ['17:00','PLAN SUNDAY — budget check · book the week'],['19:00','Prep clothes + lunch for office Monday'],['22:30','Early night']
-      ];
-      const protoRows=proto.map(([t,l])=>`<div style="display:flex;gap:12px;padding:6px 2px;border-bottom:1px dashed var(--line);font-size:14px"><b style="font-family:var(--mono);flex:0 0 52px">${t}</b><span>${l}</span></div>`).join('');
-
       const winRows = WINS.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k])).join('');
       const growthRows = GROWTH.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k],'navyInk')).join('');
       const growthDone = GROWTH.filter(([k])=>d[k]===true).length;
@@ -613,9 +605,8 @@ async function initApp(){
           <div class="chips">${chips}</div>
         </div>
         <div class="card">
-          ${secTitle('SECTION F',protoName)}
-          ${protoRows}
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Mon–Tue office · Wed–Fri WFH · 9–5. The protocol exists so decisions are already made — you just follow the timetable.</div>
+          ${secTitle('SECTION F','Timetable')}
+          <div style="font-size:14px;color:var(--ink)">🕐 Your full minute-by-minute day — bus, meals, gym, everything — lives on the <b>Plan</b> tab. Every block is tappable: done, missed, or pending.</div>
         </div>`;
     }
 
@@ -845,6 +836,108 @@ async function initApp(){
       document.body.appendChild(ov);
     }
 
+    /* ---------- Plan tab: minute-by-minute timetable, every block trackable ---------- */
+    const SCHEDS={
+      office:[  // Mon + Tue — 1 Beaufort St → 100 Kellogg Ln
+        ['wake','06:15','06:20','⏰','Wake · CGM check + basal · water'],
+        ['medit','06:20','06:35','🧘','Meditate / breathwork'],
+        ['shower','06:35','06:50','🚿','Shower + brush'],
+        ['mkbfast','06:50','07:05','🍳','Make breakfast (oats + yogurt + PB)'],
+        ['eatbfast','07:05','07:15','🌅','Eat breakfast · bolus · supplements'],
+        ['pack','07:15','07:30','🎒','Pack lunch + gym bag · get dressed'],
+        ['walk','07:30','07:37','🚶','Walk to bus stop'],
+        ['bus1','07:37','08:50','🚌','Bus → 100 Kellogg Ln (confirm route once)'],
+        ['workam','09:00','12:30','💼','Work — morning block'],
+        ['lunch','12:30','13:00','☀️','Eat packed lunch · bolus'],
+        ['workpm','13:00','17:00','💼','Work — afternoon block'],
+        ['bus2','17:00','18:10','🚌','Bus home'],
+        ['gymtrip','18:10','18:25','🚶','Gym bag → 710 Proudfoot Ln'],
+        ['gym','18:25','19:25','🏋️','GYM — 45–50 min session'],
+        ['cookdin','19:40','20:10','🍳','Cook dinner · bolus'],
+        ['eatdin','20:10','20:30','🌙','Eat dinner'],
+        ['read','20:30','20:50','📚','CELPIP reading — 20 min'],
+        ['upskill','21:00','21:45','💻','Cyber upskill / money move'],
+        ['prep','21:45','22:15','🎒','Prep tomorrow: lunch · clothes · creatine'],
+        ['wind','22:15','22:45','🌒','Wind down — no screens'],
+        ['sleep','22:45','','😴','Lights out — 7.5 hrs']
+      ],
+      wfh:[  // Wed–Fri — gym first (it's near home)
+        ['wake','06:45','06:55','⏰','Wake · CGM + basal · water · change'],
+        ['gymtrip','06:55','07:10','🚶','Head to gym — 710 Proudfoot Ln'],
+        ['gym','07:10','08:15','🏋️','GYM — full session 60–70 min'],
+        ['home','08:15','08:30','🚶','Back home'],
+        ['shower','08:30','08:50','🚿','Shower + dress'],
+        ['eatbfast','08:50','09:00','🌅','Quick breakfast · bolus · supplements'],
+        ['workam','09:00','12:30','💼','Work — morning block (WFH)'],
+        ['cooklunch','12:30','12:55','🍳','COOK lunch — the delivery-trigger hour'],
+        ['eatlunch','12:55','13:15','☀️','Eat lunch · bolus'],
+        ['workpm','13:15','17:00','💼','Work — afternoon block'],
+        ['read','17:15','17:35','📚','CELPIP reading — 20 min'],
+        ['upskill','17:45','18:45','💻','Cyber upskill + money move'],
+        ['cookdin','18:45','19:15','🍳','Cook dinner · bolus'],
+        ['eatdin','19:15','19:45','🌙','Eat dinner'],
+        ['free','19:45','21:15','🎯','Free — friends · errands · earned treat'],
+        ['medit','21:15','21:30','🧘','Meditate / breathwork'],
+        ['prep','21:45','22:15','🎒','Prep · creatine · wind down'],
+        ['sleep','22:30','','😴','Lights out']
+      ],
+      sat:[
+        ['wake','09:00','09:30','⏰','Wake easy · CGM + basal · breakfast'],
+        ['groc','10:00','11:30','🛒','Groceries — full week, one run (list in repo)'],
+        ['prep5','13:00','14:30','🍳','Meal-prep: 5 lunches + boiled eggs + dal pot'],
+        ['gym','15:00','16:15','🏋️','GYM — 710 Proudfoot Ln'],
+        ['free','16:30','21:00','🎉','Free — friends / trip (use an earned treat)'],
+        ['read','21:00','21:20','📚','CELPIP reading — 20 min'],
+        ['sleep','23:00','','😴','Lights out']
+      ],
+      sun:[
+        ['wake','09:30','10:00','⏰','Slow morning · CGM + basal'],
+        ['gym','11:00','12:15','🏋️','GYM or long walk'],
+        ['read','15:00','15:20','📚','CELPIP reading — 20 min'],
+        ['plansun','17:00','17:45','🗺️','PLAN SUNDAY — budget check · book the week'],
+        ['prepmon','19:00','19:45','🎒','Prep office Monday: lunch · clothes · bag'],
+        ['wind','22:00','22:30','🌒','Wind down'],
+        ['sleep','22:30','','😴','Early night — Monday is 6:15']
+      ]
+    };
+    function schedHTML(s){
+      const d=(s.days&&s.days[Dash.today])||{};
+      const sched=d.sched||{};
+      const dow=new Date().getDay();
+      const kind=dow===1||dow===2?'office':dow>=3&&dow<=5?'wfh':dow===6?'sat':'sun';
+      const title=kind==='office'?'Office Day':kind==='wfh'?'WFH Day':kind==='sat'?'Saturday':'Sunday';
+      const blocks=SCHEDS[kind];
+      const n=new Date(); const nowM=n.getHours()*60+n.getMinutes();
+      const toM=t=>{const p=t.split(':');return (+p[0])*60+(+p[1]);};
+      let done=0,missed=0;
+      const rows=blocks.map((b,i)=>{
+        const [k,st,en,e,l]=b;
+        const v=sched[k];
+        const endM=en?toM(en):(blocks[i+1]?toM(blocks[i+1][1]):24*60);
+        const isNow=nowM>=toM(st)&&nowM<endM;
+        if(v===true)done++; else if(v==='fail')missed++;
+        const cls=v===true?'done':v==='fail'?'fail':'';
+        const stTxt=v===true?'DONE ✓':v==='fail'?'MISSED ✗':(isNow?'NOW':'···');
+        return `<div class="tl ${cls}${isNow&&!v?' now':''}" role="button" tabindex="0" aria-label="${l}: ${v===true?'done':v==='fail'?'missed':'pending'}" data-toggle="days.${Dash.today}.sched.${k}">
+          <span class="tlt">${st}${en?'–'+en:''}</span><span class="emo" aria-hidden="true">${e}</span><span class="lbl">${l}</span><span class="st">${stTxt}</span></div>`;
+      }).join('');
+      return `
+        <div class="card">
+          ${secTitle('TIMETABLE',`${title} — every minute`,`${done}/${blocks.length}${missed?' · '+missed+' missed':''}`, missed?'var(--maple)':'var(--customs)')}
+          ${rows}
+          <div style="font-size:12px;color:var(--sub);margin-top:6px">Tap a block when done · tap again = MISSED · again = clear. Gold = right now. No points here — this is the machine that produces your Today stamps.</div>
+        </div>
+        <div class="card">
+          ${secTitle('ROUTE','Bus + Costs')}
+          <div style="font-size:13.5px;color:var(--ink);line-height:1.6">
+            🚌 <b>Home → work:</b> 1 Beaufort St → 100 Kellogg Ln ≈ 65 min. <b>Confirm the exact 7:37 bus in the Transit app once</b> — then it's law.<br>
+            💰 Fare $3.25 · ~$52/mo at 2 office days/wk — skip the $95 pass.<br>
+            🏋️ <b>Gym:</b> 710 Proudfoot Ln — near home, walk or short bus.<br>
+            🚕 Cab = $12 = an automatic fine in the Penalty Box. Oversleeping has a price now.
+          </div>
+        </div>`;
+    }
+
     function healthHTML(){
       return `
         <div class="card hcard">
@@ -862,7 +955,7 @@ async function initApp(){
         </div>`;
     }
 
-    const TABS=[['today','✓','Today'],['pr','🍁','PR'],['money','💵','Money'],['health','🩺','Health'],['history','🗓️','History']];
+    const TABS=[['today','✓','Today'],['plan','🕐','Plan'],['pr','🍁','PR'],['money','💵','Money'],['health','🩺','Health'],['history','🗓️','History']];
     function navHTML(){
       return `<nav aria-label="Sections"><div class="navIn">${TABS.map(([k,e,l])=>
         `<button class="navBtn ${tab===k?'on':''}" data-tab="${k}" aria-current="${tab===k}"><span class="nEmo" aria-hidden="true">${e}</span><span class="nLbl">${l}</span></button>`).join('')}</div></nav>`;
@@ -958,6 +1051,7 @@ async function initApp(){
 
       root.innerHTML =
         (tab==='today'?todayHTML(s,d)
+        :tab==='plan'?schedHTML(s)
         :tab==='pr'?prHTML(s)
         :tab==='money'?moneyHTML(s)
         :tab==='history'?historyHTML(s)
