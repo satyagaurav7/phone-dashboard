@@ -129,6 +129,12 @@
   .tl.fail .st{border-style:solid;border-color:var(--maple);background:var(--maple);color:#fff;transform:rotate(3deg)}
   .tl.now{border-color:var(--foil);background:rgba(201,162,39,.10);box-shadow:0 0 0 2px rgba(201,162,39,.3)}
   .tl.now .st{border-color:var(--foil);color:#8A5A00}
+  .wkRow{display:flex;gap:6px;margin-bottom:12px}
+  .dayChip{flex:1;text-align:center;border:1.5px solid var(--line);border-radius:6px;background:#FBFCFE;padding:7px 2px;cursor:pointer}
+  .dayChip .dn{font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub)}
+  .dayChip .dd{font-family:var(--mono);font-weight:700;font-size:14px;margin-top:1px}
+  .dayChip.sel{border-color:var(--passport);background:rgba(20,33,61,.07)}
+  .dayChip.tdy .dn{color:var(--maple)}
 
   /* ============ history heatmap ============ */
   .hmWrap{overflow-x:auto;padding-bottom:4px}
@@ -414,7 +420,7 @@ async function initApp(){
       ['permitdoc','Work permit copy — add to PR folder'],
     ];
 
-    let tab='today', prevCore=null, prevBusted=null, modalSpec=null;
+    let tab='today', prevCore=null, prevBusted=null, modalSpec=null, planDay=null;
 
     const daysUntil = s => { if(!s) return null;
       const a=new Date(Dash.today+'T00:00:00'), b=new Date(String(s)+'T00:00:00');
@@ -901,31 +907,62 @@ async function initApp(){
       ]
     };
     function schedHTML(s){
-      const d=(s.days&&s.days[Dash.today])||{};
-      const sched=d.sched||{};
-      const dow=new Date().getDay();
-      const kind=dow===1||dow===2?'office':dow>=3&&dow<=5?'wfh':dow===6?'sat':'sun';
-      const title=kind==='office'?'Office Day':kind==='wfh'?'WFH Day':kind==='sat'?'Saturday':'Sunday';
+      const days=s.days||{};
+      const todow=ds=>new Date(ds+'T00:00:00').getDay();
+      const kindOf=dw=>dw===1||dw===2?'office':dw>=3&&dw<=5?'wfh':dw===6?'sat':'sun';
+      const DNAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const week=Array.from({length:7},(_,i)=>addDaysStr(Dash.today,i));
+      const DN=week.map(ds=>DNAMES[todow(ds)]);
+      const sel=(planDay&&week.indexOf(planDay)>=0)?planDay:Dash.today;
+      const kind=kindOf(todow(sel));
+      const title=(kind==='office'?'Office Day':kind==='wfh'?'WFH Day':kind==='sat'?'Saturday':'Sunday');
       const blocks=SCHEDS[kind];
+      const d=days[sel]||{}; const sched=d.sched||{};
+      const editable=sel<=Dash.today;
+      const isToday=sel===Dash.today;
       const n=new Date(); const nowM=n.getHours()*60+n.getMinutes();
       const toM=t=>{const p=t.split(':');return (+p[0])*60+(+p[1]);};
+      const fineSum=dd=>(dd&&dd.fines)?dd.fines.reduce((t,k)=>{const f=FINES.find(x=>x[0]===k);return t+(f?f[3]:0);},0):0;
       let done=0,missed=0;
       const rows=blocks.map((b,i)=>{
         const [k,st,en,e,l]=b;
         const v=sched[k];
         const endM=en?toM(en):(blocks[i+1]?toM(blocks[i+1][1]):24*60);
-        const isNow=nowM>=toM(st)&&nowM<endM;
+        const isNow=isToday&&nowM>=toM(st)&&nowM<endM;
         if(v===true)done++; else if(v==='fail')missed++;
         const cls=v===true?'done':v==='fail'?'fail':'';
-        const stTxt=v===true?'DONE ✓':v==='fail'?'MISSED ✗':(isNow?'NOW':'···');
-        return `<div class="tl ${cls}${isNow&&!v?' now':''}" role="button" tabindex="0" aria-label="${l}: ${v===true?'done':v==='fail'?'missed':'pending'}" data-toggle="days.${Dash.today}.sched.${k}">
+        const stTxt=v===true?'DONE ✓':v==='fail'?'MISSED ✗':(isNow?'NOW':editable?'···':'—');
+        const tog=editable?` role="button" tabindex="0" data-toggle="days.${sel}.sched.${k}"`:` style="cursor:default"`;
+        return `<div class="tl ${cls}${isNow&&!v?' now':''}"${tog} aria-label="${l}: ${v===true?'done':v==='fail'?'missed':'pending'}">
           <span class="tlt">${st}${en?'–'+en:''}</span><span class="emo" aria-hidden="true">${e}</span><span class="lbl">${l}</span><span class="st">${stTxt}</span></div>`;
       }).join('');
+      const chips=week.map((ds,i)=>`<button class="dayChip${ds===sel?' sel':''}${ds===Dash.today?' tdy':''}" data-plday="${ds}" aria-label="${DN[i]} ${ds}"><div class="dn">${DN[i]}</div><div class="dd">${+ds.slice(8)}</div></button>`).join('');
+      const glance=week.map((ds,i)=>{
+        const kw=kindOf(todow(ds));
+        const label=kw==='office'?'Office · 6:15 wake · 7:37 bus · gym 6:25 pm'
+          :kw==='wfh'?'WFH · 6:45 wake · gym AM · cook lunch 12:30'
+          :kw==='sat'?'Groceries ~$80 · meal-prep · gym · free evening'
+          :'Plan Sunday 5 pm · prep for Monday';
+        const dd=days[ds]; const fined=fineSum(dd);
+        const mark=ds<Dash.today?(dd&&dd.completed===true?'✓':'·'):ds===Dash.today?'●':'';
+        return `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 2px;border-bottom:1px dashed var(--line);font-size:13px${ds===Dash.today?';font-weight:700':''}">
+          <b style="font-family:var(--mono);flex:0 0 62px">${DN[i]} ${+ds.slice(8)} ${mark}</b><span style="flex:1">${label}</span>${fined?`<b style="color:var(--maple);font-family:var(--mono)">−$${fined}</b>`:''}</div>`;
+      }).join('');
+      const finesWeek=week.reduce((t,ds)=>t+fineSum(days[ds]),0);
+      const officeN=week.filter(ds=>kindOf(todow(ds))==='office').length;
+      const satN=week.filter(ds=>kindOf(todow(ds))==='sat').length;
+      const planSpend=Math.round(officeN*6.5+satN*80);
       return `
         <div class="card">
-          ${secTitle('TIMETABLE',`${title} — every minute`,`${done}/${blocks.length}${missed?' · '+missed+' missed':''}`, missed?'var(--maple)':'var(--customs)')}
+          ${secTitle('WEEK','Next 7 Days', finesWeek?`−$${finesWeek} in fines`:'$0 fines · clean', finesWeek?'var(--maple)':'var(--customs)')}
+          ${glance}
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">Planned spend, next 7 days: ~$${planSpend}</b> — bus $${(officeN*6.5).toFixed(0)} (${officeN} office day${officeN===1?'':'s'}) + groceries $${satN*80}. Everything else is $0 by design: cooked meals, gym near home, no rentals. Every fine above is money the plan didn't approve.</div>
+        </div>
+        <div class="card">
+          ${secTitle('TIMETABLE',`${title}${isToday?' — today':''}`,`${done}/${blocks.length}${missed?' · '+missed+' missed':''}`, missed?'var(--maple)':'var(--customs)')}
+          <div class="wkRow">${chips}</div>
           ${rows}
-          <div style="font-size:12px;color:var(--sub);margin-top:6px">Tap a block when done · tap again = MISSED · again = clear. Gold = right now. No points here — this is the machine that produces your Today stamps.</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:6px">${editable?'Tap a block when done · tap again = MISSED · again = clear. Gold = right now.':'Future day — preview only. You earn it when you get there.'} No points here — this is the machine that produces your Today stamps.</div>
         </div>
         <div class="card">
           ${secTitle('ROUTE','Bus + Costs')}
@@ -1100,6 +1137,9 @@ async function initApp(){
         const cur=(getPath(Dash.state,`days.${Dash.today}.fines`)||[]).slice();
         cur.pop();
         Dash.set(`days.${Dash.today}.fines`,cur);
+      });
+      root.querySelectorAll('[data-plday]').forEach(el=>{
+        el.addEventListener('click',()=>{ planDay=el.dataset.plday; draw(Dash.state); });
       });
       root.querySelectorAll('[data-hday]').forEach(el=>{
         el.addEventListener('click',()=>openDayModal(el.dataset.hday));
