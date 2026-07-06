@@ -695,6 +695,25 @@ async function initApp(){
           <div style="font-size:12.5px;color:var(--sub);margin-top:8px">From your real CIBC statements, June 1 – July 2. Half a paycheque went to convenience. Groceries were only $155 of $1,081 total food spend.</div>
         </div>
         <div class="card">
+          ${secTitle('PACE','July So Far · Day 6','$28.61/day pace','var(--maple)')}
+          ${li('Uber Eats — 9 orders in 6 days (1.5/day)','$152.95',1)}
+          ${li('Uber rides','$11.79',1)}
+          ${li('Tim Hortons + gas','$6.92',1)}
+          ${li('New: Apollo Insurance — unidentified, verify','$11.49',1)}
+          ${li('New: PixivFanbox ×2 — a subscription you didn’t flag before','$8.17',1)}
+          ${li('WFG — same Jul 2 charge, still unresolved','$271.20',1)}
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Lifestyle spend, 6 days (excl. WFG)</span><b style="font-family:var(--mono);color:var(--maple)">$191.32</b></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:2px;font-size:13px"><span>→ projected for the month at this pace</span><b style="font-family:var(--mono);color:var(--maple)">≈ $887</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--maple)">Straight answer: yes, the first week slipped.</b> 9 Uber Eats orders in 6 days is a faster pace than all of June (25 in 30 days). The $350 grocery budget and "Uber Eats = $0" rule haven't landed yet — this is the exact pattern the Fine Box on Today exists to catch. Log each of these as a delivery fine retroactively if you want the streak math to reflect it honestly.</div>
+        </div>
+        <div class="card">
+          ${secTitle('DEPOSIT','Hertz Return','+$504 back','var(--customs)')}
+          ${li('Hertz hold on card (not a real charge)','$504.00')}
+          ${li('Actual rental cost (already accounted in June)','~$150')}
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Expected back when you return the car</span><b style="font-family:var(--mono);color:var(--customs)">≈ $354</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">This was never really spent — it's a security hold. When you drop the car off, CIBC releases it back to your available credit (usually 3–5 business days, sometimes up to 2 weeks). It doesn't add cash to your chequing account — rentals are a credit-card hold, not a debit charge — but your card room goes back to normal. Don't count it as "extra money" to spend.</div>
+        </div>
+        <div class="card">
           ${secTitle('PLAN','Monthly Envelopes','net $4,249')}
           ${li('Mom — loan support. First after rent. Non-negotiable.','$2,000')}
           ${li('Rent (Centurion, 1st)','$930')}
@@ -719,12 +738,14 @@ async function initApp(){
         </div>
         <div class="card">
           ${secTitle('WATCH','Flags From Your Statements','act this week','var(--maple)')}
-          ${li('WFG charged your card Jul 2 — while the $0-balance dispute is open. Demand a written explanation.','$271.20',1)}
+          ${li('WFG — still charging, dispute still open. Demand written proof of $0 balance.','$271.20',1)}
           ${li('CIBC account fee — switch plan or meet the waiver minimum.','$16.95/mo',1)}
           ${li('DashPass subscription while “No Uber Eats” is your core habit. Cancel today.','$11.29/mo',1)}
+          ${li('Apollo Insurance — new charge, you didn’t recognize it. Find out what this is.','$11.49',1)}
+          ${li('PixivFanbox — new subscription, two charges same day. Confirm you meant to keep this.','$8.17',1)}
           ${li('CIBC Payment Protector on the Visa — balance insurance is usually poor value. Review dropping it.','review',1)}
           ${li('CIBC-DISATF — $200 draft twice a month, unlabeled. Find out exactly what it is.','$200 ×2',1)}
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Card is basically at zero (−$158 credit, they owe you). The $504 Hertz was a <b>hold</b> — ~$350 releases, real rental ~$150. Your card habit is genuinely good; the leak is lifestyle, not debt.</div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Card is basically at zero (−$158 credit, they owe you). Your card habit is genuinely good; the leak is lifestyle spend and creeping subscriptions, not debt.</div>
         </div>`;
     }
 
