@@ -1,0 +1,59 @@
+name: Notifications
+
+# Two cron entries per notification because GitHub cron is UTC and has no DST
+# awareness — notify.mjs checks the Toronto wall clock and exactly one of the
+# pair proceeds (7 AM for the brief, 9 PM for the streak saver).
+on:
+  schedule:
+    - cron: '0 11 * * *'  # 7 AM EDT brief
+    - cron: '0 12 * * *'  # 7 AM EST brief
+    - cron: '0 1 * * *'   # 9 PM EDT streak saver
+    - cron: '0 2 * * *'   # 9 PM EST streak saver
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Which notification to send'
+        type: choice
+        options: [brief, streak]
+        default: brief
+      force:
+        description: 'Ignore the local-hour guard (send right now)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notify
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install sender deps
+        run: npm install --no-audit --no-fund
+        working-directory: scripts
+      - name: Determine mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
+            echo "flags=${{ inputs.force && '--force' || '' }}" >> "$GITHUB_OUTPUT"
+          else
+            H=$(date -u +%H)
+            if [ "$H" = "11" ] || [ "$H" = "12" ]; then MODE=brief; else MODE=streak; fi
+            echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+            echo "flags=" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Send notification
+        run: node scripts/notify.mjs --mode=${{ steps.mode.outputs.mode }} ${{ steps.mode.outputs.flags }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

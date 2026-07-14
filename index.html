@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mission Control">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>Satya · Mission Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -232,6 +235,18 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {
+  getMessaging, getToken, isSupported as messagingSupported
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
+
+// Web Push certificate key pair from Firebase console → Project settings →
+// Cloud Messaging → Web configuration. Empty = push UI stays hidden.
+const VAPID_KEY = '';
+
+// One service worker handles both offline caching and background push.
+const swReady = ('serviceWorker' in navigator)
+  ? navigator.serviceWorker.register('sw.js').catch((e) => { console.warn('SW registration failed', e); return null; })
+  : Promise.resolve(null);
 
 const firebaseConfig = {
   apiKey: "AIzaSyAiFSwmMc-qYYtXgsiaENQ3nRBBrmy7dc8",
@@ -296,6 +311,12 @@ async function initApp(){
   const addDays = (s,n) => { const d = new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return todayStr(d); };
   const T = todayStr();
 
+  // Timetable lives in schedule.json — one source of truth shared with the
+  // notification sender (scripts/notify.mjs). SW caches it for offline.
+  let SCHED_DATA = null;
+  try { SCHED_DATA = await (await fetch('schedule.json', { cache: 'no-cache' })).json(); }
+  catch (e) { try { const c = await caches.match('schedule.json'); if (c) SCHED_DATA = await c.json(); } catch (e2) {} }
+
   const blankDay = () => ({smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],sched:{},completed:false});
 
   let S = {};
@@ -305,6 +326,7 @@ async function initApp(){
     S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0,treatsClaimed:0}, S.config||{});
     S.actions = Object.assign({oinp:false,wfg:false,carfax:false,pcc:false,celpip:false,innobox:false,resume:false,permitdoc:false}, S.actions||{});
     S.days = S.days || {};
+    S.fcmTokens = Array.isArray(S.fcmTokens) ? S.fcmTokens : [];
     S.streak = S.streak || 0; S.best = S.best || 0; S.lastComplete = S.lastComplete || null;
     S.days[T] = Object.assign(blankDay(), S.days[T]||{});
   }
@@ -366,6 +388,30 @@ async function initApp(){
     render(fn){ this._fn = fn; fn(this.state); }
   };
   saveLocal();
+
+  /* ---------- web push: obtain/refresh the FCM token, store it in state ---------- */
+  async function ensurePushToken(interactive){
+    if (!VAPID_KEY) return { ok:false, reason:'setup' };
+    try {
+      if (!('Notification' in window) || !(await messagingSupported())) return { ok:false, reason:'unsupported' };
+      if (Notification.permission !== 'granted') {
+        if (!interactive) return { ok:false, reason:'no-permission' };
+        const p = await Notification.requestPermission();
+        if (p !== 'granted') return { ok:false, reason:'denied' };
+      }
+      const reg = await swReady;
+      if (!reg) return { ok:false, reason:'no-sw' };
+      const tok = await getToken(getMessaging(fbApp), { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+      if (!tok) return { ok:false, reason:'no-token' };
+      const cur = Dash.state.fcmTokens || [];
+      // Tokens rotate; keep the newest few (phone + laptop) so the sender
+      // always has a live one. Pruning of dead tokens happens sender-side.
+      if (!cur.includes(tok)) Dash.set('fcmTokens', cur.concat([tok]).slice(-5));
+      return { ok:true };
+    } catch (e) { console.warn('push token', e); return { ok:false, reason:'error' }; }
+  }
+  // Silent refresh on every open — standard fix for FCM token rotation.
+  if (VAPID_KEY && 'Notification' in window && Notification.permission === 'granted') ensurePushToken(false);
 
   /* ================================ UI (Mission Dashboard design) ================================ */
   (function(){
@@ -556,6 +602,59 @@ async function initApp(){
         ? `<div style="font-size:12.5px;color:var(--maple);margin-top:6px;font-family:var(--mono)">Today: ${fines.map(k=>{const f=FINES.find(x=>x[0]===k);return f?f[1]:k;}).join(' ')} · −$${fineTotal} · −${fines.length*15}pts <button data-fineundo style="color:var(--sub);text-decoration:underline;font-family:var(--mono);font-size:12px">undo last</button></div>`
         : `<div style="font-size:12.5px;color:var(--customs);margin-top:6px;font-family:var(--mono)">CLEAN — $0 in fines today. Keep it that way.</div>`;
 
+      /* ---------- Right Now: current/next timetable block + today's deadlines ---------- */
+      const rightNow=(()=>{
+        if(!SCHEDS) return '';
+        const blocks=SCHEDS[kindOf(todow(Dash.today))]||[];
+        const nowM=new Date().getHours()*60+new Date().getMinutes();
+        const sched=d.sched||{};
+        let cur=null,nxt=null;
+        for(let i=0;i<blocks.length;i++){
+          const st=toM(blocks[i][1]);
+          const en=blocks[i][2]?toM(blocks[i][2]):(blocks[i+1]?toM(blocks[i+1][1]):24*60);
+          if(nowM>=st&&nowM<en){cur=blocks[i];break;}
+          if(nowM<st){nxt=blocks[i];break;}
+        }
+        const b=cur||nxt;
+        const c=s.config||{};
+        const dueBits=[];
+        if(daysToDay(c.rentDay)===0)dueBits.push('🏠 RENT DUE TODAY');
+        if(daysToDay(c.ccDay)===0)dueBits.push('💳 CARD PAYMENT DUE TODAY');
+        [['permit','🍁 Work permit expires'],['celpipExam','📚 CELPIP retest'],['cecDate','🍁 CEC eligibility']].forEach(([k,l])=>{
+          if(daysUntil(c[k])===0)dueBits.push(`${l} TODAY`);
+        });
+        const streakLine = busted?'💔 Streak broken today — clean page tomorrow.'
+          : complete?`✅ Day locked — streak ${s.streak} safe.`
+          : hr>=18?`⚠️ ${CORE7.length-doneCore} core stamps left — streak dies at midnight.`
+          : `🔥 ${doneCore}/${CORE7.length} core stamped — streak ${s.streak} on the line.`;
+        let blockRow;
+        if(b){
+          const [k,st,en,e,l]=b;
+          const v=sched[k];
+          const cls=v===true?'done':v==='fail'?'fail':'';
+          const stTxt=v===true?'DONE ✓':v==='fail'?'MISSED ✗':cur?'STAMP':'···';
+          blockRow=`<div class="tl ${cls}${cur&&!v?' now':''}" role="button" tabindex="0" data-toggle="days.${Dash.today}.sched.${k}" aria-label="${l}: ${v===true?'done':v==='fail'?'missed':'pending'}">
+            <span class="tlt">${st}${en?'–'+en:''}</span><span class="emo" aria-hidden="true">${e}</span><span class="lbl">${cur?'':'Next · '}${l}</span><span class="st">${stTxt}</span></div>`;
+        } else {
+          blockRow=`<div style="font-size:13.5px;color:var(--sub)">No more blocks today. ${complete?'Rest is earned.':'Stamp your core wins below.'}</div>`;
+        }
+        return `<div class="card" style="border-left:4px solid var(--foil)">
+          ${secTitle('NOW','Right Now')}
+          ${blockRow}
+          <div style="font-size:13.5px;margin-top:8px;${busted?'color:var(--maple)':complete?'color:var(--customs)':hr>=18?'color:var(--maple);font-weight:700':'color:var(--ink)'}">${streakLine}</div>
+          ${dueBits.length?`<div style="font-size:13px;margin-top:6px;color:var(--maple);font-weight:700;font-family:var(--mono)">${dueBits.join(' · ')}</div>`:''}
+        </div>`;
+      })();
+
+      const pushCard=(VAPID_KEY && 'Notification' in window && Notification.permission!=='granted')
+        ? `<div class="card" style="border-left:4px solid var(--maple)">
+            ${secTitle('ALERT','Notifications')}
+            <div style="font-size:13.5px;color:var(--ink);margin-bottom:10px">Two a day, max: the <b>7 AM mission brief</b> and a <b>9 PM streak-saver</b> only if you haven't checked in. Nothing else, ever.</div>
+            <button id="pushEnable" class="row" style="margin-bottom:0"><span class="emo" aria-hidden="true">🔔</span><span class="lbl">Enable notifications</span><span class="spacer"></span><span class="stamp">TAP</span></button>
+            <div id="pushMsg" style="font-size:12.5px;color:var(--sub);margin-top:6px;min-height:16px"></div>
+          </div>`
+        : '';
+
       const fuelRows = FUEL.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub==='core'?'':sub,d[k],k==='insulin'?'navyInk':'')).join('');
       const suppDone = SUPPS.filter(([k])=>d[k]===true).length;
       const suppRows = SUPPS.map(([k,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,'💊',l,sub,d[k],'navyInk')).join('');
@@ -579,7 +678,8 @@ async function initApp(){
           ${xpBlock}
           <div class="mrz" aria-hidden="true">${mrz}</div>
         </div>
-
+        ${rightNow}
+        ${pushCard}
         <div class="grid2">
           <div class="card">
             ${secTitle('SECTION A','Daily Wins',`${WINS.filter(([k])=>d[k]===true).length}/${WINS.length} keystone`, 'var(--customs)')}
@@ -863,86 +963,29 @@ async function initApp(){
       document.body.appendChild(ov);
     }
 
-    /* ---------- Plan tab: minute-by-minute timetable, every block trackable ---------- */
-    const SCHEDS={
-      office:[  // Mon + Tue — 1 Beaufort St → 100 Kellogg Ln
-        ['wake','06:15','06:20','⏰','Wake · CGM check + basal · water'],
-        ['medit','06:20','06:35','🧘','Meditate / breathwork'],
-        ['shower','06:35','06:50','🚿','Shower + brush'],
-        ['mkbfast','06:50','07:05','🍳','Make breakfast (oats + yogurt + PB)'],
-        ['eatbfast','07:05','07:15','🌅','Eat breakfast · bolus · supplements'],
-        ['pack','07:15','07:30','🎒','Pack lunch + gym bag · get dressed'],
-        ['walk','07:30','07:37','🚶','Walk to bus stop'],
-        ['bus1','07:37','08:50','🚌','Bus → 100 Kellogg Ln (confirm route once)'],
-        ['workam','09:00','12:30','💼','Work — morning block'],
-        ['lunch','12:30','13:00','☀️','Eat packed lunch · bolus'],
-        ['workpm','13:00','17:00','💼','Work — afternoon block'],
-        ['bus2','17:00','18:10','🚌','Bus home'],
-        ['gymtrip','18:10','18:25','🚶','Gym bag → 710 Proudfoot Ln'],
-        ['gym','18:25','19:25','🏋️','GYM — 45–50 min session'],
-        ['cookdin','19:40','20:10','🍳','Cook dinner · bolus'],
-        ['eatdin','20:10','20:30','🌙','Eat dinner'],
-        ['read','20:30','20:50','📚','CELPIP reading — 20 min'],
-        ['upskill','21:00','21:45','💻','Cyber upskill / money move'],
-        ['prep','21:45','22:15','🎒','Prep tomorrow: lunch · clothes · creatine'],
-        ['wind','22:15','22:45','🌒','Wind down — no screens'],
-        ['sleep','22:45','','😴','Lights out — 7.5 hrs']
-      ],
-      wfh:[  // Wed–Fri — gym first (it's near home)
-        ['wake','06:45','06:55','⏰','Wake · CGM + basal · water · change'],
-        ['gymtrip','06:55','07:10','🚶','Head to gym — 710 Proudfoot Ln'],
-        ['gym','07:10','08:15','🏋️','GYM — full session 60–70 min'],
-        ['home','08:15','08:30','🚶','Back home'],
-        ['shower','08:30','08:50','🚿','Shower + dress'],
-        ['eatbfast','08:50','09:00','🌅','Quick breakfast · bolus · supplements'],
-        ['workam','09:00','12:30','💼','Work — morning block (WFH)'],
-        ['cooklunch','12:30','12:55','🍳','COOK lunch — the delivery-trigger hour'],
-        ['eatlunch','12:55','13:15','☀️','Eat lunch · bolus'],
-        ['workpm','13:15','17:00','💼','Work — afternoon block'],
-        ['read','17:15','17:35','📚','CELPIP reading — 20 min'],
-        ['upskill','17:45','18:45','💻','Cyber upskill + money move'],
-        ['cookdin','18:45','19:15','🍳','Cook dinner · bolus'],
-        ['eatdin','19:15','19:45','🌙','Eat dinner'],
-        ['free','19:45','21:15','🎯','Free — friends · errands · earned treat'],
-        ['medit','21:15','21:30','🧘','Meditate / breathwork'],
-        ['prep','21:45','22:15','🎒','Prep · creatine · wind down'],
-        ['sleep','22:30','','😴','Lights out']
-      ],
-      sat:[
-        ['wake','09:00','09:30','⏰','Wake easy · CGM + basal · breakfast'],
-        ['groc','10:00','11:30','🛒','Groceries — full week, one run (list in repo)'],
-        ['prep5','13:00','14:30','🍳','Meal-prep: 5 lunches + boiled eggs + dal pot'],
-        ['gym','15:00','16:15','🏋️','GYM — 710 Proudfoot Ln'],
-        ['free','16:30','21:00','🎉','Free — friends / trip (use an earned treat)'],
-        ['read','21:00','21:20','📚','CELPIP reading — 20 min'],
-        ['sleep','23:00','','😴','Lights out']
-      ],
-      sun:[
-        ['wake','09:30','10:00','⏰','Slow morning · CGM + basal'],
-        ['gym','11:00','12:15','🏋️','GYM or long walk'],
-        ['read','15:00','15:20','📚','CELPIP reading — 20 min'],
-        ['plansun','17:00','17:45','🗺️','PLAN SUNDAY — budget check · book the week'],
-        ['prepmon','19:00','19:45','🎒','Prep office Monday: lunch · clothes · bag'],
-        ['wind','22:00','22:30','🌒','Wind down'],
-        ['sleep','22:30','','😴','Early night — Monday is 6:15']
-      ]
-    };
+    /* ---------- Plan tab: timetable data comes from schedule.json (shared with the notification sender) ---------- */
+    const SCHEDS=(SCHED_DATA&&SCHED_DATA.schedules)||null;
+    const DAY_KINDS=(SCHED_DATA&&SCHED_DATA.dayKinds)||['sun','office','office','wfh','wfh','wfh','sat'];
+    const KIND_TITLES=(SCHED_DATA&&SCHED_DATA.kindTitles)||{office:'Office Day',wfh:'WFH Day',sat:'Saturday',sun:'Sunday'};
+    const GLANCE=(SCHED_DATA&&SCHED_DATA.glance)||{};
+    const todow=ds=>new Date(ds+'T00:00:00').getDay();
+    const kindOf=dw=>DAY_KINDS[dw]||'sun';
+    const toM=t=>{const p=t.split(':');return (+p[0])*60+(+p[1]);};
+
     function schedHTML(s){
+      if(!SCHEDS) return `<div class="card">${secTitle('WEEK','Next 7 Days')}<p style="color:var(--sub);font-size:14px;margin:0">Couldn't load schedule.json — check your connection and reload.</p></div>`;
       const days=s.days||{};
-      const todow=ds=>new Date(ds+'T00:00:00').getDay();
-      const kindOf=dw=>dw===1||dw===2?'office':dw>=3&&dw<=5?'wfh':dw===6?'sat':'sun';
       const DNAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
       const week=Array.from({length:7},(_,i)=>addDaysStr(Dash.today,i));
       const DN=week.map(ds=>DNAMES[todow(ds)]);
       const sel=(planDay&&week.indexOf(planDay)>=0)?planDay:Dash.today;
       const kind=kindOf(todow(sel));
-      const title=(kind==='office'?'Office Day':kind==='wfh'?'WFH Day':kind==='sat'?'Saturday':'Sunday');
-      const blocks=SCHEDS[kind];
+      const title=KIND_TITLES[kind]||kind;
+      const blocks=SCHEDS[kind]||[];
       const d=days[sel]||{}; const sched=d.sched||{};
       const editable=sel<=Dash.today;
       const isToday=sel===Dash.today;
       const n=new Date(); const nowM=n.getHours()*60+n.getMinutes();
-      const toM=t=>{const p=t.split(':');return (+p[0])*60+(+p[1]);};
       const fineSum=dd=>(dd&&dd.fines)?dd.fines.reduce((t,k)=>{const f=FINES.find(x=>x[0]===k);return t+(f?f[3]:0);},0):0;
       let done=0,missed=0;
       const rows=blocks.map((b,i)=>{
@@ -960,10 +1003,7 @@ async function initApp(){
       const chips=week.map((ds,i)=>`<button class="dayChip${ds===sel?' sel':''}${ds===Dash.today?' tdy':''}" data-plday="${ds}" aria-label="${DN[i]} ${ds}"><div class="dn">${DN[i]}</div><div class="dd">${+ds.slice(8)}</div></button>`).join('');
       const glance=week.map((ds,i)=>{
         const kw=kindOf(todow(ds));
-        const label=kw==='office'?'Office · 6:15 wake · 7:37 bus · gym 6:25 pm'
-          :kw==='wfh'?'WFH · 6:45 wake · gym AM · cook lunch 12:30'
-          :kw==='sat'?'Groceries ~$80 · meal-prep · gym · free evening'
-          :'Plan Sunday 5 pm · prep for Monday';
+        const label=GLANCE[kw]||'';
         const dd=days[ds]; const fined=fineSum(dd);
         const mark=ds<Dash.today?(dd&&dd.completed===true?'✓':'·'):ds===Dash.today?'●':'';
         return `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 2px;border-bottom:1px dashed var(--line);font-size:13px${ds===Dash.today?';font-weight:700':''}">
@@ -1167,6 +1207,22 @@ async function initApp(){
       });
       root.querySelectorAll('[data-tab]').forEach(el=>{
         el.addEventListener('click',()=>{ tab=el.dataset.tab; draw(Dash.state); window.scrollTo({top:0}); });
+      });
+      const pushBtn=root.querySelector('#pushEnable');
+      if(pushBtn) pushBtn.addEventListener('click', async ()=>{
+        const msg=root.querySelector('#pushMsg'); if(msg) msg.textContent='Registering this device…';
+        const r=await ensurePushToken(true);
+        if(r.ok){
+          // Success re-renders (token saved via Dash.set) and hides the card — confirm with a toast.
+          const t=document.createElement('div'); t.className='toast'; t.setAttribute('role','status');
+          t.textContent='🔔 Notifications on — brief lands at 7 AM.';
+          document.body.appendChild(t); setTimeout(()=>t.remove(),3200);
+        } else if(msg){
+          msg.textContent = r.reason==='denied' ? 'Blocked — allow notifications for this site in Chrome settings, then retry.'
+            : r.reason==='unsupported' ? "This browser doesn't support web push."
+            : r.reason==='setup' ? 'Push isn\'t configured yet — VAPID key missing (see NOTIFICATIONS-SETUP.md).'
+            : 'Couldn\'t register — check your connection and retry.';
+        }
       });
 
       const allCore=doneCount===CORE7.length;

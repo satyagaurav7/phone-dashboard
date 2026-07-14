@@ -1,0 +1,80 @@
+{
+  "timezone": "America/Toronto",
+  "appUrl": "https://satyagaurav7.github.io/phone-dashboard/",
+  "dayKinds": ["sun", "office", "office", "wfh", "wfh", "wfh", "sat"],
+  "kindTitles": {
+    "office": "Office Day",
+    "wfh": "WFH Day",
+    "sat": "Saturday",
+    "sun": "Sunday"
+  },
+  "glance": {
+    "office": "Office · 6:15 wake · 7:37 bus · gym 6:25 pm",
+    "wfh": "WFH · 6:45 wake · gym AM · cook lunch 12:30",
+    "sat": "Groceries ~$80 · meal-prep · gym · free evening",
+    "sun": "Plan Sunday 5 pm · prep for Monday"
+  },
+  "schedules": {
+    "office": [
+      ["wake", "06:15", "06:20", "⏰", "Wake · CGM check + basal · water"],
+      ["medit", "06:20", "06:35", "🧘", "Meditate / breathwork"],
+      ["shower", "06:35", "06:50", "🚿", "Shower + brush"],
+      ["mkbfast", "06:50", "07:05", "🍳", "Make breakfast (oats + yogurt + PB)"],
+      ["eatbfast", "07:05", "07:15", "🌅", "Eat breakfast · bolus · supplements"],
+      ["pack", "07:15", "07:30", "🎒", "Pack lunch + gym bag · get dressed"],
+      ["walk", "07:30", "07:37", "🚶", "Walk to bus stop"],
+      ["bus1", "07:37", "08:50", "🚌", "Bus → 100 Kellogg Ln (confirm route once)"],
+      ["workam", "09:00", "12:30", "💼", "Work — morning block"],
+      ["lunch", "12:30", "13:00", "☀️", "Eat packed lunch · bolus"],
+      ["workpm", "13:00", "17:00", "💼", "Work — afternoon block"],
+      ["bus2", "17:00", "18:10", "🚌", "Bus home"],
+      ["gymtrip", "18:10", "18:25", "🚶", "Gym bag → 710 Proudfoot Ln"],
+      ["gym", "18:25", "19:25", "🏋️", "GYM — 45–50 min session"],
+      ["cookdin", "19:40", "20:10", "🍳", "Cook dinner · bolus"],
+      ["eatdin", "20:10", "20:30", "🌙", "Eat dinner"],
+      ["read", "20:30", "20:50", "📚", "CELPIP reading — 20 min"],
+      ["upskill", "21:00", "21:45", "💻", "Cyber upskill / money move"],
+      ["prep", "21:45", "22:15", "🎒", "Prep tomorrow: lunch · clothes · creatine"],
+      ["wind", "22:15", "22:45", "🌒", "Wind down — no screens"],
+      ["sleep", "22:45", "", "😴", "Lights out — 7.5 hrs"]
+    ],
+    "wfh": [
+      ["wake", "06:45", "06:55", "⏰", "Wake · CGM + basal · water · change"],
+      ["gymtrip", "06:55", "07:10", "🚶", "Head to gym — 710 Proudfoot Ln"],
+      ["gym", "07:10", "08:15", "🏋️", "GYM — full session 60–70 min"],
+      ["home", "08:15", "08:30", "🚶", "Back home"],
+      ["shower", "08:30", "08:50", "🚿", "Shower + dress"],
+      ["eatbfast", "08:50", "09:00", "🌅", "Quick breakfast · bolus · supplements"],
+      ["workam", "09:00", "12:30", "💼", "Work — morning block (WFH)"],
+      ["cooklunch", "12:30", "12:55", "🍳", "COOK lunch — the delivery-trigger hour"],
+      ["eatlunch", "12:55", "13:15", "☀️", "Eat lunch · bolus"],
+      ["workpm", "13:15", "17:00", "💼", "Work — afternoon block"],
+      ["read", "17:15", "17:35", "📚", "CELPIP reading — 20 min"],
+      ["upskill", "17:45", "18:45", "💻", "Cyber upskill + money move"],
+      ["cookdin", "18:45", "19:15", "🍳", "Cook dinner · bolus"],
+      ["eatdin", "19:15", "19:45", "🌙", "Eat dinner"],
+      ["free", "19:45", "21:15", "🎯", "Free — friends · errands · earned treat"],
+      ["medit", "21:15", "21:30", "🧘", "Meditate / breathwork"],
+      ["prep", "21:45", "22:15", "🎒", "Prep · creatine · wind down"],
+      ["sleep", "22:30", "", "😴", "Lights out"]
+    ],
+    "sat": [
+      ["wake", "09:00", "09:30", "⏰", "Wake easy · CGM + basal · breakfast"],
+      ["groc", "10:00", "11:30", "🛒", "Groceries — full week, one run (list in repo)"],
+      ["prep5", "13:00", "14:30", "🍳", "Meal-prep: 5 lunches + boiled eggs + dal pot"],
+      ["gym", "15:00", "16:15", "🏋️", "GYM — 710 Proudfoot Ln"],
+      ["free", "16:30", "21:00", "🎉", "Free — friends / trip (use an earned treat)"],
+      ["read", "21:00", "21:20", "📚", "CELPIP reading — 20 min"],
+      ["sleep", "23:00", "", "😴", "Lights out"]
+    ],
+    "sun": [
+      ["wake", "09:30", "10:00", "⏰", "Slow morning · CGM + basal"],
+      ["gym", "11:00", "12:15", "🏋️", "GYM or long walk"],
+      ["read", "15:00", "15:20", "📚", "CELPIP reading — 20 min"],
+      ["plansun", "17:00", "17:45", "🗺️", "PLAN SUNDAY — budget check · book the week"],
+      ["prepmon", "19:00", "19:45", "🎒", "Prep office Monday: lunch · clothes · bag"],
+      ["wind", "22:00", "22:30", "🌒", "Wind down"],
+      ["sleep", "22:30", "", "😴", "Early night — Monday is 6:15"]
+    ]
+  }
+}

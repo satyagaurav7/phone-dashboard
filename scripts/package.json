@@ -1,0 +1,9 @@
+{
+  "name": "phone-dashboard-notify",
+  "private": true,
+  "type": "module",
+  "description": "Sends Mission Control push notifications (morning brief + streak saver) via FCM.",
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
