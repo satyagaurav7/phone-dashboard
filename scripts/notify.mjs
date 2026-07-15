@@ -96,17 +96,21 @@ function composeStreak(data, now) {
     return null;
   }
   const streak = data.streak || 0;
+  const hoursLeft = Math.max(1, 24 - now.hour);
   return {
     title: `🔥 Streak ${streak > 0 ? streak + ' dies' : 'restart slips away'} at midnight`,
-    body: `${missing.length} of 5 core stamps missing: ${missing.map(k => CORE_LABELS[k]).join(', ')}. 3 hours left — check in now.`
+    body: `${missing.length} of 5 core stamps missing: ${missing.map(k => CORE_LABELS[k]).join(', ')}. ${hoursLeft} hour${hoursLeft === 1 ? '' : 's'} left — check in now.`
   };
 }
 
 async function main() {
   const now = localNow();
-  const expectedHour = MODE === 'brief' ? 7 : 21;
-  if (!FORCE && now.hour !== expectedHour) {
-    console.log(`Local time in ${TZ} is ${now.hour}:xx, not ${expectedHour}:xx — this is the off-DST cron. Exiting.`);
+  // GitHub cron routinely runs 1-3 hours late at busy times, so a strict
+  // hour match silently drops notifications. Accept a window instead;
+  // the notifyLog dedupe below prevents the paired cron from double-sending.
+  const [minHour, maxHour] = MODE === 'brief' ? [7, 9] : [21, 23];
+  if (!FORCE && (now.hour < minHour || now.hour > maxHour)) {
+    console.log(`Local time in ${TZ} is ${now.hour}:xx, outside the ${minHour}-${maxHour} send window for [${MODE}]. Exiting.`);
     return;
   }
 
@@ -118,6 +122,13 @@ async function main() {
   const snap = await ref.get();
   if (!snap.exists) throw new Error('Firestore doc dashboard/satya not found.');
   const data = snap.data();
+
+  // Dedupe: both UTC crons can land inside the send window on the same day.
+  // The workflow's concurrency group serializes runs, so this check is safe.
+  if (!FORCE && data.notifyLog?.[MODE] === now.date) {
+    console.log(`[${MODE}] already sent today (${now.date}) — the other cron got there first. Exiting.`);
+    return;
+  }
 
   const tokens = Array.isArray(data.fcmTokens) ? data.fcmTokens.filter(Boolean) : [];
   if (tokens.length === 0) {
@@ -151,6 +162,10 @@ async function main() {
   if (dead.length) {
     await ref.update({ fcmTokens: tokens.filter(t => !dead.includes(t)) });
     console.log(`Pruned ${dead.length} dead token(s).`);
+  }
+
+  if (res.successCount > 0) {
+    await ref.update({ [`notifyLog.${MODE}`]: now.date });
   }
 }
 

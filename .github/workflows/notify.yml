@@ -1,14 +1,16 @@
 name: Notifications
 
 # Two cron entries per notification because GitHub cron is UTC and has no DST
-# awareness — notify.mjs checks the Toronto wall clock and exactly one of the
-# pair proceeds (7 AM for the brief, 9 PM for the streak saver).
+# awareness. Scheduled at :45 before the target hour and OFF the top of the
+# hour because GitHub cron runs 1-3 hours late at busy times — notify.mjs
+# accepts a send window (brief 7-9 AM, streak 9 PM-midnight Toronto) and a
+# Firestore notifyLog dedupe stops the pair from double-sending.
 on:
   schedule:
-    - cron: '0 11 * * *'  # 7 AM EDT brief
-    - cron: '0 12 * * *'  # 7 AM EST brief
-    - cron: '0 1 * * *'   # 9 PM EDT streak saver
-    - cron: '0 2 * * *'   # 9 PM EST streak saver
+    - cron: '45 10 * * *'  # brief, EDT (nominal 6:45 AM; real start lands 7-8 AM)
+    - cron: '45 11 * * *'  # brief, EST
+    - cron: '45 0 * * *'   # streak saver, EDT (nominal 8:45 PM)
+    - cron: '45 1 * * *'   # streak saver, EST
   workflow_dispatch:
     inputs:
       mode:
@@ -48,8 +50,10 @@ jobs:
             echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
             echo "flags=${{ inputs.force && '--force' || '' }}" >> "$GITHUB_OUTPUT"
           else
-            H=$(date -u +%H)
-            if [ "$H" = "11" ] || [ "$H" = "12" ]; then MODE=brief; else MODE=streak; fi
+            H=$(date -u +%H | sed 's/^0//')
+            # Brief crons fire 10:45/11:45 UTC and can run hours late; anything
+            # in the 10-15 UTC range is a brief attempt, the rest are streak.
+            if [ "$H" -ge 10 ] && [ "$H" -le 15 ]; then MODE=brief; else MODE=streak; fi
             echo "mode=$MODE" >> "$GITHUB_OUTPUT"
             echo "flags=" >> "$GITHUB_OUTPUT"
           fi
