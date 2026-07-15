@@ -15,8 +15,20 @@ import { readFileSync } from 'node:fs';
 
 const MODE = (process.argv.find(a => a.startsWith('--mode=')) || '--mode=brief').split('=')[1];
 const FORCE = process.argv.includes('--force');
-const CORE = ['smokefree', 'gym', 'language', 'cooked', 'sleep'];
-const CORE_LABELS = { smokefree: 'Smoke-free', gym: 'Gym', language: 'CELPIP reading', cooked: 'Cooked', sleep: 'Sleep' };
+
+// FLOWSTATE momentum model — keep in sync with the constants in index.html.
+const SMALL_KEYS = ['water', 'walk', 'read5', 'cookmeal', 'meditate', 'phonedown'];
+const BIG_KEYS = ['gym', 'language', 'study', 'cooked', 'smokefree', 'money'];
+const clampM = m => Math.max(0, Math.min(100, m));
+const dayGains = d => {
+  if (!d) return 0;
+  let g = (d.anchor === true || d.completed === true) ? 10 : 0;
+  g += Math.min(4, SMALL_KEYS.filter(k => d[k] === true).length) * 3;
+  g += BIG_KEYS.filter(k => d[k] === true).length * 8;
+  return g;
+};
+const flowStateOf = m => m >= 75 ? 'Deep flow' : m >= 50 ? 'Flow' : m >= 25 ? 'In motion' : 'Cold start';
+const momentumNow = (data, today) => clampM((data.flow?.m ?? 20) + dayGains((data.days || {})[today]));
 
 const sched = JSON.parse(readFileSync(new URL('../schedule.json', import.meta.url), 'utf8'));
 const TZ = sched.timezone || 'America/Toronto';
@@ -78,28 +90,32 @@ function composeBrief(data, now) {
     if (n !== null && n >= 0 && n <= 3) lines.push(fmtDue(label, n));
   }
 
-  const streak = data.streak || 0;
-  lines.push(streak > 0 ? `🔥 Streak ${streak} — protect it today.` : '🔥 Day 1 starts now.');
+  const m = momentumNow(data, now.date);
+  lines.push(`🌊 Momentum ${m} — ${flowStateOf(m)}. One small win keeps it climbing.`);
 
   const urgent = lines.some(l => l.includes('DUE TODAY'));
   return {
-    title: `${urgent ? '⚠️' : '☀️'} ${sched.kindTitles[kind] || kind} — ${now.weekdayLong}`,
+    title: `${urgent ? '⚠️' : '🌊'} ${sched.kindTitles[kind] || kind} — ${now.weekdayLong}`,
     body: lines.filter(Boolean).join('\n')
   };
 }
 
+// 9 PM anchor reminder (CLI mode is still called "streak" so the workflow
+// doesn't change). Silent whenever the day is already anchored — silence is
+// the reward. No death language, ever.
 function composeStreak(data, now) {
   const d = (data.days || {})[now.date] || {};
-  const missing = CORE.filter(k => d[k] !== true && d[k] !== 'fail');
-  if (missing.length === 0) {
-    console.log('Checked in — all core habits stamped. Staying silent.');
+  if (d.anchor === true || d.completed === true) {
+    console.log('Day is anchored — staying silent.');
     return null;
   }
-  const streak = data.streak || 0;
-  const hoursLeft = Math.max(1, 24 - now.hour);
+  const m = momentumNow(data, now.date);
+  const g = dayGains(d);
   return {
-    title: `🔥 Streak ${streak > 0 ? streak + ' dies' : 'restart slips away'} at midnight`,
-    body: `${missing.length} of 5 core stamps missing: ${missing.map(k => CORE_LABELS[k]).join(', ')}. ${hoursLeft} hour${hoursLeft === 1 ? '' : 's'} left — check in now.`
+    title: '⚓ 2 minutes — today isn\'t counted yet',
+    body: g > 0
+      ? `You already banked +${g} momentum today. Drop the anchor and the day counts.`
+      : `Tap the anchor: CGM checked, insulin on track, you're here. Momentum ${m} is waiting.`
   };
 }
 

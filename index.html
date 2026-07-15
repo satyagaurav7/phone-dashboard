@@ -3,27 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#14213D">
+<meta name="theme-color" content="#0B0E14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Mission Control">
+<meta name="apple-mobile-web-app-title" content="FLOWSTATE">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>Satya · Mission Dashboard</title>
+<title>FLOWSTATE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;600;700&family=B612+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* — token palette: "Road to PR" passport/customs — */
-    --passport:#14213D;   /* navy passport cover   */
-    --page:#ECF0F6;       /* pale guilloche page   */
-    --ink:#1C2B4A;        /* document ink          */
-    --maple:#C8271C;      /* maple red stamp ink   */
-    --customs:#1F7A4D;    /* approved-stamp green  */
-    --foil:#C9A227;       /* gold foil             */
-    --line:#C9D3E4; --sub:#51618A; --card:#FFFFFF;
+    /* — FLOWSTATE palette: dark canvas, earned light —
+       Variable names kept from the passport era so every reference reskins:
+       --passport = hero/nav surface · --maple = amber urgency (never shame red)
+       --customs = flow accent (progress cyan) · --foil = gold (PR story) */
+    --passport:#0E1420;   /* hero / nav surface    */
+    --page:#0B0E14;       /* dark canvas           */
+    --ink:#E6EBF5;        /* primary text          */
+    --maple:#E8A13C;      /* amber — urgency, info, never punishment */
+    --customs:#4FD8EB;    /* flow cyan — progress glow */
+    --foil:#C9A227;       /* gold — PR narrative   */
+    --violet:#8B7CF6;     /* secondary accent      */
+    --line:#232B3E; --sub:#8A94AD; --card:#111624; --well:#161D2E;
     --disp:'Barlow Condensed',ui-sans-serif,sans-serif;
     --body:'Public Sans',system-ui,sans-serif;
     --mono:'B612 Mono',ui-monospace,monospace;
@@ -32,7 +36,7 @@
   html,body{margin:0;padding:0}
   body{
     background:
-      repeating-radial-gradient(circle at 50% -60%, rgba(20,33,61,.05) 0 1px, transparent 1px 12px),
+      radial-gradient(ellipse 120% 60% at 50% -10%, rgba(79,216,235,.06), transparent 60%),
       var(--page);
     color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
     -webkit-tap-highlight-color:transparent;
@@ -42,8 +46,8 @@
   :focus-visible{outline:3px solid var(--foil);outline-offset:2px;border-radius:4px}
 
   /* ============ hero (passport cover) ============ */
-  .cover{background:var(--passport);border-radius:10px;color:#fff;padding:18px 18px 0;
-    border-top:4px solid var(--foil);border-bottom:4px solid var(--foil);overflow:hidden}
+  .cover{background:linear-gradient(160deg,#101A2C 0%,var(--passport) 55%);border-radius:10px;color:#fff;padding:18px 18px 0;
+    border:1.5px solid var(--line);border-top:2px solid rgba(79,216,235,.55);overflow:hidden}
   .cover .kicker{font-family:var(--disp);font-weight:600;letter-spacing:.22em;font-size:13px;color:var(--foil);text-transform:uppercase}
   .cover h1{font-family:var(--disp);font-weight:700;font-size:30px;margin:2px 0 0;letter-spacing:.02em;text-transform:uppercase}
   .cover .date{font-family:var(--mono);font-size:12.5px;color:#B9C6DE;margin-top:3px}
@@ -52,8 +56,8 @@
   .streakLbl{font-family:var(--disp);font-weight:600;letter-spacing:.18em;font-size:13px;color:#B9C6DE;text-transform:uppercase}
   .bestLbl{font-family:var(--mono);font-size:12.5px;color:var(--foil);margin-top:6px}
   .statusLine{font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.04em;color:#EAD9A0;padding:0 0 14px}
-  .mrz{background:#fff;color:var(--passport);font-family:var(--mono);font-size:12px;letter-spacing:2px;
-    padding:8px 12px;margin:0 -18px;white-space:nowrap;overflow:hidden;border-top:2px dashed var(--line)}
+  .mrz{background:rgba(79,216,235,.07);color:#9FE8F2;font-family:var(--mono);font-size:12px;letter-spacing:2px;
+    padding:8px 12px;margin:0 -18px;white-space:nowrap;overflow:hidden;border-top:1.5px dashed rgba(79,216,235,.25)}
   #syncStatus{font-family:var(--mono);font-size:11px;color:var(--foil);opacity:.85;margin-top:2px}
   .xpWrap{padding:0 0 14px}
   .xpTop{display:flex;justify-content:space-between;font-family:var(--disp);font-weight:600;letter-spacing:.14em;font-size:12px;color:var(--foil);text-transform:uppercase;margin-bottom:5px}
@@ -70,43 +74,39 @@
 
   /* stamp rows */
   .row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border:1.5px solid var(--line);
-    border-radius:6px;margin-bottom:8px;background:#FBFCFE;cursor:pointer;user-select:none;transition:background .15s}
+    border-radius:6px;margin-bottom:8px;background:var(--well);cursor:pointer;user-select:none;transition:background .15s,box-shadow .25s}
   .row:active{transform:scale(.99)}
   .row .emo{font-size:19px;flex:0 0 auto}
   .row .lbl{font-weight:600;font-size:15.5px}
   .row .subt{font-size:12.5px;color:var(--sub);font-weight:400;margin-top:1px}
   .row .spacer{flex:1}
   .stamp{flex:0 0 auto;font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.08em;
-    border:2px dashed #A7B4CC;color:var(--sub);border-radius:6px;padding:7px 10px;transform:rotate(0)}
-  .row.done{background:rgba(31,122,77,.07);border-color:rgba(31,122,77,.45)}
-  .row.done .stamp{border:2px solid var(--customs);box-shadow:inset 0 0 0 1.5px #fff,inset 0 0 0 3px rgba(31,122,77,.35);
-    color:var(--customs);background:rgba(31,122,77,.06);transform:rotate(-5deg);animation:slam .28s cubic-bezier(.2,1.6,.5,1)}
-  .row.navyInk.done{background:rgba(20,33,61,.05);border-color:rgba(20,33,61,.4)}
-  .row.navyInk.done .stamp{border-color:var(--passport);box-shadow:inset 0 0 0 1.5px #fff,inset 0 0 0 3px rgba(20,33,61,.3);color:var(--passport);background:rgba(20,33,61,.04)}
-  .row.mapleInk.done{background:rgba(200,39,28,.05);border-color:rgba(200,39,28,.4)}
-  .row.mapleInk.done .stamp{border-color:var(--maple);box-shadow:inset 0 0 0 1.5px #fff,inset 0 0 0 3px rgba(200,39,28,.3);color:var(--maple);background:rgba(200,39,28,.04)}
-  .row.fail{background:rgba(200,39,28,.07);border-color:rgba(200,39,28,.55)}
-  .row.fail .lbl{color:var(--maple)}
-  .row.fail .stamp{border:2px solid var(--maple);color:#fff;background:var(--maple);transform:rotate(4deg);animation:slam .28s cubic-bezier(.2,1.6,.5,1)}
-  @keyframes slam{0%{transform:rotate(9deg) scale(1.7);opacity:0}60%{transform:rotate(-7deg) scale(.95);opacity:1}100%{transform:rotate(-5deg) scale(1)}}
+    border:2px dashed #3A4560;color:var(--sub);border-radius:6px;padding:7px 10px;transform:rotate(0)}
+  .row.done{background:rgba(79,216,235,.08);border-color:rgba(79,216,235,.45);box-shadow:0 0 14px -6px rgba(79,216,235,.5)}
+  .row.done .stamp{border:2px solid var(--customs);color:var(--customs);background:rgba(79,216,235,.08);transform:rotate(-3deg);animation:slam .28s cubic-bezier(.2,1.6,.5,1)}
+  .row.navyInk.done{background:rgba(139,124,246,.08);border-color:rgba(139,124,246,.45);box-shadow:0 0 14px -6px rgba(139,124,246,.5)}
+  .row.navyInk.done .stamp{border-color:var(--violet);color:var(--violet);background:rgba(139,124,246,.08)}
+  .row.mapleInk.done{background:rgba(201,162,39,.08);border-color:rgba(201,162,39,.45);box-shadow:0 0 14px -6px rgba(201,162,39,.5)}
+  .row.mapleInk.done .stamp{border-color:var(--foil);color:var(--foil);background:rgba(201,162,39,.08)}
+  @keyframes slam{0%{transform:rotate(7deg) scale(1.5);opacity:0}60%{transform:rotate(-5deg) scale(.96);opacity:1}100%{transform:rotate(-3deg) scale(1)}}
   .timeWrap{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-right:2px}
-  .timeWrap input{font-family:var(--mono);font-size:13px;border:1.5px solid var(--line);border-radius:5px;padding:5px 6px;color:var(--ink);background:#fff}
+  .timeWrap input{font-family:var(--mono);font-size:13px;border:1.5px solid var(--line);border-radius:5px;padding:5px 6px;color:var(--ink);background:var(--well)}
 
   /* chips */
   .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{font-size:13px;border:1.5px solid var(--line);background:#FBFCFE;border-radius:4px;padding:8px 12px;color:var(--ink)}
-  .chip b{color:var(--passport)}
+  .chip{font-size:13px;border:1.5px solid var(--line);background:var(--well);border-radius:4px;padding:8px 12px;color:var(--ink)}
+  .chip b{color:var(--customs)}
 
   /* tiles */
   .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-  .tile{border:1.5px solid var(--line);background:#FBFCFE;border-radius:8px;padding:14px;position:relative;cursor:pointer;transition:border-color .15s;width:100%}
-  .tile:hover{border-color:var(--passport)}
-  .tile .dot{position:absolute;top:10px;right:10px;width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 2px #fff}
+  .tile{border:1.5px solid var(--line);background:var(--well);border-radius:8px;padding:14px;position:relative;cursor:pointer;transition:border-color .15s;width:100%}
+  .tile:hover{border-color:var(--customs)}
+  .tile .dot{position:absolute;top:10px;right:10px;width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--card)}
   .tile .big{font-family:var(--mono);font-weight:700;font-size:30px;line-height:1.05}
   .tile .cap{font-family:var(--disp);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:12.5px;color:var(--sub);margin-top:7px}
-  .tile .amend{font-family:var(--mono);font-size:10.5px;color:var(--passport);margin-top:6px;opacity:.75}
-  .t-good .big{color:var(--customs)} .t-warn .big{color:#8A5A00} .t-bad .big{color:var(--maple)} .t-idle .big{color:var(--ink)}
-  .d-good{background:var(--customs)} .d-warn{background:#C98A00} .d-bad{background:var(--maple)} .d-idle{background:#8FA0BF}
+  .tile .amend{font-family:var(--mono);font-size:10.5px;color:var(--sub);margin-top:6px;opacity:.8}
+  .t-good .big{color:var(--customs)} .t-warn .big{color:#E8B45A} .t-bad .big{color:var(--maple)} .t-idle .big{color:var(--ink)}
+  .d-good{background:var(--customs)} .d-warn{background:#C98A00} .d-bad{background:var(--maple)} .d-idle{background:#3A4560}
 
   /* two-up on wide screens */
   .grid2{display:grid;grid-template-columns:1fr;gap:0}
@@ -118,93 +118,103 @@
 
   /* ============ timetable (Plan tab) ============ */
   .tl{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:1.5px solid var(--line);
-    border-radius:6px;margin-bottom:6px;background:#FBFCFE;cursor:pointer;user-select:none}
+    border-radius:6px;margin-bottom:6px;background:var(--well);cursor:pointer;user-select:none}
   .tl:active{transform:scale(.995)}
   .tl .tlt{font-family:var(--mono);font-size:11.5px;color:var(--sub);flex:0 0 86px;line-height:1.3}
   .tl .emo{font-size:16px;flex:0 0 auto}
   .tl .lbl{font-weight:600;font-size:14px}
   .tl .st{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;
-    border:2px dashed #A7B4CC;color:var(--sub);border-radius:5px;padding:4px 7px;flex:0 0 auto;white-space:nowrap}
-  .tl.done{background:rgba(31,122,77,.07);border-color:rgba(31,122,77,.45)}
-  .tl.done .st{border-style:solid;border-color:var(--customs);color:var(--customs);transform:rotate(-4deg)}
-  .tl.fail{background:rgba(200,39,28,.07);border-color:rgba(200,39,28,.55)}
-  .tl.fail .lbl{color:var(--maple)}
-  .tl.fail .st{border-style:solid;border-color:var(--maple);background:var(--maple);color:#fff;transform:rotate(3deg)}
-  .tl.now{border-color:var(--foil);background:rgba(201,162,39,.10);box-shadow:0 0 0 2px rgba(201,162,39,.3)}
-  .tl.now .st{border-color:var(--foil);color:#8A5A00}
+    border:2px dashed #3A4560;color:var(--sub);border-radius:5px;padding:4px 7px;flex:0 0 auto;white-space:nowrap}
+  .tl.done{background:rgba(79,216,235,.08);border-color:rgba(79,216,235,.45)}
+  .tl.done .st{border-style:solid;border-color:var(--customs);color:var(--customs);transform:rotate(-3deg)}
+  .tl.fail{opacity:.55}
+  .tl.fail .st{border-style:solid;border-color:#3A4560;color:var(--sub)}
+  .tl.now{border-color:var(--customs);background:rgba(79,216,235,.08);box-shadow:0 0 16px -6px rgba(79,216,235,.55)}
+  .tl.now .st{border-color:var(--customs);color:var(--customs)}
   .wkRow{display:flex;gap:6px;margin-bottom:12px}
-  .dayChip{flex:1;text-align:center;border:1.5px solid var(--line);border-radius:6px;background:#FBFCFE;padding:7px 2px;cursor:pointer}
+  .dayChip{flex:1;text-align:center;border:1.5px solid var(--line);border-radius:6px;background:var(--well);padding:7px 2px;cursor:pointer}
   .dayChip .dn{font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub)}
   .dayChip .dd{font-family:var(--mono);font-weight:700;font-size:14px;margin-top:1px}
-  .dayChip.sel{border-color:var(--passport);background:rgba(20,33,61,.07)}
-  .dayChip.tdy .dn{color:var(--maple)}
+  .dayChip.sel{border-color:var(--customs);background:rgba(79,216,235,.08)}
+  .dayChip.tdy .dn{color:var(--customs)}
 
   /* ============ history heatmap ============ */
   .hmWrap{overflow-x:auto;padding-bottom:4px}
   .hmMonths{display:flex;gap:3px;height:14px;margin:0 0 4px;font-family:var(--mono);font-size:10px;color:var(--sub)}
   .hmMonths span{width:13px;flex:0 0 auto;overflow:visible;white-space:nowrap}
   .hmGrid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,13px);grid-auto-columns:13px;gap:3px}
-  .hmCell{width:13px;height:13px;border-radius:3px;border:1px solid var(--line);background:#FBFCFE;padding:0;cursor:pointer}
-  .hmCell.part{background:#E7C46A;border-color:#C98A00}
-  .hmCell.full{background:var(--customs);border-color:var(--customs)}
-  .hmCell.fail{background:var(--maple);border-color:var(--maple)}
-  .hmCell.today{outline:2px solid var(--passport);outline-offset:1px}
+  .hmCell{width:13px;height:13px;border-radius:3px;border:1px solid var(--line);background:#131A29;padding:0;cursor:pointer}
+  .hmCell.part{background:rgba(79,216,235,.32);border-color:rgba(79,216,235,.5)}
+  .hmCell.full{background:var(--customs);border-color:var(--customs);box-shadow:0 0 6px -1px rgba(79,216,235,.7)}
+  .hmCell.today{outline:2px solid var(--customs);outline-offset:1px}
   .hmDow{display:grid;grid-template-rows:repeat(7,13px);gap:3px;margin:18px 6px 0 0;font-family:var(--mono);font-size:9px;color:var(--sub);flex:0 0 auto}
   .hmLegend{display:flex;gap:12px;align-items:center;margin-top:10px;font-size:12px;color:var(--sub);flex-wrap:wrap}
   .hmLegend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 
   /* ============ bottom nav ============ */
-  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--passport);border-top:3px solid var(--foil);padding-bottom:env(safe-area-inset-bottom)}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--passport);border-top:2px solid rgba(79,216,235,.35);padding-bottom:env(safe-area-inset-bottom)}
   .navIn{max-width:780px;margin:0 auto;display:flex}
-  .navBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 12px;color:#8FA0BF;position:relative}
+  .navBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 12px;color:#55617F;position:relative}
   .navBtn .nEmo{font-size:19px;line-height:1}
   .navBtn .nLbl{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
   .navBtn.on{color:#fff}
-  .navBtn.on::after{content:"";position:absolute;top:-3px;left:22%;right:22%;height:3px;background:var(--foil)}
+  .navBtn.on::after{content:"";position:absolute;top:-2px;left:22%;right:22%;height:2px;background:var(--customs);box-shadow:0 0 8px rgba(79,216,235,.8)}
 
   /* ============ modal ============ */
   .overlay{position:fixed;inset:0;z-index:60;background:rgba(20,33,61,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px}
-  .modal{width:100%;max-width:340px;background:#fff;border-radius:8px;border:1.5px solid var(--line);overflow:hidden;animation:mIn .22s cubic-bezier(.3,1.4,.6,1)}
+  .modal{width:100%;max-width:340px;background:var(--card);border-radius:8px;border:1.5px solid var(--line);overflow:hidden;animation:mIn .22s cubic-bezier(.3,1.4,.6,1)}
   @keyframes mIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
   .modal header{background:var(--passport);color:#fff;padding:12px 16px;font-family:var(--disp);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:14.5px}
   .modal .body{padding:16px}
   .modal label{display:block;font-family:var(--disp);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:0 0 5px}
-  .modal input{width:100%;font-family:var(--mono);font-size:16px;padding:10px 12px;border:1.5px solid var(--line);border-radius:6px;color:var(--ink);margin-bottom:14px;background:#FBFCFE}
-  .modal input:focus{outline:none;border-color:var(--passport)}
+  .modal input{width:100%;font-family:var(--mono);font-size:16px;padding:10px 12px;border:1.5px solid var(--line);border-radius:6px;color:var(--ink);margin-bottom:14px;background:var(--well)}
+  .modal input:focus{outline:none;border-color:var(--customs)}
   .mBtns{display:flex;gap:10px}
   .mBtns .cancel{flex:1;text-align:center;padding:11px;border:1.5px solid var(--line);border-radius:6px;color:var(--sub);font-weight:600}
-  .mBtns .save{flex:1;text-align:center;padding:11px;border-radius:6px;background:var(--customs);color:#fff;font-weight:700;font-family:var(--disp);letter-spacing:.12em;text-transform:uppercase}
+  .mBtns .save{flex:1;text-align:center;padding:11px;border-radius:6px;background:var(--customs);color:#06222A;font-weight:700;font-family:var(--disp);letter-spacing:.12em;text-transform:uppercase}
 
   /* ============ celebration ============ */
   .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:80;background:var(--passport);color:#fff;
-    border:2px solid var(--foil);border-radius:8px;padding:12px 18px;font-weight:700;font-size:15px;white-space:nowrap;
-    box-shadow:0 10px 30px rgba(20,33,61,.35);animation:tIn .35s cubic-bezier(.3,1.5,.6,1)}
+    border:1.5px solid rgba(79,216,235,.6);border-radius:8px;padding:12px 18px;font-weight:700;font-size:15px;white-space:nowrap;
+    box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 24px -6px rgba(79,216,235,.5);animation:tIn .35s cubic-bezier(.3,1.5,.6,1)}
   @keyframes tIn{from{opacity:0;transform:translate(-50%,-16px)}to{opacity:1;transform:translate(-50%,0)}}
   .burstBox{position:fixed;top:66px;left:50%;width:0;height:0;z-index:75;pointer-events:none}
   .pc{position:absolute;left:0;top:0;font-size:15px;animation:fly 1.3s ease-out forwards}
   .pcSq{position:absolute;left:0;top:0;width:8px;height:8px;border-radius:1px;animation:fly 1.3s ease-out forwards}
   @keyframes fly{from{opacity:1;transform:translate(0,0) rotate(0)}to{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
-  .lockCard{position:fixed;inset:0;z-index:78;display:flex;align-items:center;justify-content:center;pointer-events:none}
-  .lockCard .inner{background:#fff;border:4px double var(--maple);color:var(--maple);border-radius:10px;padding:22px 30px;
-    font-family:var(--mono);font-weight:700;font-size:20px;letter-spacing:.1em;transform:rotate(-6deg);text-align:center}
+  /* ============ anchor + momentum ============ */
+  .anchorBtn{display:flex;align-items:center;gap:14px;width:100%;padding:16px 14px;border:1.5px solid rgba(79,216,235,.4);
+    border-radius:8px;background:linear-gradient(135deg,rgba(79,216,235,.10),rgba(139,124,246,.06));cursor:pointer;user-select:none;transition:box-shadow .25s}
+  .anchorBtn .aEmo{font-size:26px;flex:0 0 auto}
+  .anchorBtn .aLbl{font-family:var(--disp);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+  .anchorBtn .aSub{font-size:12.5px;color:var(--sub);font-weight:400;margin-top:2px;text-transform:none;letter-spacing:0;font-family:var(--body)}
+  .anchorBtn .stamp{margin-left:auto}
+  .anchorBtn.done{border-color:var(--customs);box-shadow:0 0 24px -6px rgba(79,216,235,.65);background:linear-gradient(135deg,rgba(79,216,235,.16),rgba(79,216,235,.05))}
+  .anchorBtn.done .stamp{border:2px solid var(--customs);color:var(--customs)}
+  .smallGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .swin{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--well);
+    padding:10px;cursor:pointer;user-select:none;font-size:13px;font-weight:600;color:var(--ink)}
+  .swin .pts{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--sub);white-space:nowrap}
+  .swin.done{background:rgba(79,216,235,.10);border-color:rgba(79,216,235,.5);box-shadow:0 0 12px -5px rgba(79,216,235,.55)}
+  .swin.done .pts{color:var(--customs)}
 
   /* ============ auth gate ============ */
   #authGate{
     max-width:360px;margin:14vh auto 0;background:var(--card);border:1.5px solid var(--line);
-    border-radius:10px;padding:32px 28px;box-shadow:0 18px 40px -18px rgba(20,33,61,.35);text-align:center;
-    border-top:4px solid var(--foil);animation:mIn .3s cubic-bezier(.3,1.4,.6,1)
+    border-radius:10px;padding:32px 28px;box-shadow:0 18px 40px -18px rgba(0,0,0,.6),0 0 40px -14px rgba(79,216,235,.35);text-align:center;
+    border-top:2px solid rgba(79,216,235,.55);animation:mIn .3s cubic-bezier(.3,1.4,.6,1)
   }
   #authGate .lock{font-size:34px}
-  #authGate h2{margin:14px 0 4px;font-family:var(--disp);font-weight:700;font-size:20px;color:var(--passport);letter-spacing:.02em;text-transform:uppercase}
+  #authGate h2{margin:14px 0 4px;font-family:var(--disp);font-weight:700;font-size:20px;color:var(--ink);letter-spacing:.02em;text-transform:uppercase}
   #authGate .sub{color:var(--sub);font-size:14px;margin:0 0 20px}
   #authGate input{
     width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:6px;font-size:16px;
-    margin-bottom:12px;background:#FBFCFE;color:var(--ink);font-family:var(--mono)
+    margin-bottom:12px;background:var(--well);color:var(--ink);font-family:var(--mono)
   }
-  #authGate input:focus{outline:none;border-color:var(--passport)}
+  #authGate input:focus{outline:none;border-color:var(--customs)}
   #authGate button{
     width:100%;padding:13px;border:none;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;
-    color:#fff;background:var(--passport);font-family:var(--disp);letter-spacing:.12em;text-transform:uppercase;transition:filter .16s
+    color:#06222A;background:var(--customs);font-family:var(--disp);letter-spacing:.12em;text-transform:uppercase;transition:filter .16s
   }
   #authGate button:hover{filter:brightness(1.2)}
   #authGate button:disabled{opacity:.6;cursor:default}
@@ -217,9 +227,9 @@
 </head>
 <body>
   <div id="authGate">
-    <div class="lock">🔒</div>
+    <div class="lock">🌊</div>
     <h2>Welcome back, Satya</h2>
-    <p class="sub">Enter your password to open Mission Control.</p>
+    <p class="sub">Enter your password. Enter the flow.</p>
     <input type="password" id="authPass" placeholder="Password" autocomplete="current-password">
     <button id="authSubmit">Unlock</button>
     <div class="err" id="authErr"></div>
@@ -317,7 +327,25 @@ async function initApp(){
   try { SCHED_DATA = await (await fetch('schedule.json', { cache: 'no-cache' })).json(); }
   catch (e) { try { const c = await caches.match('schedule.json'); if (c) SCHED_DATA = await c.json(); } catch (e2) {} }
 
-  const blankDay = () => ({smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],sched:{},completed:false});
+  const blankDay = () => ({anchor:false,water:false,walk:false,read5:false,cookmeal:false,phonedown:false,smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],sched:{},completed:false});
+
+  /* ---------- momentum engine (shared constants with scripts/notify.mjs) ----------
+     Anchor +10 · small win +3 (max 4 count) · big win +8 · each new day −4 drift.
+     Momentum lives in S.flow = {m, asOf}: m is the value at the START of asOf;
+     today's gains are layered on live, then committed at the next day rollover.
+     It can dip. It can never be reset to zero by a bad day. */
+  const SMALL_KEYS = ['water','walk','read5','cookmeal','meditate','phonedown'];
+  const BIG_KEYS = ['gym','language','study','cooked','smokefree','money'];
+  const clampM = m => Math.max(0, Math.min(100, m));
+  const dayGains = d => {
+    if (!d) return 0;
+    let g = (d.anchor===true || d.completed===true) ? 10 : 0; // completed = pre-FLOWSTATE legacy days
+    g += Math.min(4, SMALL_KEYS.filter(k=>d[k]===true).length) * 3;
+    g += BIG_KEYS.filter(k=>d[k]===true).length * 8;
+    return g;
+  };
+  const FLOW_STATES = [[75,'🔥','Deep flow'],[50,'⚡','Flow'],[25,'🌊','In motion'],[0,'·','Cold start']];
+  const flowStateOf = m => FLOW_STATES.find(([t])=>m>=t);
 
   let S = {};
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
@@ -328,9 +356,18 @@ async function initApp(){
     S.days = S.days || {};
     S.fcmTokens = Array.isArray(S.fcmTokens) ? S.fcmTokens : [];
     S.streak = S.streak || 0; S.best = S.best || 0; S.lastComplete = S.lastComplete || null;
+    // Migrate the old streak into starting momentum, once. streak/best stay as legacy stats.
+    if (!S.flow || typeof S.flow.m !== 'number' || !/^\d{4}-\d{2}-\d{2}$/.test(String(S.flow.asOf))) S.flow = { m: clampM((S.streak||0)*8 + 20), asOf: T };
+    // Day rollover: commit each passed day's gains, apply −4 drift per day.
+    if (S.flow.asOf < T) {
+      let m = S.flow.m, d = S.flow.asOf;
+      while (d < T) { m = clampM(m + dayGains(S.days[d]) - 4); d = addDays(d, 1); }
+      S.flow = { m, asOf: T };
+    }
     S.days[T] = Object.assign(blankDay(), S.days[T]||{});
   }
   normalize();
+  const momentumNow = s => clampM(s.flow.m + dayGains(s.days[T]));
 
   const syncEl = () => document.getElementById('syncStatus');
   const setSyncUI = (text) => { const el = syncEl(); if (el) el.textContent = text; };
@@ -351,7 +388,6 @@ async function initApp(){
     catch(e) { setSyncUI('Saved on this device'); }
   };
 
-  const CORE = ['smokefree','gym','language','cooked','sleep'];
   const getPath = (o,p) => String(p).split('.').reduce((a,k)=>a==null?a:a[k], o);
 
   window.Dash = {
@@ -359,29 +395,11 @@ async function initApp(){
     state: S,
     _fn: null,
     set(path, value){
+      // FLOWSTATE: no streak mutation, no day-locking, no punishment side
+      // effects. Momentum is derived from what was actually logged.
       const parts = String(path).split('.'); let o = this.state;
       for (let i=0; i<parts.length-1; i++){ if (o[parts[i]] == null) o[parts[i]] = {}; o = o[parts[i]]; }
       o[parts[parts.length-1]] = value;
-      const d = this.state.days[this.today] || {};
-      if (CORE.every(k => d[k] === true) && !d.completed) {
-        d.completed = true;
-        d.prevStreak = { streak: this.state.streak, best: this.state.best, lastComplete: this.state.lastComplete };
-        this.state.streak = (this.state.lastComplete === addDays(this.today,-1)) ? this.state.streak+1 : 1;
-        this.state.lastComplete = this.today;
-        this.state.best = Math.max(this.state.best, this.state.streak);
-      } else if (d.completed && !CORE.every(k => d[k] === true)) {
-        // A core item was un-done or denied after the day locked — revert the lock honestly.
-        d.completed = false;
-        if (d.prevStreak) {
-          this.state.streak = d.prevStreak.streak;
-          this.state.best = d.prevStreak.best;
-          this.state.lastComplete = d.prevStreak.lastComplete;
-          delete d.prevStreak;
-        } else {
-          this.state.streak = Math.max(0, this.state.streak - 1);
-          this.state.lastComplete = this.state.streak > 0 ? addDays(this.today,-1) : null;
-        }
-      }
       saveLocal(); saveCloud();
       if (this._fn) this._fn(this.state);
     },
@@ -413,34 +431,38 @@ async function initApp(){
   // Silent refresh on every open — standard fix for FCM token rotation.
   if (VAPID_KEY && 'Notification' in window && Notification.permission === 'granted') ensurePushToken(false);
 
-  /* ================================ UI (Mission Dashboard design) ================================ */
+  /* ================================ UI (FLOWSTATE design) ================================ */
   (function(){
     'use strict';
     const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const WINS = [
-      ['smokefree','🚭','Smoke-free','no weed, no vape — clean day'],
-      ['gym','🏋️','Gym / workout','went, that’s the win'],
-      ['language','📚','CELPIP reading','20 min — the PR blocker'],
-      ['cooked','🍳','Cooked — zero delivery','no Uber Eats, period'],
-      ['sleep','😴','Sleep on schedule','in bed / woke on time'],
+    const SMALL_WINS = [
+      ['water','🚰','Hydrated properly'],
+      ['walk','🚶','10-min walk / moved'],
+      ['read5','📖','Opened the CELPIP book'],
+      ['cookmeal','🍳','Cooked one meal'],
+      ['meditate','🧘','One breathing reset'],
+      ['phonedown','🌙','Phone down before bed'],
     ];
-    const GROWTH = [
-      ['study','💻','Cyber upskill','30 min — CISSP / cloud / AppSec'],
+    const BIG_WINS = [
+      ['gym','🏋️','Gym session','showing up is the win'],
+      ['language','📚','CELPIP 20-min block','the PR blocker, chipped'],
+      ['study','💻','Upskill hour','CISSP · cloud · AppSec'],
+      ['cooked','🍽️','Full cooked day','every meal home-made'],
+      ['smokefree','🚭','Smoke-free day','stamp it at night'],
       ['money','💸','Money move','side income · invest · learn'],
-      ['meditate','🧘','Meditate / breathwork','10 min of quiet'],
     ];
     const FINES = [
-      ['cab','🚕','Cabbed it — overslept',12],
-      ['delivery','🍔','Ordered delivery',20],
-      ['smoke','🚬','Bought smokes / weed',15],
-      ['impulse','🛒','Impulse buy I didn’t need',15],
+      ['cab','🚕','Cab ride',12],
+      ['delivery','🍔','Delivery order',20],
+      ['smoke','🚬','Smokes / weed buy',15],
+      ['impulse','🛒','Impulse buy',15],
     ];
     const FUEL = [
       ['breakfast','🌅','Breakfast','core'],
       ['lunch','☀️','Lunch','core'],
       ['dinner','🌙','Dinner','core'],
-      ['insulin','💉','Insulin done','logged · not part of streak'],
+      ['insulin','💉','Insulin done','medical log — always worth a tap'],
     ];
     const SUPPS = [
       ['omega3','Omega-3','Fish Oil 1300 mg'],
@@ -466,7 +488,7 @@ async function initApp(){
       ['permitdoc','Work permit copy — add to PR folder'],
     ];
 
-    let tab='today', prevCore=null, prevBusted=null, modalSpec=null, planDay=null;
+    let tab='today', prevAnchor=null, prevBig=null, modalSpec=null, planDay=null;
 
     const daysUntil = s => { if(!s) return null;
       const a=new Date(Dash.today+'T00:00:00'), b=new Date(String(s)+'T00:00:00');
@@ -483,18 +505,16 @@ async function initApp(){
     /* ---------- Visa Points (XP) — derived from real record, never stored ---------- */
     const LEVELS=[[0,'Visitor'],[150,'Student'],[400,'Worker'],[800,'Candidate'],[1400,'Nominee'],[2200,'Permanent Resident']];
     function calcXP(s){
-      const CORE7=['smokefree','gym','language','cooked','sleep'];
-      const GROWTHK=['study','money','meditate'];
+      // FLOWSTATE: additive only. Nothing you do can subtract Visa Points.
       let xp=0;
       for(const k in (s.days||{})){
         const d=s.days[k]; if(!d) continue;
-        if(d.completed===true) xp+=10;
-        else if(CORE7.some(x=>d[x]==='fail')) xp-=15;
-        xp += GROWTHK.filter(x=>d[x]===true).length*5;  // bonus: growth beyond the 5 keystones
-        xp -= (d.fines?d.fines.length:0)*15;             // penalty: each logged fine costs points
+        if(d.anchor===true||d.completed===true) xp+=10;      // showed up (completed = legacy days)
+        xp += BIG_KEYS.filter(x=>d[x]===true).length*5;
+        xp += Math.min(4,SMALL_KEYS.filter(x=>d[x]===true).length)*2;
       }
       for(const k in (s.actions||{})) if(s.actions[k]===true) xp+=100;
-      return Math.max(0,xp);
+      return xp;
     }
     function levelInfo(xp){
       let i=0; for(let j=0;j<LEVELS.length;j++) if(xp>=LEVELS[j][0]) i=j;
@@ -502,48 +522,25 @@ async function initApp(){
       return {idx:i,name:LEVELS[i][1],next,progress:next?(xp-LEVELS[i][0])/(next[0]-LEVELS[i][0]):1};
     }
 
-    function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];}
-    function arc(cx,cy,r,a0,a1){const [x0,y0]=polar(cx,cy,r,a0),[x1,y1]=polar(cx,cy,r,a1);
-      return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;}
-    function sealSVG(done, total, complete, failed){
-      failed = failed || 0;
-      const cx=80, cy=80, segR=56, gap=7, span=360/total;
-      let segs='';
-      for(let i=0;i<total;i++){
-        const a0=i*span+gap/2, a1=(i+1)*span-gap/2;
-        const col = i<done ? '#3FBF7F' : i<done+failed ? '#E5533F' : 'rgba(255,255,255,.18)';
-        segs+=`<path d="${arc(cx,cy,segR,a0,a1)}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="butt"></path>`;
-      }
-      const ringTxt=`DAILY ENTRY · CANADA BOUND · DAILY ENTRY · CANADA BOUND · `;
-      const center = failed>0
-        ? `<g transform="rotate(8 ${cx} ${cy})">
-             <circle cx="${cx}" cy="${cy}" r="41" fill="none" stroke="#E5533F" stroke-width="2.5"></circle>
-             <circle cx="${cx}" cy="${cy}" r="36" fill="none" stroke="#E5533F" stroke-width="1.2"></circle>
-             <text x="${cx}" y="${cy-4}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="12" fill="#E5533F" letter-spacing="1">ENTRY</text>
-             <text x="${cx}" y="${cy+12}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="12" fill="#E5533F" letter-spacing="1">REFUSED</text>
-           </g>`
-        : complete
-        ? `<g transform="rotate(-12 ${cx} ${cy})">
-             <circle cx="${cx}" cy="${cy}" r="41" fill="none" stroke="#3FBF7F" stroke-width="2.5"></circle>
-             <circle cx="${cx}" cy="${cy}" r="36" fill="none" stroke="#3FBF7F" stroke-width="1.2"></circle>
-             <text x="${cx}" y="${cy-4}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="13" fill="#3FBF7F" letter-spacing="1">DAY</text>
-             <text x="${cx}" y="${cy+12}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="13" fill="#3FBF7F" letter-spacing="1">LOCKED</text>
-           </g>`
-        : `<text x="${cx}" y="${cy+2}" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="26" fill="#fff">${done}/${total}</text>
-           <text x="${cx}" y="${cy+20}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="9.5" fill="#C9A227" letter-spacing="2.5">CORE STAMPED</text>`;
-      return `<svg width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Core progress: ${done} of ${total}">
-        <defs><path id="sealTxtPath" d="M ${cx} ${cy-70} A 70 70 0 1 1 ${cx-0.01} ${cy-70}"></path></defs>
-        <text font-family="B612 Mono,monospace" font-size="8.2" fill="rgba(255,255,255,.5)" letter-spacing="2.2">
-          <textPath href="#sealTxtPath">${ringTxt}</textPath>
-        </text>
-        ${segs}${center}
+    function momentumRing(m, todayGain){
+      const C=2*Math.PI*56, off=C*(1-m/100);
+      const st=flowStateOf(m);
+      return `<svg width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Momentum ${m} of 100 — ${st[2]}">
+        <circle cx="80" cy="80" r="56" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
+        <circle cx="80" cy="80" r="56" fill="none" stroke="rgba(79,216,235,.28)" stroke-width="15" stroke-linecap="round"
+          stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 80 80)"/>
+        <circle cx="80" cy="80" r="56" fill="none" stroke="#4FD8EB" stroke-width="6" stroke-linecap="round"
+          stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 80 80)"/>
+        <text x="80" y="78" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="36" fill="#fff">${m}</text>
+        <text x="80" y="98" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="11.5" fill="#4FD8EB" letter-spacing="2.5">${st[2].toUpperCase()}</text>
+        ${todayGain>0?`<text x="80" y="116" text-anchor="middle" font-family="B612 Mono,monospace" font-size="10.5" fill="#C9A227">+${todayGain} today</text>`:''}
       </svg>`;
     }
 
     function rowHTML(path, emo, lbl, sub, state, inkClass, extra){
-      const cls = state===true?'done':state==='fail'?'fail':'';
-      const stamp = state===true?'DONE ✓':state==='fail'?'DENIED ✗':'STAMP';
-      return `<div class="row ${cls} ${inkClass||''}" role="button" tabindex="0" aria-pressed="${state===true}" aria-label="${lbl}: ${state===true?'done':state==='fail'?'denied':'not stamped'}" data-toggle="${path}">
+      const cls = state===true?'done':'';
+      const stamp = state===true?'DONE ✓':'TAP';
+      return `<div class="row ${cls} ${inkClass||''}" role="button" tabindex="0" aria-pressed="${state===true}" aria-label="${lbl}: ${state===true?'done':'not yet'}" data-toggle="${path}">
         <span class="emo" aria-hidden="true">${emo}</span>
         <span><span class="lbl">${lbl}</span>${sub?`<div class="subt">${sub}</div>`:''}</span>
         <span class="spacer"></span>${extra||''}
@@ -562,45 +559,58 @@ async function initApp(){
     }
 
     function todayHTML(s,d){
-      const CORE7=['smokefree','gym','language','cooked','sleep'];
-      const doneCore=CORE7.filter(k=>d[k]===true).length;
-      const failedCore=CORE7.filter(k=>d[k]==='fail').length;
-      const busted=failedCore>0;
-      const complete=doneCore===CORE7.length;
-      const shownStreak=busted?0:s.streak;
       const hr=new Date().getHours();
       const greet=hr<5?'Late night':hr<12?'Good morning':hr<17?'Good afternoon':hr<22?'Good evening':'Late night';
       const dateStr=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-      const status = busted ? `Entry refused — ${failedCore} denied. Streak broken. Clean page tomorrow.`
-        : complete ? `Day locked. Streak ${s.streak} and counting.`
-        : doneCore===0 ? 'Fresh page. First stamp sets the tone.'
-        : `${doneCore}/${CORE7.length} stamped — keep the ink wet.`;
+      const gToday=dayGains(d);
+      const m=momentumNow(s);
+      const st=flowStateOf(m);
+      const anchored=d.anchor===true;
+      const bigDone=BIG_KEYS.filter(k=>d[k]===true).length;
+      const status = !anchored
+        ? (gToday>0 ? `+${gToday} momentum already banked — drop the anchor and the day counts.`
+                    : 'The anchor takes 2 minutes. Everything after it is bonus.')
+        : gToday>=26 ? `Deep work day — +${gToday} momentum and glowing.`
+        : `Day counted ⚓ +${gToday} momentum${bigDone?` · ${bigDone} big win${bigDone>1?'s':''}`:''}. Every extra tap is pure gain.`;
       const mrzPad = t => (t + '<'.repeat(44)).slice(0,44).replace(/</g,'&lt;');
-      const mrz1 = mrzPad('PALAKOLLU<<SATYA<GAURAV');
-      const mrz2 = mrzPad( busted
-        ? `ENTRY<REFUSED<<DENIED<${pad(failedCore,2)}<<PR<2027`
-        : `STREAK<${pad(shownStreak,3)}<BEST<${pad(s.best,3)}<DONE<${doneCore}<OF<${CORE7.length}<PR<2027` );
+      const mrz1 = mrzPad('SATYA<GAURAV<<FLOWSTATE');
+      const mrz2 = mrzPad(`FLOW<${pad(m,3)}<${st[2].toUpperCase().replace(/ /g,'<')}<DAY<${anchored?'COUNTED':'OPEN'}<PR<2027`);
       const mrz=`${mrz1}<br>${mrz2}`;
 
       const xp=calcXP(s), lv=levelInfo(xp);
       const xpBlock=`<div class="xpWrap">
         <div class="xpTop"><span>Visa Points · ${xp}</span><span>Lv${lv.idx+1} · ${lv.name}</span></div>
         <div class="xpBar"><div class="xpFill" style="width:${Math.round(lv.progress*100)}%"></div></div>
-        <div class="xpSub">${lv.next?`${lv.next[0]-xp} pts to ${lv.next[1].toUpperCase()}`:'MAX LEVEL — you made it home'} · +10 lock · +100 action · −15 refusal</div>
+        <div class="xpSub">${lv.next?`${lv.next[0]-xp} pts to ${lv.next[1].toUpperCase()}`:'MAX LEVEL — you made it home'} · gains only: anchor +10 · big +5 · small +2 · PR action +100</div>
       </div>`;
 
-      const winRows = WINS.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k])).join('');
-      const growthRows = GROWTH.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k],'navyInk')).join('');
-      const growthDone = GROWTH.filter(([k])=>d[k]===true).length;
+      const anchorCard=`<div class="card" style="border-color:rgba(79,216,235,.35)">
+        ${secTitle('⚓','The Anchor', anchored?'DAY COUNTED':'2 minutes', anchored?'var(--customs)':'var(--sub)')}
+        <div class="anchorBtn${anchored?' done':''}" role="button" tabindex="0" aria-pressed="${anchored}" data-toggle="days.${Dash.today}.anchor" aria-label="Anchor: ${anchored?'done — day counted':'not yet'}">
+          <span class="aEmo" aria-hidden="true">⚓</span>
+          <span><span class="aLbl">${anchored?'Anchored':'Drop the anchor'}</span>
+          <div class="aSub">CGM checked · insulin on track · I'm here</div></span>
+          <span class="stamp">${anchored?'+10 ✓':'TAP'}</span>
+        </div>
+        ${anchored?'':'<div style="font-size:12px;color:var(--sub);margin-top:8px">This is the only thing the day asks of you. Do it and the day counts — no matter what else happens.</div>'}
+      </div>`;
+
+      const smallRows=`<div class="smallGrid">${SMALL_WINS.map(([k,e,l])=>
+        `<div class="swin${d[k]===true?' done':''}" role="button" tabindex="0" aria-pressed="${d[k]===true}" aria-label="${l}: ${d[k]===true?'done':'not yet'}" data-toggle="days.${Dash.today}.${k}">
+          <span aria-hidden="true">${e}</span><span>${l}</span><span class="pts">${d[k]===true?'+3 ✓':'+3'}</span>
+        </div>`).join('')}</div>`;
+      const smallDone=SMALL_WINS.filter(([k])=>d[k]===true).length;
+
+      const bigRows = BIG_WINS.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k])).join('');
 
       const fines=d.fines||[];
       const fineTotal=fines.reduce((t,k)=>{const f=FINES.find(x=>x[0]===k);return t+(f?f[3]:0);},0);
-      const fineRows=FINES.map(([k,e,l,amt])=>`<div class="row mapleInk" role="button" tabindex="0" aria-label="Log fine: ${l}, minus $${amt}" data-fine="${k}" style="margin-bottom:8px">
+      const fineRows=FINES.map(([k,e,l,amt])=>`<div class="row" role="button" tabindex="0" aria-label="Log leak: ${l}, $${amt}" data-fine="${k}" style="margin-bottom:8px">
         <span class="emo" aria-hidden="true">${e}</span><span><span class="lbl">${l}</span></span><span class="spacer"></span>
-        <span class="stamp">−$${amt} · −15pts</span></div>`).join('');
+        <span class="stamp">$${amt}</span></div>`).join('');
       const fineLog = fines.length
-        ? `<div style="font-size:12.5px;color:var(--maple);margin-top:6px;font-family:var(--mono)">Today: ${fines.map(k=>{const f=FINES.find(x=>x[0]===k);return f?f[1]:k;}).join(' ')} · −$${fineTotal} · −${fines.length*15}pts <button data-fineundo style="color:var(--sub);text-decoration:underline;font-family:var(--mono);font-size:12px">undo last</button></div>`
-        : `<div style="font-size:12.5px;color:var(--customs);margin-top:6px;font-family:var(--mono)">CLEAN — $0 in fines today. Keep it that way.</div>`;
+        ? `<div style="font-size:12.5px;color:var(--sub);margin-top:6px;font-family:var(--mono)">Logged today: ${fines.map(k=>{const f=FINES.find(x=>x[0]===k);return f?f[1]:k;}).join(' ')} · $${fineTotal} <button data-fineundo style="color:var(--sub);text-decoration:underline;font-family:var(--mono);font-size:12px">undo last</button></div>`
+        : `<div style="font-size:12.5px;color:var(--sub);margin-top:6px;font-family:var(--mono)">Nothing leaked today.</div>`;
 
       /* ---------- Right Now: current/next timetable block + today's deadlines ---------- */
       const rightNow=(()=>{
@@ -623,25 +633,25 @@ async function initApp(){
         [['permit','🍁 Work permit expires'],['celpipExam','📚 CELPIP retest'],['cecDate','🍁 CEC eligibility']].forEach(([k,l])=>{
           if(daysUntil(c[k])===0)dueBits.push(`${l} TODAY`);
         });
-        const streakLine = busted?'💔 Streak broken today — clean page tomorrow.'
-          : complete?`✅ Day locked — streak ${s.streak} safe.`
-          : hr>=18?`⚠️ ${CORE7.length-doneCore} core stamps left — streak dies at midnight.`
-          : `🔥 ${doneCore}/${CORE7.length} core stamped — streak ${s.streak} on the line.`;
+        const flowLine = anchored
+          ? `${st[1]} Momentum ${m} — ${st[2]}. Day counted.`
+          : hr>=18 ? `⚓ Anchor still open — 2 minutes and today counts.`
+          : `🌊 Momentum ${m} — anchor open, day ahead.`;
         let blockRow;
         if(b){
-          const [k,st,en,e,l]=b;
+          const [k,bst,en,e,l]=b;
           const v=sched[k];
           const cls=v===true?'done':v==='fail'?'fail':'';
-          const stTxt=v===true?'DONE ✓':v==='fail'?'MISSED ✗':cur?'STAMP':'···';
-          blockRow=`<div class="tl ${cls}${cur&&!v?' now':''}" role="button" tabindex="0" data-toggle="days.${Dash.today}.sched.${k}" aria-label="${l}: ${v===true?'done':v==='fail'?'missed':'pending'}">
-            <span class="tlt">${st}${en?'–'+en:''}</span><span class="emo" aria-hidden="true">${e}</span><span class="lbl">${cur?'':'Next · '}${l}</span><span class="st">${stTxt}</span></div>`;
+          const stTxt=v===true?'DONE ✓':v==='fail'?'SKIP':cur?'NOW':'···';
+          blockRow=`<div class="tl ${cls}${cur&&!v?' now':''}" role="button" tabindex="0" data-toggle="days.${Dash.today}.sched.${k}" aria-label="${l}: ${v===true?'done':v==='fail'?'skipped':'pending'}">
+            <span class="tlt">${bst}${en?'–'+en:''}</span><span class="emo" aria-hidden="true">${e}</span><span class="lbl">${cur?'':'Next · '}${l}</span><span class="st">${stTxt}</span></div>`;
         } else {
-          blockRow=`<div style="font-size:13.5px;color:var(--sub)">No more blocks today. ${complete?'Rest is earned.':'Stamp your core wins below.'}</div>`;
+          blockRow=`<div style="font-size:13.5px;color:var(--sub)">No more blocks today. ${anchored?'Rest is earned.':'The anchor below still counts the day.'}</div>`;
         }
-        return `<div class="card" style="border-left:4px solid var(--foil)">
+        return `<div class="card" style="border-left:3px solid var(--customs)">
           ${secTitle('NOW','Right Now')}
           ${blockRow}
-          <div style="font-size:13.5px;margin-top:8px;${busted?'color:var(--maple)':complete?'color:var(--customs)':hr>=18?'color:var(--maple);font-weight:700':'color:var(--ink)'}">${streakLine}</div>
+          <div style="font-size:13.5px;margin-top:8px;color:${anchored?'var(--customs)':'var(--ink)'}">${flowLine}</div>
           ${dueBits.length?`<div style="font-size:13px;margin-top:6px;color:var(--maple);font-weight:700;font-family:var(--mono)">${dueBits.join(' · ')}</div>`:''}
         </div>`;
       })();
@@ -649,7 +659,7 @@ async function initApp(){
       const pushCard=(VAPID_KEY && 'Notification' in window && Notification.permission!=='granted')
         ? `<div class="card" style="border-left:4px solid var(--maple)">
             ${secTitle('ALERT','Notifications')}
-            <div style="font-size:13.5px;color:var(--ink);margin-bottom:10px">Two a day, max: the <b>7 AM mission brief</b> and a <b>9 PM streak-saver</b> only if you haven't checked in. Nothing else, ever.</div>
+            <div style="font-size:13.5px;color:var(--ink);margin-bottom:10px">Two a day, max: the <b>7 AM flow brief</b> and a <b>9 PM anchor reminder</b> only on days the anchor is still open. Nothing else, ever.</div>
             <button id="pushEnable" class="row" style="margin-bottom:0"><span class="emo" aria-hidden="true">🔔</span><span class="lbl">Enable notifications</span><span class="spacer"></span><span class="stamp">TAP</span></button>
             <div id="pushMsg" style="font-size:12.5px;color:var(--sub);margin-top:6px;min-height:16px"></div>
           </div>`
@@ -662,57 +672,58 @@ async function initApp(){
 
       return `
         <div class="cover">
-          <div class="kicker">Daily Declaration Form</div>
+          <div class="kicker">Flowstate</div>
           <h1>${greet}, Satya</h1>
           <div class="date">${dateStr}</div>
           <div id="syncStatus"></div>
           <div class="heroRow">
-            ${sealSVG(doneCore,CORE7.length,complete,failedCore)}
+            ${momentumRing(m,gToday)}
             <div>
-              <div class="streakBig">${busted?'💔':'🔥'} ${shownStreak}</div>
-              <div class="streakLbl">Day Streak${busted?' · BROKEN':''}</div>
-              <div class="bestLbl">BEST EVER · ${s.best} DAYS</div>
+              <div class="streakBig">+${gToday}</div>
+              <div class="streakLbl">Today's Flow</div>
+              <div class="bestLbl">ANCHOR ${anchored?'DOWN ⚓':'OPEN'} · BEST RUN ${s.best}</div>
             </div>
           </div>
-          <div class="statusLine"${busted?' style="color:#FF9A8A"':''}>${status}</div>
+          <div class="statusLine">${status}</div>
           ${xpBlock}
           <div class="mrz" aria-hidden="true">${mrz}</div>
         </div>
         ${rightNow}
+        ${anchorCard}
         ${pushCard}
+        <div class="card">
+          ${secTitle('SMALL','Small Wins',`${smallDone}/${SMALL_WINS.length} · +3 each`, smallDone?'var(--customs)':'var(--sub)')}
+          ${smallRows}
+          <div style="font-size:12px;color:var(--sub);margin-top:8px">Two-minute moves. There is always one available — no day is ever ruined.</div>
+        </div>
+        <div class="card">
+          ${secTitle('BIG','Big Wins',`${bigDone}/${BIG_WINS.length} · +8 each`, bigDone?'var(--customs)':'var(--sub)')}
+          ${bigRows}
+          <div style="font-size:12px;color:var(--sub);margin-top:4px">All bonus, all gain. Skipping one costs nothing — landing one glows.</div>
+        </div>
         <div class="grid2">
           <div class="card">
-            ${secTitle('SECTION A','Daily Wins',`${WINS.filter(([k])=>d[k]===true).length}/${WINS.length} keystone`, 'var(--customs)')}
-            ${winRows}
-            <div style="font-size:12px;color:var(--sub);margin-top:4px">These 5 lock your day. Tap once = DONE · again = DENIED (breaks streak) · again = clear</div>
-          </div>
-          <div class="card">
-            ${secTitle('SECTION B','Fuel',`${['breakfast','lunch','dinner'].filter(k=>d[k]===true).length}/3 meals`, 'var(--customs)')}
+            ${secTitle('FUEL','Meals + Insulin',`${['breakfast','lunch','dinner'].filter(k=>d[k]===true).length}/3 meals`, 'var(--customs)')}
             ${fuelRows}
           </div>
+          <div class="card">
+            ${secTitle('SUPP','Supplements',`${suppDone}/${SUPPS.length}`, suppDone===SUPPS.length?'var(--customs)':'var(--sub)')}
+            ${suppRows}
+          </div>
         </div>
         <div class="card">
-          ${secTitle('SECTION C','Growth · Bonus',`${growthDone}/${GROWTH.length} · +5 pts each`, growthDone===GROWTH.length?'var(--customs)':'var(--sub)')}
-          ${growthRows}
-          <div style="font-size:12px;color:var(--sub);margin-top:4px">Not required to lock the day — but every one is Visa Points toward your next level. Ambition is optional; it's rewarded.</div>
-        </div>
-        <div class="card">
-          ${secTitle('PENALTY','The Fine Box', fines.length?`−$${fineTotal} today`:'$0 · clean', fines.length?'var(--maple)':'var(--customs)')}
+          ${secTitle('LEAKS','Leak Log', fines.length?`$${fineTotal} today`:'$0 today', 'var(--sub)')}
           ${fineRows}
           ${fineLog}
-          <div style="font-size:12px;color:var(--sub);margin-top:6px">Tap the moment you slip. It's the real money you burned plus 15 Visa Points. Logging it honestly IS the discipline — hiding it is the only real failure.</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:6px">Just data, not judgment — tap when money leaks so the Money tab stays honest. Monthly total lives there.</div>
         </div>
         <div class="card">
-          ${secTitle('SECTION D','Supplements',`${suppDone}/${SUPPS.length}`, suppDone===SUPPS.length?'var(--customs)':'var(--sub)')}
-          ${suppRows}
-        </div>
-        <div class="card">
-          ${secTitle('SECTION E','Guardrails')}
+          ${secTitle('KEEL','Guardrails')}
           <div class="chips">${chips}</div>
         </div>
         <div class="card">
-          ${secTitle('SECTION F','Timetable')}
-          <div style="font-size:14px;color:var(--ink)">🕐 Your full minute-by-minute day — bus, meals, gym, everything — lives on the <b>Plan</b> tab. Every block is tappable: done, missed, or pending.</div>
+          ${secTitle('PLAN','Timetable')}
+          <div style="font-size:14px;color:var(--ink)">🕐 Your full minute-by-minute day — bus, meals, gym, everything — lives on the <b>Plan</b> tab. Blocks are tappable; skipping one is allowed.</div>
         </div>`;
     }
 
@@ -755,6 +766,9 @@ async function initApp(){
       const rD=daysToDay(c.rentDay), cD=daysToDay(c.ccDay);
       const xp=calcXP(s), lv=levelInfo(xp);
       const treats=Math.max(0, lv.idx-(c.treatsClaimed||0));
+      const monthPrefix=Dash.today.slice(0,7);
+      const leakMonth=Object.keys(s.days||{}).filter(k=>k.startsWith(monthPrefix))
+        .reduce((t,k)=>t+((s.days[k].fines||[]).reduce((a,f)=>{const x=FINES.find(y=>y[0]===f);return a+(x?x[3]:0);},0)),0);
       const li=(lbl,amt,bad)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px dashed var(--line);font-size:14px"><span>${lbl}</span><b style="font-family:var(--mono);white-space:nowrap;color:${bad?'var(--maple)':'var(--ink)'}">${amt}</b></div>`;
       return `
         <div class="card">
@@ -767,6 +781,7 @@ async function initApp(){
             ${tileHTML('rentDay', rD==null?'—':rD, 'days · rent due', rD!=null&&rD<=3?'warn':'idle')}
             ${tileHTML('ccDay', cD==null?'—':cD, 'days · card due', cD!=null&&cD<=3?'bad':'idle')}
             ${tileHTML('treats', treats, 'treats earned · $50 cap', treats>0?'good':'idle')}
+            ${statTile('$'+leakMonth, 'leaks logged this month', leakMonth>0?'warn':'good')}
           </div>
         </div>
         <div class="card">
@@ -804,7 +819,7 @@ async function initApp(){
           ${li('WFG — same Jul 2 charge, still unresolved','$271.20',1)}
           <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Lifestyle spend, 6 days (excl. WFG)</span><b style="font-family:var(--mono);color:var(--maple)">$191.32</b></div>
           <div style="display:flex;justify-content:space-between;gap:10px;padding:2px;font-size:13px"><span>→ projected for the month at this pace</span><b style="font-family:var(--mono);color:var(--maple)">≈ $887</b></div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--maple)">Straight answer: yes, the first week slipped.</b> 9 Uber Eats orders in 6 days is a faster pace than all of June (25 in 30 days). The $350 grocery budget and "Uber Eats = $0" rule haven't landed yet — this is the exact pattern the Fine Box on Today exists to catch. Log each of these as a delivery fine retroactively if you want the streak math to reflect it honestly.</div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--maple)">Straight answer: yes, the first week slipped.</b> 9 Uber Eats orders in 6 days is a faster pace than all of June (25 in 30 days). The $350 grocery budget and "Uber Eats = $0" rule haven't landed yet — this is the exact pattern the Leak Log on Today exists to catch. Log leaks as they happen; the data does the talking.</div>
         </div>
         <div class="card">
           ${secTitle('DEPOSIT','Hertz Return','+$504 back','var(--customs)')}
@@ -854,15 +869,15 @@ async function initApp(){
     }
 
     function historyHTML(s){
-      const CORE7=['smokefree','gym','language','cooked','sleep'];
       const days=s.days||{};
+      const isAnchored=d=>!!d&&(d.anchor===true||d.completed===true); // completed = legacy days
       const dayStat=k=>{const d=days[k];if(!d)return 'none';
-        if(CORE7.some(x=>d[x]==='fail'))return 'fail';
-        const n=CORE7.filter(x=>d[x]===true).length;
-        if(d.completed===true||n===CORE7.length)return 'full';
-        return n>0?'part':'none';};
-      const pctOver=n=>{let c=0;for(let i=0;i<n;i++){const d=days[addDaysStr(Dash.today,-i)];if(d&&d.completed===true)c++;}return Math.round(c/n*100);};
+        if(isAnchored(d)&&dayGains(d)>=18)return 'full';   // anchored + real wins
+        if(isAnchored(d)||dayGains(d)>0)return 'part';     // showed up, or wins without anchor
+        return 'none';};
+      const pctOver=n=>{let c=0;for(let i=0;i<n;i++){if(isAnchored(days[addDaysStr(Dash.today,-i)]))c++;}return Math.round(c/n*100);};
       const p7=pctOver(7),p30=pctOver(30);
+      const anchorTotal=Object.keys(days).filter(k=>isAnchored(days[k])).length;
 
       const WEEKS=16;
       let start=addDaysStr(Dash.today,-(WEEKS*7-1));
@@ -880,25 +895,27 @@ async function initApp(){
           if(ds>Dash.today){cells+='<span></span>';continue;}
           const st=dayStat(ds);
           const nice=new Date(ds+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'});
-          cells+=`<button class="hmCell ${st==='none'?'':st}${ds===Dash.today?' today':''}" data-hday="${ds}" aria-label="${nice}: ${st==='full'?'day locked':st==='fail'?'entry refused':st==='part'?'partial entries':'no entries'}" title="${nice}"></button>`;
+          cells+=`<button class="hmCell ${st==='none'?'':st}${ds===Dash.today?' today':''}" data-hday="${ds}" aria-label="${nice}: ${st==='full'?'deep day':st==='part'?'showed up':'quiet day'}" title="${nice}"></button>`;
         }
       }
       const DOW=['M','','W','','F','',''];
       const xp=calcXP(s), lv=levelInfo(xp);
+      const m=momentumNow(s), fst=flowStateOf(m);
       return `
         <div class="card">
           ${secTitle('RECORD','The Record')}
           <div class="tiles">
+            ${statTile(m,'momentum · '+fst[2].toLowerCase(),m>=50?'good':'idle')}
+            ${statTile(anchorTotal,'days showed up',anchorTotal>0?'good':'idle')}
             ${statTile(xp,'visa points',xp>0?'good':'idle')}
             ${statTile('L'+(lv.idx+1),lv.name,'idle')}
-            ${statTile('🔥 '+s.streak,'current streak',s.streak>0?'good':'idle')}
-            ${statTile(s.best,'best ever',s.best>0?'good':'idle')}
-            ${statTile(p7+'%','locked · last 7 days',p7>=70?'good':p7>=40?'warn':'bad')}
-            ${statTile(p30+'%','locked · last 30 days',p30>=70?'good':p30>=40?'warn':'bad')}
+            ${statTile(p7+'%','anchored · last 7 days',p7>=70?'good':'idle')}
+            ${statTile(p30+'%','anchored · last 30 days',p30>=70?'good':'idle')}
+            ${statTile(s.best,'best run · legacy streak','idle')}
           </div>
         </div>
         <div class="card">
-          ${secTitle('LOG','Travel History','16 weeks')}
+          ${secTitle('LOG','Flow History','16 weeks')}
           <div class="hmWrap">
             <div style="display:flex">
               <div class="hmDow">${DOW.map(x=>`<span>${x}</span>`).join('')}</div>
@@ -909,12 +926,11 @@ async function initApp(){
             </div>
           </div>
           <div class="hmLegend">
-            <span><i style="background:var(--customs)"></i>Locked</span>
-            <span><i style="background:#E7C46A"></i>Partial</span>
-            <span><i style="background:var(--maple)"></i>Refused</span>
-            <span><i style="background:#FBFCFE;border:1px solid var(--line)"></i>Empty</span>
+            <span><i style="background:var(--customs)"></i>Deep day</span>
+            <span><i style="background:rgba(79,216,235,.32)"></i>Showed up</span>
+            <span><i style="background:#131A29;border:1px solid var(--line)"></i>Quiet</span>
           </div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Tap any day to inspect or amend its entries.</div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Quiet days are allowed — they cost a little momentum, never your history. Tap any day to inspect or amend it.</div>
         </div>`;
     }
 
@@ -922,8 +938,9 @@ async function initApp(){
       const ov=document.createElement('div'); ov.className='overlay'; ov.id='dashModal';
       const niceDate=new Date(dstr+'T00:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
       const groups=[
-        ['Daily Wins',WINS.map(([k,e,l])=>[k,e,l])],
-        ['Growth',GROWTH.map(([k,e,l])=>[k,e,l])],
+        ['Anchor',[['anchor','⚓','Anchored — showed up']]],
+        ['Small Wins',SMALL_WINS.map(([k,e,l])=>[k,e,l])],
+        ['Big Wins',BIG_WINS.map(([k,e,l])=>[k,e,l])],
         ['Fuel',FUEL.map(([k,e,l])=>[k,e,l])],
         ['Supplements',SUPPS.map(([k,l])=>[k,'💊',l])],
       ];
@@ -933,9 +950,9 @@ async function initApp(){
           `<div style="font-family:var(--disp);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:10px 0 6px">${g}</div>`+
           items.map(([k,e,l])=>{
             const st=d[k];
-            const cls=st===true?'done':st==='fail'?'fail':'';
-            const stamp=st===true?'DONE ✓':st==='fail'?'DENIED ✗':'STAMP';
-            return `<div class="row ${cls}" role="button" tabindex="0" aria-label="${l}: ${st===true?'done':st==='fail'?'denied':'not stamped'}" data-hedit="${k}" style="padding:8px 10px;margin-bottom:6px">
+            const cls=st===true?'done':'';
+            const stamp=st===true?'DONE ✓':'—';
+            return `<div class="row ${cls}" role="button" tabindex="0" aria-label="${l}: ${st===true?'done':'not logged'}" data-hedit="${k}" style="padding:8px 10px;margin-bottom:6px">
               <span class="emo" aria-hidden="true">${e}</span><span class="lbl" style="font-size:14px">${l}</span><span class="spacer"></span><span class="stamp" style="font-size:10.5px;padding:5px 8px">${stamp}</span></div>`;
           }).join('')
         ).join('');
@@ -950,8 +967,7 @@ async function initApp(){
           const fire=()=>{
             const k=el.dataset.hedit;
             const cur=(Dash.state.days[dstr]||{})[k];
-            const next=cur===true?'fail':cur==='fail'?false:true;
-            Dash.set(`days.${dstr}.${k}`,next);
+            Dash.set(`days.${dstr}.${k}`, cur===true?false:true);
             render();
           };
           el.addEventListener('click',fire);
@@ -995,9 +1011,9 @@ async function initApp(){
         const isNow=isToday&&nowM>=toM(st)&&nowM<endM;
         if(v===true)done++; else if(v==='fail')missed++;
         const cls=v===true?'done':v==='fail'?'fail':'';
-        const stTxt=v===true?'DONE ✓':v==='fail'?'MISSED ✗':(isNow?'NOW':editable?'···':'—');
+        const stTxt=v===true?'DONE ✓':v==='fail'?'SKIP':(isNow?'NOW':editable?'···':'—');
         const tog=editable?` role="button" tabindex="0" data-toggle="days.${sel}.sched.${k}"`:` style="cursor:default"`;
-        return `<div class="tl ${cls}${isNow&&!v?' now':''}"${tog} aria-label="${l}: ${v===true?'done':v==='fail'?'missed':'pending'}">
+        return `<div class="tl ${cls}${isNow&&!v?' now':''}"${tog} aria-label="${l}: ${v===true?'done':v==='fail'?'skipped':'pending'}">
           <span class="tlt">${st}${en?'–'+en:''}</span><span class="emo" aria-hidden="true">${e}</span><span class="lbl">${l}</span><span class="st">${stTxt}</span></div>`;
       }).join('');
       const chips=week.map((ds,i)=>`<button class="dayChip${ds===sel?' sel':''}${ds===Dash.today?' tdy':''}" data-plday="${ds}" aria-label="${DN[i]} ${ds}"><div class="dn">${DN[i]}</div><div class="dd">${+ds.slice(8)}</div></button>`).join('');
@@ -1007,7 +1023,7 @@ async function initApp(){
         const dd=days[ds]; const fined=fineSum(dd);
         const mark=ds<Dash.today?(dd&&dd.completed===true?'✓':'·'):ds===Dash.today?'●':'';
         return `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 2px;border-bottom:1px dashed var(--line);font-size:13px${ds===Dash.today?';font-weight:700':''}">
-          <b style="font-family:var(--mono);flex:0 0 62px">${DN[i]} ${+ds.slice(8)} ${mark}</b><span style="flex:1">${label}</span>${fined?`<b style="color:var(--maple);font-family:var(--mono)">−$${fined}</b>`:''}</div>`;
+          <b style="font-family:var(--mono);flex:0 0 62px">${DN[i]} ${+ds.slice(8)} ${mark}</b><span style="flex:1">${label}</span>${fined?`<b style="color:var(--sub);font-family:var(--mono)">$${fined}</b>`:''}</div>`;
       }).join('');
       const finesWeek=week.reduce((t,ds)=>t+fineSum(days[ds]),0);
       const officeN=week.filter(ds=>kindOf(todow(ds))==='office').length;
@@ -1015,15 +1031,15 @@ async function initApp(){
       const planSpend=Math.round(officeN*6.5+satN*80);
       return `
         <div class="card">
-          ${secTitle('WEEK','Next 7 Days', finesWeek?`−$${finesWeek} in fines`:'$0 fines · clean', finesWeek?'var(--maple)':'var(--customs)')}
+          ${secTitle('WEEK','Next 7 Days', finesWeek?`$${finesWeek} leaked`:'no leaks', finesWeek?'var(--sub)':'var(--customs)')}
           ${glance}
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">Planned spend, next 7 days: ~$${planSpend}</b> — bus $${(officeN*6.5).toFixed(0)} (${officeN} office day${officeN===1?'':'s'}) + groceries $${satN*80}. Everything else is $0 by design: cooked meals, gym near home, no rentals. Every fine above is money the plan didn't approve.</div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">Planned spend, next 7 days: ~$${planSpend}</b> — bus $${(officeN*6.5).toFixed(0)} (${officeN} office day${officeN===1?'':'s'}) + groceries $${satN*80}. Everything else is $0 by design: cooked meals, gym near home, no rentals.</div>
         </div>
         <div class="card">
-          ${secTitle('TIMETABLE',`${title}${isToday?' — today':''}`,`${done}/${blocks.length}${missed?' · '+missed+' missed':''}`, missed?'var(--maple)':'var(--customs)')}
+          ${secTitle('TIMETABLE',`${title}${isToday?' — today':''}`,`${done}/${blocks.length}${missed?' · '+missed+' skipped':''}`, 'var(--customs)')}
           <div class="wkRow">${chips}</div>
           ${rows}
-          <div style="font-size:12px;color:var(--sub);margin-top:6px">${editable?'Tap a block when done · tap again = MISSED · again = clear. Gold = right now.':'Future day — preview only. You earn it when you get there.'} No points here — this is the machine that produces your Today stamps.</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:6px">${editable?'Tap a block when done · tap again = SKIP · again = clear. Glowing = right now.':'Future day — preview only.'} This is the machine that produces your wins — skipping a block is information, not failure.</div>
         </div>
         <div class="card">
           ${secTitle('ROUTE','Bus + Costs')}
@@ -1049,7 +1065,7 @@ async function initApp(){
         </div>
         <div class="card hcard">
           ${secTitle('NOTE','Daily checks')}
-          <p class="sub">Insulin + meal stamps live on the <b>Today</b> tab — the streak <i>is</i> the medicine schedule. Not medical advice — loop in your diabetes team for anything clinical.</p>
+          <p class="sub">Insulin + meal stamps live on the <b>Today</b> tab — the anchor <i>is</i> the medicine check. Not medical advice — loop in your diabetes team for anything clinical.</p>
         </div>`;
     }
 
@@ -1102,50 +1118,20 @@ async function initApp(){
     }
     document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
 
-    function celebrate(streak){
+    function flowToast(msg){
+      // FLOWSTATE celebration: a quiet glow, never noise. No confetti, no
+      // failure counterpart — negative events simply don't get theatre.
       const toast=document.createElement('div'); toast.className='toast'; toast.setAttribute('role','status');
-      toast.textContent=`Day locked — streak ${streak}! 🔥`;
+      toast.textContent=msg;
       document.body.appendChild(toast);
-      setTimeout(()=>toast.remove(), 3200);
-      if(REDUCED){
-        const lc=document.createElement('div'); lc.className='lockCard';
-        lc.innerHTML=`<div class="inner">✦ DAY LOCKED ✦<br>STREAK ${pad(streak,3)}</div>`;
-        document.body.appendChild(lc); setTimeout(()=>lc.remove(), 3200);
-        return;
-      }
-      const box=document.createElement('div'); box.className='burstBox';
-      const cols=['#C8271C','#1F7A4D','#C9A227','#14213D'];
-      for(let i=0;i<20;i++){
-        const leaf=i%3===0;
-        const el=document.createElement('span');
-        el.className=leaf?'pc':'pcSq';
-        if(leaf) el.textContent='🍁'; else el.style.background=cols[i%cols.length];
-        const ang=Math.PI*2*i/20 + Math.random()*.4, dist=90+Math.random()*90;
-        el.style.setProperty('--dx',(Math.cos(ang)*dist).toFixed(0)+'px');
-        el.style.setProperty('--dy',(Math.sin(ang)*dist*0.8+40).toFixed(0)+'px');
-        el.style.setProperty('--rot',(Math.random()*300-150).toFixed(0)+'deg');
-        box.appendChild(el);
-      }
-      document.body.appendChild(box); setTimeout(()=>box.remove(), 1500);
-    }
-
-    function deny(){
-      const toast=document.createElement('div'); toast.className='toast'; toast.setAttribute('role','status');
-      toast.style.background='var(--maple)'; toast.style.borderColor='#7A1410';
-      toast.textContent='Entry DENIED — streak broken. 💔';
-      document.body.appendChild(toast);
-      setTimeout(()=>toast.remove(), 3200);
-      const lc=document.createElement('div'); lc.className='lockCard';
-      lc.innerHTML=`<div class="inner">✗ ENTRY REFUSED ✗<br>CLEAN PAGE TOMORROW</div>`;
-      document.body.appendChild(lc); setTimeout(()=>lc.remove(), 2200);
+      setTimeout(()=>toast.remove(), 2600);
     }
 
     function draw(s){
       const root=document.getElementById('appRoot');
       const d=(s.days&&s.days[Dash.today])||{};
-      const CORE7=['smokefree','gym','language','cooked','sleep'];
-      const doneCount=CORE7.filter(k=>d[k]===true).length;
-      const busted=CORE7.some(k=>d[k]==='fail');
+      const anchoredNow=d.anchor===true;
+      const bigNow=BIG_KEYS.filter(k=>d[k]===true).length;
 
       root.innerHTML =
         (tab==='today'?todayHTML(s,d)
@@ -1159,9 +1145,12 @@ async function initApp(){
         const fire=()=>{
           const path=el.dataset.toggle;
           const cur=getPath(Dash.state,path);
-          const next = path.startsWith('days.')
+          // Timetable blocks keep a neutral three-state (done / skip / clear)
+          // for honest plan tracking; everything else is a simple on/off —
+          // there is no DENIED state anywhere anymore.
+          const next = path.includes('.sched.')
             ? (cur===true ? 'fail' : cur==='fail' ? false : true)
-            : !cur;
+            : cur===true ? false : true;
           Dash.set(path,next);
         };
         el.addEventListener('click',fire);
@@ -1225,11 +1214,10 @@ async function initApp(){
         }
       });
 
-      const allCore=doneCount===CORE7.length;
-      if(prevCore===false && allCore) celebrate(s.streak);
-      prevCore=allCore;
-      if(prevBusted===false && busted) deny();
-      prevBusted=busted;
+      if(prevAnchor===false && anchoredNow) flowToast(`⚓ Day counted — momentum ${momentumNow(s)}`);
+      if(prevBig!==null && bigNow>prevBig) flowToast(`⚡ Big win — momentum ${momentumNow(s)}`);
+      prevAnchor=anchoredNow;
+      prevBig=bigNow;
     }
 
     Dash.render(draw);

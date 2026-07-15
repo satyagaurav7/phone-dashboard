@@ -20,7 +20,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   const d = (payload && payload.data) || {};
   if (payload && payload.notification) return; // already displayed
-  self.registration.showNotification(d.title || 'Mission Control', {
+  self.registration.showNotification(d.title || 'FLOWSTATE', {
     body: d.body || '',
     icon: 'icons/icon-192.png',
     badge: 'icons/icon-192.png',
@@ -42,7 +42,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 /* ---------------- app-shell cache ---------------- */
-const CACHE = 'mission-control-v1';
+const CACHE = 'flowstate-v1';
 const SHELL = [
   './',
   'index.html',
