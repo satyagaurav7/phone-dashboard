@@ -584,12 +584,15 @@ async function initApp(){
         <div class="xpSub">${lv.next?`${lv.next[0]-xp} pts to ${lv.next[1].toUpperCase()}`:'MAX LEVEL — you made it home'} · gains only: anchor +10 · big +5 · small +2 · PR action +100</div>
       </div>`;
 
+      // Suggested tap times for today's day kind (schedule.json tapPlan) —
+      // the nudge notifications fire around these same times.
+      const IT=(SCHED_DATA&&SCHED_DATA.tapPlan&&SCHED_DATA.tapPlan.itemTimes&&SCHED_DATA.tapPlan.itemTimes[kindOf(todow(Dash.today))])||{};
       const anchorCard=`<div class="card" style="border-color:rgba(79,216,235,.35)">
-        ${secTitle('⚓','The Anchor', anchored?'DAY COUNTED':'2 minutes', anchored?'var(--customs)':'var(--sub)')}
+        ${secTitle('⚓','The Anchor', anchored?'DAY COUNTED':(IT.anchor?'~'+IT.anchor+' · 2 minutes':'2 minutes'), anchored?'var(--customs)':'var(--sub)')}
         <div class="anchorBtn${anchored?' done':''}" role="button" tabindex="0" aria-pressed="${anchored}" data-toggle="days.${Dash.today}.anchor" aria-label="Anchor: ${anchored?'done — day counted':'not yet'}">
           <span class="aEmo" aria-hidden="true">⚓</span>
           <span><span class="aLbl">${anchored?'Anchored':'Drop the anchor'}</span>
-          <div class="aSub">CGM checked · insulin on track · I'm here</div></span>
+          <div class="aSub">CGM checked · insulin on track · I'm here${anchored||!IT.anchor?'':' · best right after waking'}</div></span>
           <span class="stamp">${anchored?'+10 ✓':'TAP'}</span>
         </div>
         ${anchored?'':'<div style="font-size:12px;color:var(--sub);margin-top:8px">This is the only thing the day asks of you. Do it and the day counts — no matter what else happens.</div>'}
@@ -597,11 +600,11 @@ async function initApp(){
 
       const smallRows=`<div class="smallGrid">${SMALL_WINS.map(([k,e,l])=>
         `<div class="swin${d[k]===true?' done':''}" role="button" tabindex="0" aria-pressed="${d[k]===true}" aria-label="${l}: ${d[k]===true?'done':'not yet'}" data-toggle="days.${Dash.today}.${k}">
-          <span aria-hidden="true">${e}</span><span>${l}</span><span class="pts">${d[k]===true?'+3 ✓':'+3'}</span>
+          <span aria-hidden="true">${e}</span><span>${l}</span><span class="pts">${d[k]===true?'+3 ✓':(IT[k]?IT[k]+' · ':'')+'+3'}</span>
         </div>`).join('')}</div>`;
       const smallDone=SMALL_WINS.filter(([k])=>d[k]===true).length;
 
-      const bigRows = BIG_WINS.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub,d[k])).join('');
+      const bigRows = BIG_WINS.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub+(IT[k]?` · ~${IT[k]}`:''),d[k])).join('');
 
       const fines=d.fines||[];
       const fineTotal=fines.reduce((t,k)=>{const f=FINES.find(x=>x[0]===k);return t+(f?f[3]:0);},0);
@@ -659,15 +662,19 @@ async function initApp(){
       const pushCard=(VAPID_KEY && 'Notification' in window && Notification.permission!=='granted')
         ? `<div class="card" style="border-left:4px solid var(--maple)">
             ${secTitle('ALERT','Notifications')}
-            <div style="font-size:13.5px;color:var(--ink);margin-bottom:10px">Two a day, max: the <b>7 AM flow brief</b> and a <b>9 PM anchor reminder</b> only on days the anchor is still open. Nothing else, ever.</div>
+            <div style="font-size:13.5px;color:var(--ink);margin-bottom:10px">The <b>7 AM flow brief</b>, <b>tap-window nudges</b> only while items sit open, and a <b>9 PM anchor reminder</b> if the day isn't counted. Do the things and the phone stays silent.</div>
             <button id="pushEnable" class="row" style="margin-bottom:0"><span class="emo" aria-hidden="true">🔔</span><span class="lbl">Enable notifications</span><span class="spacer"></span><span class="stamp">TAP</span></button>
             <div id="pushMsg" style="font-size:12.5px;color:var(--sub);margin-top:6px;min-height:16px"></div>
           </div>`
         : '';
 
-      const fuelRows = FUEL.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub==='core'?'':sub,d[k],k==='insulin'?'navyInk':'')).join('');
+      const fuelRows = FUEL.map(([k,e,l,sub])=>{
+        const base=sub==='core'?'':sub;
+        const t=IT[k]?(base?base+' · ~'+IT[k]:'~'+IT[k]):base;
+        return rowHTML(`days.${Dash.today}.${k}`,e,l,t,d[k],k==='insulin'?'navyInk':'');
+      }).join('');
       const suppDone = SUPPS.filter(([k])=>d[k]===true).length;
-      const suppRows = SUPPS.map(([k,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,'💊',l,sub,d[k],'navyInk')).join('');
+      const suppRows = SUPPS.map(([k,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,'💊',l,sub+(IT[k]?' · ~'+IT[k]:''),d[k],'navyInk')).join('');
       const chips = GUARDRAILS.map(([b,rest])=>`<span class="chip"><b>${b}</b> ${rest}</span>`).join('');
 
       return `

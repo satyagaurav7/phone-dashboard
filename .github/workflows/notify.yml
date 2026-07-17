@@ -1,25 +1,31 @@
 name: Notifications
 
-# Two cron entries per notification because GitHub cron is UTC and has no DST
-# awareness. Scheduled at :45 before the target hour and OFF the top of the
-# hour because GitHub cron runs 1-3 hours late at busy times — notify.mjs
-# accepts a send window (brief 7-9 AM, streak 9 PM-midnight Toronto) and a
-# Firestore notifyLog dedupe stops the pair from double-sending.
+# Every scheduled run calls notify.mjs --mode=auto: the script reads the
+# Toronto wall clock + Firestore notifyLog and decides what (if anything) is
+# due — morning brief, a tap-window nudge, or the 9 PM anchor reminder.
+# Cron entries come in DST pairs, off the top of the hour, scheduled BEFORE
+# the target window because GitHub cron lands 0-90+ minutes late.
 on:
   schedule:
-    - cron: '45 10 * * *'  # brief, EDT (nominal 6:45 AM; real start lands 7-8 AM)
+    - cron: '45 10 * * *'  # brief, EDT (lands ~7-8 AM Toronto)
     - cron: '45 11 * * *'  # brief, EST
-    - cron: '45 0 * * *'   # streak saver, EDT (nominal 8:45 PM)
-    - cron: '45 1 * * *'   # streak saver, EST
+    - cron: '15 16 * * *'  # midday nudge, EDT (lands ~12:15-1:45 PM)
+    - cron: '15 17 * * *'  # midday nudge, EST
+    - cron: '45 20 * * *'  # afternoon nudge, EDT (lands ~4:45-6:15 PM)
+    - cron: '45 21 * * *'  # afternoon nudge, EST
+    - cron: '15 0 * * *'   # evening nudge, EDT (lands ~8:15-9:45 PM)
+    - cron: '15 1 * * *'   # evening nudge, EST
+    - cron: '45 0 * * *'   # anchor reminder, EDT (lands ~9-10:15 PM)
+    - cron: '45 1 * * *'   # anchor reminder, EST
   workflow_dispatch:
     inputs:
       mode:
         description: 'Which notification to send'
         type: choice
-        options: [brief, streak]
-        default: brief
+        options: [auto, brief, streak]
+        default: auto
       force:
-        description: 'Ignore the local-hour guard (send right now)'
+        description: 'Ignore the time guard (brief/streak only)'
         type: boolean
         default: true
 
@@ -50,11 +56,8 @@ jobs:
             echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
             echo "flags=${{ inputs.force && '--force' || '' }}" >> "$GITHUB_OUTPUT"
           else
-            H=$(date -u +%H | sed 's/^0//')
-            # Brief crons fire 10:45/11:45 UTC and can run hours late; anything
-            # in the 10-15 UTC range is a brief attempt, the rest are streak.
-            if [ "$H" -ge 10 ] && [ "$H" -le 15 ]; then MODE=brief; else MODE=streak; fi
-            echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+            # Scheduled runs always use auto — the script decides what's due.
+            echo "mode=auto" >> "$GITHUB_OUTPUT"
             echo "flags=" >> "$GITHUB_OUTPUT"
           fi
       - name: Send notification

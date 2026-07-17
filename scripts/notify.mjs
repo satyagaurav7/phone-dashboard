@@ -44,13 +44,16 @@ function localNow() {
   }).formatToParts(new Date());
   const get = t => parts.find(p => p.type === t)?.value;
   const dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'));
+  const hour = parseInt(get('hour'), 10) % 24; // Intl can emit "24" at midnight
+  const minute = parseInt(get('minute'), 10);
   return {
     date: `${get('year')}-${get('month')}-${get('day')}`,
-    hour: parseInt(get('hour'), 10) % 24, // Intl can emit "24" at midnight
-    dow,
+    hour, minute, minutes: hour * 60 + minute, dow,
     weekdayLong: new Intl.DateTimeFormat('en-CA', { timeZone: TZ, weekday: 'long' }).format(new Date())
   };
 }
+
+const toM = t => { const p = String(t).split(':'); return (+p[0]) * 60 + (+p[1]); };
 
 // Days from `date` until the next occurrence of day-of-month `day` (rent/card due days).
 function daysToDayOfMonth(dateStr, day) {
@@ -100,6 +103,33 @@ function composeBrief(data, now) {
   };
 }
 
+// Tap-time nudges: schedule.json tapPlan.slots defines up to 3 windows per day
+// kind. A nudge fires only when its cron lands inside the slot window, it
+// hasn't been sent today, AND at least one of its items is still untapped.
+// Fully-done slots stay silent — doing the things is how you mute the app.
+function composeNudge(data, now) {
+  const kind = sched.dayKinds[now.dow] || 'sun';
+  const slots = sched.tapPlan?.slots?.[kind] || [];
+  const labels = sched.tapPlan?.labels || {};
+  const d = (data.days || {})[now.date] || {};
+  for (let i = 0; i < slots.length; i++) {
+    const slotM = toM(slots[i].t);
+    // Window tolerates GitHub cron landing up to ~25 min early or ~110 min late.
+    if (now.minutes < slotM - 25 || now.minutes > slotM + 110) continue;
+    if (data.notifyLog?.[`nudge${i}`] === now.date) continue;
+    const pending = slots[i].keys.filter(k => d[k] !== true);
+    if (pending.length === 0) continue;
+    const names = pending.map(k => labels[k] || k).join(' · ');
+    const m = momentumNow(data, now.date);
+    return {
+      logField: `nudge${i}`,
+      title: `${slots[i].title} — ${pending.length} tap${pending.length === 1 ? '' : 's'} open`,
+      body: `${names}\n🌊 Momentum ${m} — each tap moves it.`
+    };
+  }
+  return null;
+}
+
 // 9 PM anchor reminder (CLI mode is still called "streak" so the workflow
 // doesn't change). Silent whenever the day is already anchored — silence is
 // the reward. No death language, ever.
@@ -121,13 +151,15 @@ function composeStreak(data, now) {
 
 async function main() {
   const now = localNow();
-  // GitHub cron routinely runs 1-3 hours late at busy times, so a strict
-  // hour match silently drops notifications. Accept a window instead;
-  // the notifyLog dedupe below prevents the paired cron from double-sending.
-  const [minHour, maxHour] = MODE === 'brief' ? [7, 9] : [21, 23];
-  if (!FORCE && (now.hour < minHour || now.hour > maxHour)) {
-    console.log(`Local time in ${TZ} is ${now.hour}:xx, outside the ${minHour}-${maxHour} send window for [${MODE}]. Exiting.`);
-    return;
+  // GitHub cron routinely runs 1-3 hours late at busy times, so strict time
+  // matches silently drop notifications. Explicit modes use wide hour windows;
+  // auto mode decides from the wall clock + notifyLog dedupe after reading data.
+  if (MODE !== 'auto') {
+    const [minHour, maxHour] = MODE === 'brief' ? [7, 9] : [21, 23];
+    if (!FORCE && (now.hour < minHour || now.hour > maxHour)) {
+      console.log(`Local time in ${TZ} is ${now.hour}:xx, outside the ${minHour}-${maxHour} send window for [${MODE}]. Exiting.`);
+      return;
+    }
   }
 
   const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || 'null');
@@ -139,28 +171,40 @@ async function main() {
   if (!snap.exists) throw new Error('Firestore doc dashboard/satya not found.');
   const data = snap.data();
 
-  // Dedupe: both UTC crons can land inside the send window on the same day.
-  // The workflow's concurrency group serializes runs, so this check is safe.
-  if (!FORCE && data.notifyLog?.[MODE] === now.date) {
-    console.log(`[${MODE}] already sent today (${now.date}) — the other cron got there first. Exiting.`);
-    return;
-  }
-
   const tokens = Array.isArray(data.fcmTokens) ? data.fcmTokens.filter(Boolean) : [];
   if (tokens.length === 0) {
     console.log('No FCM tokens registered — open the app and tap "Enable notifications" first.');
     return;
   }
 
-  const msg = MODE === 'streak' ? composeStreak(data, now) : composeBrief(data, now);
-  if (!msg) return;
+  // Pick what's due. Dedupe via notifyLog: both DST crons can land in the same
+  // window; the workflow's concurrency group serializes runs, so this is safe.
+  let msg = null, logField = null;
+  if (MODE === 'auto') {
+    if (now.hour >= 7 && now.hour <= 9 && data.notifyLog?.brief !== now.date) {
+      msg = composeBrief(data, now); logField = 'brief';
+    }
+    if (!msg) { const n = composeNudge(data, now); if (n) { msg = n; logField = n.logField; } }
+    if (!msg && now.hour >= 21 && now.hour <= 23 && data.notifyLog?.streak !== now.date) {
+      msg = composeStreak(data, now); logField = 'streak';
+    }
+    if (!msg) { console.log(`auto: nothing due at ${now.hour}:${String(now.minute).padStart(2,'0')} ${TZ} — staying silent.`); return; }
+  } else {
+    if (!FORCE && data.notifyLog?.[MODE] === now.date) {
+      console.log(`[${MODE}] already sent today (${now.date}) — the other cron got there first. Exiting.`);
+      return;
+    }
+    msg = MODE === 'streak' ? composeStreak(data, now) : composeBrief(data, now);
+    logField = MODE;
+    if (!msg) return;
+  }
 
-  console.log(`Sending [${MODE}] to ${tokens.length} device(s):\n${msg.title}\n${msg.body}`);
+  console.log(`Sending [${logField}] to ${tokens.length} device(s):\n${msg.title}\n${msg.body}`);
   const res = await getMessaging().sendEachForMulticast({
     tokens,
     notification: { title: msg.title, body: msg.body },
     webpush: {
-      notification: { icon: ICON, badge: ICON, tag: `mission-${MODE}` },
+      notification: { icon: ICON, badge: ICON, tag: `flowstate-${logField}` },
       fcmOptions: { link: APP_URL }
     }
   });
@@ -181,7 +225,7 @@ async function main() {
   }
 
   if (res.successCount > 0) {
-    await ref.update({ [`notifyLog.${MODE}`]: now.date });
+    await ref.update({ [`notifyLog.${logField}`]: now.date });
   }
 }
 

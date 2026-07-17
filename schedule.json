@@ -14,6 +14,71 @@
     "sat": "Groceries ~$80 · meal-prep · gym · free evening",
     "sun": "Plan Sunday 5 pm · prep for Monday"
   },
+  "tapPlan": {
+    "itemTimes": {
+      "office": {
+        "anchor": "06:15", "water": "06:20", "meditate": "06:20",
+        "breakfast": "07:05", "insulin": "07:05", "omega3": "07:05", "bonehealth": "07:05", "vitcd": "07:05",
+        "walk": "07:30", "lunch": "12:30",
+        "gym": "18:25", "cookmeal": "19:40", "dinner": "20:10", "cooked": "20:30",
+        "read5": "20:30", "language": "20:30", "study": "21:00", "money": "21:00",
+        "creatine": "21:45", "smokefree": "22:15", "phonedown": "22:15"
+      },
+      "wfh": {
+        "anchor": "06:45", "water": "06:50", "walk": "06:55", "gym": "07:10",
+        "breakfast": "08:50", "insulin": "08:50", "omega3": "08:50", "bonehealth": "08:50", "vitcd": "08:50",
+        "cookmeal": "12:30", "lunch": "12:55",
+        "read5": "17:15", "language": "17:15", "study": "17:45", "money": "17:45",
+        "dinner": "19:15", "cooked": "19:45", "meditate": "21:15",
+        "creatine": "21:45", "smokefree": "21:45", "phonedown": "21:45"
+      },
+      "sat": {
+        "anchor": "09:00", "water": "09:05", "breakfast": "09:15", "insulin": "09:15",
+        "omega3": "09:15", "bonehealth": "09:15", "vitcd": "09:15",
+        "walk": "10:00", "cookmeal": "13:00", "lunch": "13:30", "study": "14:00", "money": "14:00",
+        "gym": "15:00", "dinner": "19:30", "cooked": "20:00",
+        "read5": "21:00", "language": "21:00", "meditate": "21:40",
+        "creatine": "22:00", "smokefree": "22:30", "phonedown": "22:30"
+      },
+      "sun": {
+        "anchor": "09:30", "water": "09:35", "breakfast": "10:00", "insulin": "10:00",
+        "omega3": "10:00", "bonehealth": "10:00", "vitcd": "10:00",
+        "gym": "11:00", "walk": "11:00", "lunch": "13:00",
+        "read5": "15:00", "language": "15:00", "study": "16:00", "money": "17:00",
+        "cookmeal": "18:00", "dinner": "18:45", "cooked": "19:30", "meditate": "21:30",
+        "creatine": "21:45", "smokefree": "22:00", "phonedown": "22:00"
+      }
+    },
+    "slots": {
+      "office": [
+        { "t": "12:30", "title": "Midday", "keys": ["lunch", "insulin", "water"] },
+        { "t": "17:15", "title": "Gym window", "keys": ["gym", "walk"] },
+        { "t": "20:15", "title": "Evening stack", "keys": ["dinner", "cookmeal", "read5", "language", "study", "creatine", "smokefree", "phonedown"] }
+      ],
+      "wfh": [
+        { "t": "12:25", "title": "Cook-lunch hour", "keys": ["cookmeal", "lunch", "water", "insulin"] },
+        { "t": "17:10", "title": "Reading + upskill", "keys": ["read5", "language", "study", "money"] },
+        { "t": "20:15", "title": "Wind-down", "keys": ["dinner", "meditate", "creatine", "smokefree", "phonedown"] }
+      ],
+      "sat": [
+        { "t": "12:45", "title": "Meal-prep window", "keys": ["cookmeal", "lunch", "water", "insulin"] },
+        { "t": "16:45", "title": "Gym check", "keys": ["gym", "walk"] },
+        { "t": "20:15", "title": "Evening", "keys": ["read5", "language", "dinner", "smokefree", "phonedown"] }
+      ],
+      "sun": [
+        { "t": "12:30", "title": "Midday", "keys": ["gym", "walk", "lunch", "water"] },
+        { "t": "16:45", "title": "Plan Sunday", "keys": ["read5", "language", "money", "study"] },
+        { "t": "20:15", "title": "Wind-down", "keys": ["dinner", "meditate", "smokefree", "phonedown"] }
+      ]
+    },
+    "labels": {
+      "anchor": "Anchor ⚓", "water": "Hydrate", "walk": "10-min walk", "read5": "Open the book",
+      "cookmeal": "Cook a meal", "meditate": "Breathing reset", "phonedown": "Phone down",
+      "gym": "Gym", "language": "CELPIP 20 min", "study": "Upskill hour", "cooked": "Full cooked day",
+      "smokefree": "Smoke-free stamp", "money": "Money move",
+      "breakfast": "Breakfast", "lunch": "Lunch", "dinner": "Dinner", "insulin": "Insulin", "creatine": "Creatine"
+    }
+  },
   "schedules": {
     "office": [
       ["wake", "06:15", "06:20", "⏰", "Wake · CGM check + basal · water"],
