@@ -327,7 +327,7 @@ async function initApp(){
   try { SCHED_DATA = await (await fetch('schedule.json', { cache: 'no-cache' })).json(); }
   catch (e) { try { const c = await caches.match('schedule.json'); if (c) SCHED_DATA = await c.json(); } catch (e2) {} }
 
-  const blankDay = () => ({anchor:false,water:false,walk:false,read5:false,cookmeal:false,phonedown:false,smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],sched:{},completed:false});
+  const blankDay = () => ({anchor:false,water:false,walk:false,read5:false,cookmeal:false,phonedown:false,smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],sched:{},hydro:[],log:{},completed:false});
 
   /* ---------- momentum engine (shared constants with scripts/notify.mjs) ----------
      Anchor +10 · small win +3 (max 4 count) · big win +8 · each new day −4 drift.
@@ -351,7 +351,7 @@ async function initApp(){
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
 
   function normalize(){
-    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0,treatsClaimed:0}, S.config||{});
+    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0,treatsClaimed:0,waterGoal:2500}, S.config||{});
     S.actions = Object.assign({oinp:false,wfg:false,carfax:false,pcc:false,celpip:false,innobox:false,resume:false,permitdoc:false}, S.actions||{});
     S.days = S.days || {};
     S.fcmTokens = Array.isArray(S.fcmTokens) ? S.fcmTokens : [];
@@ -400,6 +400,16 @@ async function initApp(){
       const parts = String(path).split('.'); let o = this.state;
       for (let i=0; i<parts.length-1; i++){ if (o[parts[i]] == null) o[parts[i]] = {}; o = o[parts[i]]; }
       o[parts[parts.length-1]] = value;
+      // Rhythm tracking: every day-level stamp records WHEN it happened
+      // (days.<date>.log.<key> = "HH:MM"); clearing a stamp clears its time.
+      if (parts[0]==='days' && parts.length===3){
+        const day=this.state.days[parts[1]];
+        if (day){
+          day.log = day.log || {};
+          if (value===true) day.log[parts[2]] = new Date().toTimeString().slice(0,5);
+          else if (value===false) delete day.log[parts[2]];
+        }
+      }
       saveLocal(); saveCloud();
       if (this._fn) this._fn(this.state);
     },
@@ -458,6 +468,15 @@ async function initApp(){
       ['smoke','🚬','Smokes / weed buy',15],
       ['impulse','🛒','Impulse buy',15],
     ];
+    // Satya's actual bottles — tapping Hydrate logs a real amount from one of these.
+    const BOTTLES = [
+      ['sipper','🥤','Mobility Global sipper',890],
+      ['stanley','🧊','Stanley',1180],
+      ['black','🍶','Black bottle',800],
+      ['glass','🥛','Glass / cup',250],
+    ];
+    const KEY_LABELS={anchor:'Anchor ⚓',water:'Hydrate',walk:'Walk',read5:'Open the book',cookmeal:'Cook a meal',meditate:'Breathing reset',phonedown:'Phone down',gym:'Gym',language:'CELPIP 20 min',study:'Upskill hour',cooked:'Full cooked day',smokefree:'Smoke-free stamp',money:'Money move',breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',insulin:'Insulin',omega3:'Omega-3',bonehealth:'Bone health',vitcd:'Vit C+D3',creatine:'Creatine'};
+    const hydroTotal=d=>((d&&d.hydro)||[]).reduce((t,x)=>t+(x.ml||0),0);
     const FUEL = [
       ['breakfast','🌅','Breakfast','core'],
       ['lunch','☀️','Lunch','core'],
@@ -537,9 +556,9 @@ async function initApp(){
       </svg>`;
     }
 
-    function rowHTML(path, emo, lbl, sub, state, inkClass, extra){
+    function rowHTML(path, emo, lbl, sub, state, inkClass, extra, doneAt){
       const cls = state===true?'done':'';
-      const stamp = state===true?'DONE ✓':'TAP';
+      const stamp = state===true?(doneAt?`✓ ${doneAt}`:'DONE ✓'):'TAP';
       return `<div class="row ${cls} ${inkClass||''}" role="button" tabindex="0" aria-pressed="${state===true}" aria-label="${lbl}: ${state===true?'done':'not yet'}" data-toggle="${path}">
         <span class="emo" aria-hidden="true">${emo}</span>
         <span><span class="lbl">${lbl}</span>${sub?`<div class="subt">${sub}</div>`:''}</span>
@@ -567,6 +586,12 @@ async function initApp(){
       const st=flowStateOf(m);
       const anchored=d.anchor===true;
       const bigDone=BIG_KEYS.filter(k=>d[k]===true).length;
+      const waterMl=hydroTotal(d);
+      const waterGoal=(s.config&&s.config.waterGoal)||2500;
+      const litre=v=>(v/1000).toFixed(1).replace(/\.0$/,'')+'L';
+      // Suggested tap times for today's day kind (schedule.json tapPlan) —
+      // the nudge notifications fire around these same times.
+      const IT=(SCHED_DATA&&SCHED_DATA.tapPlan&&SCHED_DATA.tapPlan.itemTimes&&SCHED_DATA.tapPlan.itemTimes[kindOf(todow(Dash.today))])||{};
       const status = !anchored
         ? (gToday>0 ? `+${gToday} momentum already banked — drop the anchor and the day counts.`
                     : 'The anchor takes 2 minutes. Everything after it is bonus.')
@@ -584,27 +609,32 @@ async function initApp(){
         <div class="xpSub">${lv.next?`${lv.next[0]-xp} pts to ${lv.next[1].toUpperCase()}`:'MAX LEVEL — you made it home'} · gains only: anchor +10 · big +5 · small +2 · PR action +100</div>
       </div>`;
 
-      // Suggested tap times for today's day kind (schedule.json tapPlan) —
-      // the nudge notifications fire around these same times.
-      const IT=(SCHED_DATA&&SCHED_DATA.tapPlan&&SCHED_DATA.tapPlan.itemTimes&&SCHED_DATA.tapPlan.itemTimes[kindOf(todow(Dash.today))])||{};
       const anchorCard=`<div class="card" style="border-color:rgba(79,216,235,.35)">
         ${secTitle('⚓','The Anchor', anchored?'DAY COUNTED':(IT.anchor?'~'+IT.anchor+' · 2 minutes':'2 minutes'), anchored?'var(--customs)':'var(--sub)')}
         <div class="anchorBtn${anchored?' done':''}" role="button" tabindex="0" aria-pressed="${anchored}" data-toggle="days.${Dash.today}.anchor" aria-label="Anchor: ${anchored?'done — day counted':'not yet'}">
           <span class="aEmo" aria-hidden="true">⚓</span>
           <span><span class="aLbl">${anchored?'Anchored':'Drop the anchor'}</span>
           <div class="aSub">CGM checked · insulin on track · I'm here${anchored||!IT.anchor?'':' · best right after waking'}</div></span>
-          <span class="stamp">${anchored?'+10 ✓':'TAP'}</span>
+          <span class="stamp">${anchored?('✓ '+((d.log&&d.log.anchor)||'+10')):'TAP'}</span>
         </div>
         ${anchored?'':'<div style="font-size:12px;color:var(--sub);margin-top:8px">This is the only thing the day asks of you. Do it and the day counts — no matter what else happens.</div>'}
       </div>`;
 
-      const smallRows=`<div class="smallGrid">${SMALL_WINS.map(([k,e,l])=>
-        `<div class="swin${d[k]===true?' done':''}" role="button" tabindex="0" aria-pressed="${d[k]===true}" aria-label="${l}: ${d[k]===true?'done':'not yet'}" data-toggle="days.${Dash.today}.${k}">
-          <span aria-hidden="true">${e}</span><span>${l}</span><span class="pts">${d[k]===true?'+3 ✓':(IT[k]?IT[k]+' · ':'')+'+3'}</span>
-        </div>`).join('')}</div>`;
+      const smallRows=`<div class="smallGrid">${SMALL_WINS.map(([k,e,l])=>{
+        if(k==='water'){
+          // Hydrate opens the bottle picker — the win auto-stamps at the goal.
+          return `<div class="swin${d.water===true?' done':''}" role="button" tabindex="0" aria-label="Hydration: ${waterMl} of ${waterGoal} ml — tap to log a drink" data-hydro="1">
+            <span aria-hidden="true">${e}</span><span>${l}</span><span class="pts">${litre(waterMl)}/${litre(waterGoal)}</span>
+          </div>`;
+        }
+        const done=d[k]===true;
+        return `<div class="swin${done?' done':''}" role="button" tabindex="0" aria-pressed="${done}" aria-label="${l}: ${done?'done':'not yet'}" data-toggle="days.${Dash.today}.${k}">
+          <span aria-hidden="true">${e}</span><span>${l}</span><span class="pts">${done?('✓ '+((d.log&&d.log[k])||'')):(IT[k]?IT[k]+' · ':'')+'+3'}</span>
+        </div>`;
+      }).join('')}</div>`;
       const smallDone=SMALL_WINS.filter(([k])=>d[k]===true).length;
 
-      const bigRows = BIG_WINS.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub+(IT[k]?` · ~${IT[k]}`:''),d[k])).join('');
+      const bigRows = BIG_WINS.map(([k,e,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,e,l,sub+(IT[k]?` · ~${IT[k]}`:''),d[k],'',null,d.log&&d.log[k])).join('');
 
       const fines=d.fines||[];
       const fineTotal=fines.reduce((t,k)=>{const f=FINES.find(x=>x[0]===k);return t+(f?f[3]:0);},0);
@@ -651,10 +681,23 @@ async function initApp(){
         } else {
           blockRow=`<div style="font-size:13.5px;color:var(--sub)">No more blocks today. ${anchored?'Rest is earned.':'The anchor below still counts the day.'}</div>`;
         }
+        /* rhythm: hydration pace + what's overdue + what's next, from tapPlan times */
+        const hyd=d.hydro||[];
+        const lastSip=hyd.length?hyd[hyd.length-1].t:null;
+        const sipGap=lastSip?nowM-toM(lastSip):null;
+        const hydLine=`💧 ${litre(waterMl)} / ${litre(waterGoal)}${lastSip?` · last sip ${lastSip}${sipGap>90?' — sip now':''}`:(waterMl===0?' · start sipping':'')}`;
+        const pendingT=Object.entries(IT).filter(([k])=>k!=='anchor'&&d[k]!==true).map(([k,t])=>({k,mm:toM(t),t})).sort((a,b)=>a.mm-b.mm);
+        const over=pendingT.filter(x=>x.mm<nowM-10);
+        const nextTap=pendingT.find(x=>x.mm>=nowM-10);
+        const rhythmBits=[];
+        if(over.length)rhythmBits.push(`⏰ Catch up: ${over.slice(-2).map(x=>`${KEY_LABELS[x.k]||x.k} (${x.t})`).join(' · ')}${over.length>2?` +${over.length-2} more`:''}`);
+        if(nextTap)rhythmBits.push(`Next: ${KEY_LABELS[nextTap.k]||nextTap.k} · ${nextTap.t}`);
         return `<div class="card" style="border-left:3px solid var(--customs)">
           ${secTitle('NOW','Right Now')}
           ${blockRow}
           <div style="font-size:13.5px;margin-top:8px;color:${anchored?'var(--customs)':'var(--ink)'}">${flowLine}</div>
+          <div style="font-size:13px;margin-top:6px;color:${waterMl>=waterGoal?'var(--customs)':'var(--sub)'};font-family:var(--mono)">${hydLine}</div>
+          ${rhythmBits.map(b=>`<div style="font-size:13px;margin-top:5px;color:var(--sub)">${b}</div>`).join('')}
           ${dueBits.length?`<div style="font-size:13px;margin-top:6px;color:var(--maple);font-weight:700;font-family:var(--mono)">${dueBits.join(' · ')}</div>`:''}
         </div>`;
       })();
@@ -671,10 +714,10 @@ async function initApp(){
       const fuelRows = FUEL.map(([k,e,l,sub])=>{
         const base=sub==='core'?'':sub;
         const t=IT[k]?(base?base+' · ~'+IT[k]:'~'+IT[k]):base;
-        return rowHTML(`days.${Dash.today}.${k}`,e,l,t,d[k],k==='insulin'?'navyInk':'');
+        return rowHTML(`days.${Dash.today}.${k}`,e,l,t,d[k],k==='insulin'?'navyInk':'',null,d.log&&d.log[k]);
       }).join('');
       const suppDone = SUPPS.filter(([k])=>d[k]===true).length;
-      const suppRows = SUPPS.map(([k,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,'💊',l,sub+(IT[k]?' · ~'+IT[k]:''),d[k],'navyInk')).join('');
+      const suppRows = SUPPS.map(([k,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,'💊',l,sub+(IT[k]?' · ~'+IT[k]:''),d[k],'navyInk',null,d.log&&d.log[k])).join('');
       const chips = GUARDRAILS.map(([b,rest])=>`<span class="chip"><b>${b}</b> ${rest}</span>`).join('');
 
       return `
@@ -941,6 +984,61 @@ async function initApp(){
         </div>`;
     }
 
+    function openHydroModal(){
+      const ov=document.createElement('div'); ov.className='overlay'; ov.id='dashModal';
+      const hhmm=()=>new Date().toTimeString().slice(0,5);
+      const applyHydro=(arr)=>{
+        const d=Object.assign({},Dash.state.days[Dash.today]||{});
+        d.hydro=arr;
+        const goal=(Dash.state.config&&Dash.state.config.waterGoal)||2500;
+        const total=arr.reduce((t,x)=>t+(x.ml||0),0);
+        d.log=d.log||{};
+        const was=d.water===true;
+        d.water=total>=goal; // Hydrate win is derived from real ml, never hand-toggled
+        if(d.water&&!was){ d.log.water=hhmm(); flowToast('💧 Goal hit — Hydrate stamped'); }
+        if(!d.water) delete d.log.water;
+        Dash.set(`days.${Dash.today}`,d);
+        render();
+      };
+      const render=()=>{
+        const d=Dash.state.days[Dash.today]||{};
+        const hyd=d.hydro||[];
+        const total=hyd.reduce((t,x)=>t+(x.ml||0),0);
+        const goal=(Dash.state.config&&Dash.state.config.waterGoal)||2500;
+        const pct=Math.min(100,Math.round(total/goal*100));
+        const rows=BOTTLES.map(([id,e,l,ml])=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)">
+            <span style="font-size:19px" aria-hidden="true">${e}</span>
+            <span style="flex:1"><b style="font-size:14px">${l}</b><div style="font-size:11.5px;color:var(--sub);font-family:var(--mono)">${ml} ml</div></span>
+            <button class="chip" data-sip="${ml}" aria-label="Log full ${l} — ${ml} ml">Full</button>
+            <button class="chip" data-sip="${Math.round(ml/2)}" aria-label="Log half ${l} — ${Math.round(ml/2)} ml">½</button>
+          </div>`).join('');
+        const logList=hyd.length
+          ? hyd.slice().reverse().map(x=>`<div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--sub);padding:3px 0"><span>${x.t}</span><span>${x.ml} ml</span></div>`).join('')
+          : '<div style="font-size:12.5px;color:var(--sub)">Nothing logged yet today.</div>';
+        ov.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Hydration">
+          <header>Hydration — ${total} / ${goal} ml</header>
+          <div class="body" style="max-height:66vh;overflow-y:auto">
+            <div class="xpBar" style="background:var(--well);margin-bottom:12px"><div class="xpFill" style="width:${pct}%;background:var(--customs)"></div></div>
+            ${rows}
+            <div style="font-family:var(--disp);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:12px 0 4px">Today</div>
+            ${logList}
+            <div class="mBtns" style="margin-top:12px">
+              ${hyd.length?'<button class="cancel" data-hundo>Undo last</button>':''}
+              <button class="cancel" data-hgoal>Goal ✎</button>
+              <button class="save" data-mclose>Done</button>
+            </div>
+          </div></div>`;
+        ov.querySelector('[data-mclose]').onclick=()=>ov.remove();
+        const hg=ov.querySelector('[data-hgoal]'); if(hg) hg.onclick=()=>{ ov.remove(); openModal('waterGoal'); };
+        const hu=ov.querySelector('[data-hundo]'); if(hu) hu.onclick=()=>applyHydro(hyd.slice(0,-1));
+        ov.querySelectorAll('[data-sip]').forEach(b=>{ b.onclick=()=>applyHydro(hyd.concat([{t:hhmm(),ml:+b.dataset.sip}])); });
+      };
+      ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+      render();
+      document.body.appendChild(ov);
+    }
+
     function openDayModal(dstr){
       const ov=document.createElement('div'); ov.className='overlay'; ov.id='dashModal';
       const niceDate=new Date(dstr+'T00:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
@@ -1093,6 +1191,7 @@ async function initApp(){
       budgetLeft:{title:'Budget Left',fields:[{path:'config.budgetLeft',label:'Amount left ($)',type:'number'}]},
       rentDay:{title:'Rent Due Day',fields:[{path:'config.rentDay',label:'Day of month (1–31)',type:'number'}]},
       ccDay:{title:'Card Due Day',fields:[{path:'config.ccDay',label:'Day of month (1–31)',type:'number'}]},
+      waterGoal:{title:'Hydration Goal',fields:[{path:'config.waterGoal',label:'Daily goal (ml)',type:'number'}]},
       treats:{title:'Guilt-Free Treats',fields:[{path:'config.treatsClaimed',label:'Treats used so far (1 earned per level-up)',type:'number'}]},
     };
     function openModal(key){
@@ -1160,6 +1259,11 @@ async function initApp(){
             : cur===true ? false : true;
           Dash.set(path,next);
         };
+        el.addEventListener('click',fire);
+        el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fire(); } });
+      });
+      root.querySelectorAll('[data-hydro]').forEach(el=>{
+        const fire=()=>openHydroModal();
         el.addEventListener('click',fire);
         el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fire(); } });
       });
