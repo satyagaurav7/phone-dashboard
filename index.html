@@ -820,6 +820,11 @@ async function initApp(){
       const leakMonth=Object.keys(s.days||{}).filter(k=>k.startsWith(monthPrefix))
         .reduce((t,k)=>t+((s.days[k].fines||[]).reduce((a,f)=>{const x=FINES.find(y=>y[0]===f);return a+(x?x[3]:0);},0)),0);
       const li=(lbl,amt,bad)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px dashed var(--line);font-size:14px"><span>${lbl}</span><b style="font-family:var(--mono);white-space:nowrap;color:${bad?'var(--maple)':'var(--ink)'}">${amt}</b></div>`;
+      // June → July comparison row. `worse` flags the one metric that moved the wrong way.
+      const cmp=(lbl,was,now,note,worse)=>`<div style="display:flex;gap:8px;align-items:baseline;padding:7px 2px;border-bottom:1px dashed var(--line);font-size:14px">
+        <span style="flex:1">${lbl}${note?`<div style="font-size:11.5px;color:var(--sub)">${note}</div>`:''}</span>
+        <b style="font-family:var(--mono);width:66px;text-align:right;color:var(--sub);text-decoration:line-through">${was}</b>
+        <b style="font-family:var(--mono);width:66px;text-align:right;color:${worse?'var(--maple)':'var(--customs)'}">${now}</b></div>`;
       return `
         <div class="card">
           ${secTitle('LEDGER','Numbers')}
@@ -835,17 +840,18 @@ async function initApp(){
           </div>
         </div>
         <div class="card">
-          ${secTitle('VAULT','What You Actually Have','≈ $13.8k','var(--customs)')}
-          <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--customs);margin:2px 0 4px">Accessible · ~$6,930</div>
-          ${li('CIBC chequing','$1,726')}
+          ${secTitle('VAULT','What You Actually Have','≈ $13.5k','var(--customs)')}
+          <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--maple);margin:2px 0 4px">Liquid · ~$2,166 — thin</div>
+          ${li('CIBC chequing (Jul 27)','$950')}
           ${li('Wealthsimple — TFSA + FHSA + RRSP + crypto','$1,216')}
-          ${li('Sun Life TFSA (group)','$3,405')}
-          ${li('Sun Life non-registered','$582')}
+          ${li('Sun Life TFSA + non-registered — cashed out for the car','$0')}
+          ${li('Equitable Life TFSA — $2,721 withdrawn, verify balance','verify')}
+          <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--foil);margin:12px 0 4px">New asset — July</div>
+          ${li('2009 Civic DX-G — bought + repaired + safetied','~$4,500')}
           <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:12px 0 4px">Locked — retirement, working for you</div>
           ${li('Sun Life pension (DCPP ×2) — locked till retirement','$5,755')}
           ${li('Sun Life RRSP — withdrawable but taxable','$1,093')}
-          ${li('Equitable Life TFSA — +$400/mo, growing','update')}
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">You are <b>not</b> broke — you're building. ~$14k in assets at 26, as a newcomer. The June problem was cash-flow discipline, not lack of money. Snapshot from your screenshots; tap a Numbers tile to keep the live ones current.</div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">Your total net worth barely moved — it changed shape.</b> ~$6.7k of liquid savings became a car sitting in your driveway. That's a real asset, not a loss. But liquid is now ~$2.2k with no e-fund, so the next 2–3 months are about rebuilding the buffer, not more purchases. Tap a Numbers tile to keep these current.</div>
         </div>
         <div class="card">
           ${secTitle('AUDIT','June Reality Check','51.7% of pay','var(--maple)')}
@@ -860,41 +866,57 @@ async function initApp(){
           <div style="font-size:12.5px;color:var(--sub);margin-top:8px">From your real CIBC statements, June 1 – July 2. Half a paycheque went to convenience. Groceries were only $155 of $1,081 total food spend.</div>
         </div>
         <div class="card">
-          ${secTitle('PACE','July So Far · Day 6','$28.61/day pace','var(--maple)')}
-          ${li('Uber Eats — 9 orders in 6 days (1.5/day)','$152.95',1)}
-          ${li('Uber rides','$11.79',1)}
-          ${li('Tim Hortons + gas','$6.92',1)}
-          ${li('New: Apollo Insurance — unidentified, verify','$11.49',1)}
-          ${li('New: PixivFanbox ×2 — a subscription you didn’t flag before','$8.17',1)}
-          ${li('WFG — same Jul 2 charge, still unresolved','$271.20',1)}
-          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Lifestyle spend, 6 days (excl. WFG)</span><b style="font-family:var(--mono);color:var(--maple)">$191.32</b></div>
-          <div style="display:flex;justify-content:space-between;gap:10px;padding:2px;font-size:13px"><span>→ projected for the month at this pace</span><b style="font-family:var(--mono);color:var(--maple)">≈ $887</b></div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--maple)">Straight answer: yes, the first week slipped.</b> 9 Uber Eats orders in 6 days is a faster pace than all of June (25 in 30 days). The $350 grocery budget and "Uber Eats = $0" rule haven't landed yet — this is the exact pattern the Leak Log on Today exists to catch. Log leaks as they happen; the data does the talking.</div>
+          ${secTitle('WINS','July vs June · The Leak Shrank','real progress','var(--customs)')}
+          <div style="display:flex;gap:8px;font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:var(--sub);padding:0 2px 6px"><span style="flex:1"></span><span style="width:66px;text-align:right">June</span><span style="width:66px;text-align:right">July</span></div>
+          ${cmp('Uber Eats','$352','$175','18 → 11 orders')}
+          ${cmp('Uber rides','$280','$106','62% fewer')}
+          ${cmp('Car rentals','$835','$154','you bought the car')}
+          ${cmp('Dining + coffee','$429','$261','')}
+          ${cmp('Subscriptions','$160','$127','')}
+          ${cmp('Groceries','$155','$63','↓ but this one should go UP',1)}
+          ${cmp('Cannabis','$59','$85','the one that grew',1)}
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Daily lifestyle burn</span><b style="font-family:var(--mono);color:var(--customs)">$90 → $54/day</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">This is the honest good news: <b style="color:var(--customs)">the convenience leak actually shrank</b>. Delivery halved, rides down 62%, rentals gone. The gap: cheaper takeout replaced expensive takeout — groceries didn't rise. That's the next move, not more restriction.</div>
         </div>
         <div class="card">
-          ${secTitle('DEPOSIT','Hertz Return','+$504 back','var(--customs)')}
-          ${li('Hertz hold on card (not a real charge)','$504.00')}
-          ${li('Actual rental cost (already accounted in June)','~$150')}
-          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Expected back when you return the car</span><b style="font-family:var(--mono);color:var(--customs)">≈ $354</b></div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">This was never really spent — it's a security hold. When you drop the car off, CIBC releases it back to your available credit (usually 3–5 business days, sometimes up to 2 weeks). It doesn't add cash to your chequing account — rentals are a credit-card hold, not a debit charge — but your card room goes back to normal. Don't count it as "extra money" to spend.</div>
+          ${secTitle('CAR','July · The Civic','$5,999 all-in','var(--foil)')}
+          ${li('Purchase — $3,000 e-transfer + $1,500 cash','$4,500')}
+          ${li('Mechanic — suspension, ball joint, rust weld, exhaust','$880')}
+          ${li('MTO — plates, transfer, permit','$236')}
+          ${li('Square One Insurance — verify monthly vs annual','$383')}
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Traced across both accounts</span><b style="font-family:var(--mono);color:var(--foil)">$5,999</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Matches your own $5,923 repair record once the ATM cash is counted. This was an <b>asset purchase, not a leak</b> — but it now has a running cost: <b style="color:var(--maple)">$170 of gas in the first 10 days ≈ $500/month</b> if that pace holds. Bus was $52/month. Drive it like it costs something, because it does.</div>
         </div>
         <div class="card">
-          ${secTitle('PLAN','Monthly Envelopes','net $4,249')}
-          ${li('Mom — loan support. First after rent. Non-negotiable.','$2,000')}
+          ${secTitle('TRUTH','July Cash Flow','−$2,492 cash','var(--maple)')}
+          ${li('Actual income — 1 Carfax pay + benefits + GST','$2,533')}
+          ${li('Savings liquidated — Sun Life $4,050 + Equitable $2,721','$6,771',1)}
+          ${li('Total money out','$12,266',1)}
+          ${li('→ Car','$5,999')}
+          ${li('→ Mom','$2,000')}
+          ${li('→ Rent','$930')}
+          ${li('→ Lifestyle (everything else)','$1,463')}
+          ${li('WFG — charged AGAIN Jul 2, still unresolved','$271',1)}
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Chequing: Jul 1 → Jul 27</span><b style="font-family:var(--mono);color:var(--maple)">$3,443 → $950</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">July wasn't funded by your paycheque — it was funded by your savings.</b> That was a deliberate trade for the car, not a spiral. But the cushion is what paid for it: <b style="color:var(--maple)">the emergency fund is effectively gone.</b> August has rent $930 + mom $2,000 against ~$4,250 of pay. It works — with almost nothing behind it. Rebuilding the buffer is the whole job now.</div>
+        </div>
+        <div class="card">
+          ${secTitle('PLAN','Monthly Envelopes · post-car','net $4,249')}
+          ${li('Mom — loan support. Non-negotiable.','$2,000')}
           ${li('Rent (Centurion, 1st)','$930')}
-          ${li('Equitable Life TFSA — savings, not an expense ✓','$400')}
-          ${li('Fixed: phone + insulin/pharmacy + bank fee','$140')}
-          ${li('Groceries — this replaces delivery','$350')}
-          ${li('Transport — bus pass first, no casual Ubers','$150')}
-          ${li('Fun + earned treats ($50/level-up from here)','$60')}
+          ${li('Fixed: phone $28 + insulin/pharmacy + bank fee $17','$140')}
+          ${li('Groceries — the envelope that has to finally get used','$350')}
+          ${li('Car: gas — drive deliberately, this replaced $52 bus','$250')}
+          ${li('Car: insurance — CONFIRM if Square One is monthly','$0–383',1)}
           ${li('Subscriptions — Spotify + ONE AI tool','$40')}
+          ${li('Fun + earned treats','$60')}
           ${li('Cannabis — taper envelope, cash only','$20')}
-          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Buffer / e-fund top-up</span><b style="font-family:var(--mono);color:var(--customs)">~$159</b></div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">You already save $400/mo into the Equitable TFSA — that's real. $2,000 to mom + $400 savings on $4,249 is tight but honest. The only slack is delivery money you don't spend. Every skipped Uber Eats order = a real dollar toward the buffer.</div>
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Left to rebuild the e-fund</span><b style="font-family:var(--mono);color:${'var(--foil)'}">$459 → $76 if insurance is monthly</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">The car ate your savings envelope.</b> The $400/mo Equitable contribution is paused reality — you withdrew $2,721 of it. Until the e-fund is back to ~$2k, every dollar of slack goes there. <b style="color:var(--maple)">Priority one: find out whether that $383 insurance is monthly.</b> If it is, this budget only works by holding groceries at $350 and delivery near zero — exactly the thing July proved you can actually do.</div>
           <div class="chips" style="margin-top:12px">
             <span class="chip"><b>Uber Eats = $0.</b> Delete the app</span>
-            <span class="chip"><b>Rentals:</b> only from an earned treat + fun envelope</span>
-            <span class="chip"><b>Payday order:</b> mom → rent → e-fund → rest</span>
+            <span class="chip"><b>You own the car now</b> — no Ubers, no rentals</span>
+            <span class="chip"><b>Payday order:</b> rent → mom → e-fund → rest</span>
             <span class="chip"><b>Tims cap</b> $20/mo — brew at home</span>
             <span class="chip"><b>One AI sub</b> — cancel the rest</span>
             <span class="chip"><b>Level-up =</b> 1 guilt-free treat · $50 cap</span>
@@ -903,14 +925,15 @@ async function initApp(){
         </div>
         <div class="card">
           ${secTitle('WATCH','Flags From Your Statements','act this week','var(--maple)')}
-          ${li('WFG — still charging, dispute still open. Demand written proof of $0 balance.','$271.20',1)}
+          ${li('Square One Insurance — monthly or annual? This one answers whether August works.','$382.74',1)}
+          ${li('WFG — charged AGAIN Jul 2. Third month. Demand written proof of $0 balance.','$271.20',1)}
+          ${li('Gas pace — $170 in 10 days. Watch it for two weeks before trusting the $250 envelope.','~$500/mo',1)}
+          ${li('THREE AI subs still live — Claude $31.64 + ChatGPT $30.50 + aiboosterlab $36.58.','$98.72/mo',1)}
           ${li('CIBC account fee — switch plan or meet the waiver minimum.','$16.95/mo',1)}
-          ${li('DashPass subscription while “No Uber Eats” is your core habit. Cancel today.','$11.29/mo',1)}
-          ${li('Apollo Insurance — new charge, you didn’t recognize it. Find out what this is.','$11.49',1)}
-          ${li('PixivFanbox — new subscription, two charges same day. Confirm you meant to keep this.','$8.17',1)}
-          ${li('CIBC Payment Protector on the Visa — balance insurance is usually poor value. Review dropping it.','review',1)}
-          ${li('CIBC-DISATF — $200 draft twice a month, unlabeled. Find out exactly what it is.','$200 ×2',1)}
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Card is basically at zero (−$158 credit, they owe you). Your card habit is genuinely good; the leak is lifestyle spend and creeping subscriptions, not debt.</div>
+          ${li('Apollo Insurance — recurring monthly now, still unidentified.','$11.49/mo',1)}
+          ${li('PixivFanbox — 3 more charges Jul 4. Confirm you meant to keep this.','$9.08',1)}
+          ${li('CIBC-DISATF — $200 out twice monthly, partial credits back. Still unlabeled.','$200 ×2',1)}
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Card: charged $1,754, paid $1,635 in July — the balance grew ~$119, first time in a while it moved the wrong way. Still small, but the card is no longer running at zero. Cancelling two of the three AI subs alone funds a third of the gas envelope.</div>
         </div>`;
     }
 
