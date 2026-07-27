@@ -351,10 +351,11 @@ async function initApp(){
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
 
   function normalize(){
-    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0,treatsClaimed:0,waterGoal:2500}, S.config||{});
+    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0,treatsClaimed:0,waterGoal:2500,gasBudget:250}, S.config||{});
     S.actions = Object.assign({oinp:false,wfg:false,carfax:false,pcc:false,celpip:false,innobox:false,resume:false,permitdoc:false}, S.actions||{});
     S.days = S.days || {};
     S.fcmTokens = Array.isArray(S.fcmTokens) ? S.fcmTokens : [];
+    S.gasLog = Array.isArray(S.gasLog) ? S.gasLog : [];
     S.streak = S.streak || 0; S.best = S.best || 0; S.lastComplete = S.lastComplete || null;
     // Migrate the old streak into starting momentum, once. streak/best stay as legacy stats.
     if (!S.flow || typeof S.flow.m !== 'number' || !/^\d{4}-\d{2}-\d{2}$/.test(String(S.flow.asOf))) S.flow = { m: clampM((S.streak||0)*8 + 20), asOf: T };
@@ -819,6 +820,9 @@ async function initApp(){
       const monthPrefix=Dash.today.slice(0,7);
       const leakMonth=Object.keys(s.days||{}).filter(k=>k.startsWith(monthPrefix))
         .reduce((t,k)=>t+((s.days[k].fines||[]).reduce((a,f)=>{const x=FINES.find(y=>y[0]===f);return a+(x?x[3]:0);},0)),0);
+      const gasMonth=(s.gasLog||[]).filter(x=>x.date.startsWith(monthPrefix)).reduce((t,x)=>t+(x.amount||0),0);
+      const gasBudget=(c.gasBudget)||250;
+      const gasFillCount=(s.gasLog||[]).filter(x=>x.date.startsWith(monthPrefix)).length;
       const li=(lbl,amt,bad)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px dashed var(--line);font-size:14px"><span>${lbl}</span><b style="font-family:var(--mono);white-space:nowrap;color:${bad?'var(--maple)':'var(--ink)'}">${amt}</b></div>`;
       // June → July comparison row. `worse` flags the one metric that moved the wrong way.
       const cmp=(lbl,was,now,note,worse)=>`<div style="display:flex;gap:8px;align-items:baseline;padding:7px 2px;border-bottom:1px dashed var(--line);font-size:14px">
@@ -887,9 +891,13 @@ async function initApp(){
           <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Traced across both accounts</span><b style="font-family:var(--mono);color:var(--foil)">$5,999</b></div>
           <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--maple);margin:14px 0 4px">What it costs to RUN — every month</div>
           ${li('Insurance — confirmed monthly','$191',1)}
-          ${li('Gas — budgeted (current pace is ~$500)','$250',1)}
-          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Monthly to keep it on the road</span><b style="font-family:var(--mono);color:var(--maple)">$441 · vs $52 bus</b></div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">The purchase matched your own $5,923 record — that part was an <b>asset, not a leak</b>. The real number to sit with is the one below it: <b style="color:var(--maple)">$441/month, ~$5,300/year — more than the car cost to buy.</b> That's the honest price of the freedom. It's affordable on your pay, but only if groceries stay at $350 and delivery stays near zero. Keep gas under $250 and this works.</div>
+          <div role="button" tabindex="0" data-gaslog="1" aria-label="Gas log: $${gasMonth.toFixed(2)} of $${gasBudget} budget this month, tap to log a fill-up" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px dashed var(--line);cursor:pointer">
+            <span style="flex:1;font-size:14px">⛽ Gas — tracked${gasFillCount?` · ${gasFillCount} fill-up${gasFillCount===1?'':'s'} this month`:' · no fill-ups logged yet'}</span>
+            <b style="font-family:var(--mono);color:${gasMonth>gasBudget?'var(--maple)':'var(--ink)'}">$${gasMonth.toFixed(2)}</b>
+            <span class="chip" style="padding:5px 9px;font-size:11.5px">Log ⛽</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Budgeted to keep it on the road</span><b style="font-family:var(--mono);color:var(--maple)">$441/mo · vs $52 bus</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">The purchase matched your own $5,923 record — that part was an <b>asset, not a leak</b>. The real running cost is $441/month, ~$5,300/year — more than the car cost to buy. ${gasFillCount?`So far this month: <b style="color:${gasMonth>gasBudget?'var(--maple)':'var(--customs)'}">$${gasMonth.toFixed(2)} across ${gasFillCount} fill-up${gasFillCount===1?'':'s'}</b> against the $${gasBudget} budget.`:'Tap the gas row above at every fill-up — a few weeks of real data replaces the guess.'} Keep it under budget and this works.</div>
         </div>
         <div class="card">
           ${secTitle('TRUTH','July Cash Flow','−$2,492 cash','var(--maple)')}
@@ -929,7 +937,7 @@ async function initApp(){
         </div>
         <div class="card">
           ${secTitle('WATCH','Flags From Your Statements','act this week','var(--maple)')}
-          ${li('Gas pace — $170 in 10 days. The $250 envelope needs you to drive less than that.','~$500/mo',1)}
+          ${li('Gas — log every fill-up on the Car card to see the real monthly pace.', gasFillCount?`$${gasMonth.toFixed(2)} so far`:'not tracked yet', gasFillCount?gasMonth>gasBudget:1)}
           ${li('WFG — charged AGAIN Jul 2. Third month. Demand written proof of $0 balance.','$271.20',1)}
           ${li('THREE AI subs still live — Claude $31.64 + ChatGPT $30.50 + aiboosterlab $36.58. Cancelling two ≈ 1½ months off the e-fund rebuild.','$98.72/mo',1)}
           ${li('CIBC account fee — switch plan or meet the waiver minimum.','$16.95/mo',1)}
@@ -1059,6 +1067,71 @@ async function initApp(){
         const hg=ov.querySelector('[data-hgoal]'); if(hg) hg.onclick=()=>{ ov.remove(); openModal('waterGoal'); };
         const hu=ov.querySelector('[data-hundo]'); if(hu) hu.onclick=()=>applyHydro(hyd.slice(0,-1));
         ov.querySelectorAll('[data-sip]').forEach(b=>{ b.onclick=()=>applyHydro(hyd.concat([{t:hhmm(),ml:+b.dataset.sip}])); });
+      };
+      ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+      render();
+      document.body.appendChild(ov);
+    }
+
+    function openGasModal(){
+      const ov=document.createElement('div'); ov.className='overlay'; ov.id='dashModal';
+      const hhmm=()=>new Date().toTimeString().slice(0,5);
+      const monthPrefix=Dash.today.slice(0,7);
+      const render=()=>{
+        const log=(Dash.state.gasLog||[]).slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+        const thisMonth=log.filter(x=>x.date.startsWith(monthPrefix));
+        const monthTotal=thisMonth.reduce((t,x)=>t+(x.amount||0),0);
+        const budget=(Dash.state.config&&Dash.state.config.gasBudget)||250;
+        const pct=Math.min(100,Math.round(monthTotal/budget*100));
+        const over=monthTotal>budget;
+        const recent=log.slice().reverse().slice(0,12);
+        const rows=recent.length
+          ? recent.map(x=>{
+              const perL=x.liters?(x.amount/x.liters).toFixed(2):null;
+              return `<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:12px;color:var(--sub);padding:5px 0;border-bottom:1px dashed var(--line)">
+                <span>${x.date.slice(5)} ${x.t||''}</span>
+                <span style="flex:1;text-align:center">${x.liters?x.liters+'L':''}${perL?' · '+perL+'/L':''}${x.odo?' · '+x.odo+'km':''}</span>
+                <b style="color:var(--ink)">$${x.amount.toFixed(2)}</b>
+                <button data-gasdel="${x.id}" aria-label="Delete this fill-up" style="margin-left:8px;color:var(--sub);font-size:14px">✕</button>
+              </div>`;
+            }).join('')
+          : '<div style="font-size:12.5px;color:var(--sub)">No fill-ups logged yet.</div>';
+        ov.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Gas log">
+          <header>Gas — $${monthTotal.toFixed(2)} / $${budget} this month</header>
+          <div class="body" style="max-height:70vh;overflow-y:auto">
+            <div class="xpBar" style="background:var(--well);margin-bottom:14px"><div class="xpFill" style="width:${pct}%;background:${over?'var(--maple)':'var(--customs)'}"></div></div>
+            <label for="gfAmt">Amount ($)</label>
+            <input id="gfAmt" type="number" inputmode="decimal" placeholder="e.g. 45.00">
+            <label for="gfLit">Litres (optional)</label>
+            <input id="gfLit" type="number" inputmode="decimal" placeholder="e.g. 32.5">
+            <label for="gfOdo">Odometer km (optional)</label>
+            <input id="gfOdo" type="number" inputmode="decimal" placeholder="e.g. 250400">
+            <div class="mBtns" style="margin-bottom:14px"><button class="save" data-gasadd>Log Fill-up</button></div>
+            <div style="font-family:var(--disp);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:6px 0 4px">Recent</div>
+            ${rows}
+            <div class="mBtns" style="margin-top:12px">
+              <button class="cancel" data-gasbudget>Budget ✎</button>
+              <button class="save" data-mclose>Done</button>
+            </div>
+          </div></div>`;
+        ov.querySelector('[data-mclose]').onclick=()=>ov.remove();
+        const gb=ov.querySelector('[data-gasbudget]'); if(gb) gb.onclick=()=>{ ov.remove(); openModal('gasBudget'); };
+        ov.querySelector('[data-gasadd]').onclick=()=>{
+          const amt=parseFloat(document.getElementById('gfAmt').value);
+          if(!amt||amt<=0) return;
+          const lit=parseFloat(document.getElementById('gfLit').value)||null;
+          const odo=parseFloat(document.getElementById('gfOdo').value)||null;
+          const entry={id:Dash.today+'-'+hhmm()+'-'+Math.random().toString(36).slice(2,7),date:Dash.today,t:hhmm(),amount:amt,liters:lit,odo:odo};
+          Dash.set('gasLog',(Dash.state.gasLog||[]).concat([entry]));
+          flowToast(`⛽ Logged $${amt.toFixed(2)}`);
+          render();
+        };
+        ov.querySelectorAll('[data-gasdel]').forEach(b=>{
+          b.onclick=()=>{
+            Dash.set('gasLog',(Dash.state.gasLog||[]).filter(x=>x.id!==b.dataset.gasdel));
+            render();
+          };
+        });
       };
       ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
       render();
@@ -1218,6 +1291,7 @@ async function initApp(){
       rentDay:{title:'Rent Due Day',fields:[{path:'config.rentDay',label:'Day of month (1–31)',type:'number'}]},
       ccDay:{title:'Card Due Day',fields:[{path:'config.ccDay',label:'Day of month (1–31)',type:'number'}]},
       waterGoal:{title:'Hydration Goal',fields:[{path:'config.waterGoal',label:'Daily goal (ml)',type:'number'}]},
+      gasBudget:{title:'Gas Budget',fields:[{path:'config.gasBudget',label:'Monthly budget ($)',type:'number'}]},
       treats:{title:'Guilt-Free Treats',fields:[{path:'config.treatsClaimed',label:'Treats used so far (1 earned per level-up)',type:'number'}]},
     };
     function openModal(key){
@@ -1290,6 +1364,11 @@ async function initApp(){
       });
       root.querySelectorAll('[data-hydro]').forEach(el=>{
         const fire=()=>openHydroModal();
+        el.addEventListener('click',fire);
+        el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fire(); } });
+      });
+      root.querySelectorAll('[data-gaslog]').forEach(el=>{
+        const fire=()=>openGasModal();
         el.addEventListener('click',fire);
         el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fire(); } });
       });
