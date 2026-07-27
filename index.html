@@ -887,7 +887,7 @@ async function initApp(){
           ${li('Purchase — $3,000 e-transfer + $1,500 cash','$4,500')}
           ${li('Mechanic — suspension, ball joint, rust weld, exhaust','$880')}
           ${li('MTO — plates, transfer, permit','$236')}
-          ${li('Square One Insurance — $382.74 = first 2 months upfront','$383')}
+          ${li('Square One Insurance — confirmed: auto policy #PA107067304 for this Civic','$383')}
           <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Traced across both accounts</span><b style="font-family:var(--mono);color:var(--foil)">$5,999</b></div>
           <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--maple);margin:14px 0 4px">What it costs to RUN — every month</div>
           ${li('Insurance — confirmed monthly','$191',1)}
@@ -908,7 +908,7 @@ async function initApp(){
           ${li('→ Mom','$2,000')}
           ${li('→ Rent','$930')}
           ${li('→ Lifestyle (everything else)','$1,463')}
-          ${li('WFG — charged AGAIN Jul 2, still unresolved','$271',1)}
+          ${li('WFG — 3 emails sent, only auto-replies, charged again anyway','$271',1)}
           <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Chequing: Jul 1 → Jul 27</span><b style="font-family:var(--mono);color:var(--maple)">$3,443 → $950</b></div>
           <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">July wasn't funded by your paycheque — it was funded by your savings.</b> That was a deliberate trade for the car, not a spiral. But the cushion is what paid for it: <b style="color:var(--maple)">the emergency fund is effectively gone.</b> August: rent $930 + mom $2,000 + car $441 = $3,371 against ~$4,250 of pay. It works — with $878 for everything else and nothing behind it. Rebuilding the buffer is the whole job now.</div>
         </div>
@@ -916,7 +916,7 @@ async function initApp(){
           ${secTitle('PLAN','Monthly Envelopes · post-car','net $4,249')}
           ${li('Mom — loan support. Non-negotiable.','$2,000')}
           ${li('Rent (Centurion, 1st)','$930')}
-          ${li('Fixed: phone $28 + insulin/pharmacy + bank fee $17','$140')}
+          ${li('Fixed: phone $28 + tenant insurance (Apollo) $11 + insulin/pharmacy + bank fee $17','$140')}
           ${li('Groceries — the envelope that has to finally get used','$350')}
           ${li('Car: insurance — confirmed monthly','$191')}
           ${li('Car: gas — drive deliberately, this replaced $52 bus','$250')}
@@ -938,10 +938,9 @@ async function initApp(){
         <div class="card">
           ${secTitle('WATCH','Flags From Your Statements','act this week','var(--maple)')}
           ${li('Gas — log every fill-up on the Car card to see the real monthly pace.', gasFillCount?`$${gasMonth.toFixed(2)} so far`:'not tracked yet', gasFillCount?gasMonth>gasBudget:1)}
-          ${li('WFG — charged AGAIN Jul 2. Third month. Demand written proof of $0 balance.','$271.20',1)}
+          ${li('WFG — 3 emails sent (Jun 15, Jun 22, Jul 2), only auto-replies back, charged again anyway. Email isn\'t working — call CIBC to dispute the charge directly.','$271.20',1)}
           ${li('THREE AI subs still live — Claude $31.64 + ChatGPT $30.50 + aiboosterlab $36.58. Cancelling two ≈ 1½ months off the e-fund rebuild.','$98.72/mo',1)}
           ${li('CIBC account fee — switch plan or meet the waiver minimum.','$16.95/mo',1)}
-          ${li('Apollo Insurance — recurring monthly now, still unidentified.','$11.49/mo',1)}
           ${li('PixivFanbox — 3 more charges Jul 4. Confirm you meant to keep this.','$9.08',1)}
           ${li('CIBC-DISATF — $200 out twice monthly, partial credits back. Still unlabeled.','$200 ×2',1)}
           <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Card: charged $1,754, paid $1,635 in July — the balance grew ~$119, first time in a while it moved the wrong way. Still small, but the card is no longer running at zero. Cancelling two of the three AI subs alone funds a third of the gas envelope.</div>
