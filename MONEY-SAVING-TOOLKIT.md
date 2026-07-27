@@ -27,17 +27,24 @@ used Civic and a quote costs nothing.
 
 ---
 
-## ⚠️ WFG — email isn't working, escalate differently
+## ✅ WFG — done. Closed with written proof.
 
-Your sent mail shows you've emailed WFG's account rollup team three times
-(Jun 15, Jun 22, Jul 2) and gotten only auto-replies each time — then got
-charged **again** anyway. Three rounds of the same approach with no result
-means the approach needs to change, not repeat:
-- **Call CIBC directly and dispute the $271.20 charge** as unauthorized/
-  recurring-without-service — banks can block future charges from a specific
-  merchant once a dispute is filed, which email to WFG can't do.
-- Ask CIBC for a **transaction dispute reference number** in writing.
-- Stop emailing WFG's rollup inbox — it's not routing anywhere useful.
+Correction to the first draft of this file: I'd only seen the auto-reply
+bounces and wrongly concluded email wasn't working. The full thread says
+otherwise — it was a real, working conversation the whole time:
+
+1. Jun 15 — you asked WFG to confirm what you owed (code 342BLC)
+2. Jun 24 — a real reply: $271.20 was unpaid mandatory license fees from when
+   you held an active WFG license (a one-time old obligation, not a recurring
+   subscription)
+3. Jul 2 — you confirmed payment made in full, cc'ing a named rep
+4. **Jul 24 — written confirmation: "we received your payment and your
+   outstanding balance is currently at $0."**
+
+That's exactly the proof that was being chased. Nothing left to do here —
+it's a closed, one-time expense, not an ongoing leak. (The only reason to
+glance at it again: confirm no further WFG charge posts on your August
+statement, just as a final check that the $0 stuck.)
 
 ---
 
@@ -51,9 +58,7 @@ all of it: **~$60–100/month**, before you change a single spending habit.
   Keep one, cancel two. Saves ~$65/mo.
 - [ ] **Cancel DashPass.** ($11.29/mo) You're not supposed to be using Uber Eats —
   paying for a subscription to make it *cheaper* to break the rule is backwards.
-- [ ] **Call CIBC to dispute the WFG charge** ($271.20). Emailing WFG three
-  times hasn't worked (see below) — this is the single biggest recoverable
-  amount on your statement, and it needs a different channel now.
+- [x] ~~Resolve WFG~~ — done, $0 balance confirmed in writing Jul 24 (see below).
 - [ ] **Fix the CIBC $16.95/mo account fee.** Either meet the fee-waiver minimum
   balance/direct-deposit requirement, or move to a genuinely free account (see
   Banking below). Saves ~$17/mo, ~$200/year, forever.
@@ -114,10 +119,10 @@ number you can trust.
 
 ### Subscriptions — the leak that creeps
 - **Rocket Money** (or just a recurring calendar reminder) — surfaces every
-  recurring charge on a linked card so nothing hides for three months like WFG
-  and DashPass did. If it doesn't fully support CIBC well, a manual quarterly
+  recurring charge on a linked card so nothing sits unexamined for months, the
+  way DashPass has. If it doesn't fully support CIBC well, a manual quarterly
   "read the last statement top to bottom" habit does the same job — you clearly
-  can spot these once you look (you found PixivFanbox and Apollo yourself).
+  can spot these once you look (you found PixivFanbox yourself).
 
 ### Online shopping (Amazon, etc.)
 - **Rakuten** (free browser extension/app) — automatic cashback (typically
@@ -160,16 +165,15 @@ GasBuddy first — all of it shortens that 7½ months. That's the actual game.
 
 ## The one-time cleanup checklist
 
-- [ ] Run an auto insurance comparison quote (Ratehub/Kanetix) — Square One is confirmed but may not be cheapest
+- [x] ~~Resolve WFG~~ — done, $0 balance confirmed Jul 24
 - [ ] Cancel 2 of 3 AI subscriptions
 - [ ] Cancel DashPass
-- [ ] Call CIBC to dispute the WFG charge — email hasn't worked in 3 tries
 - [ ] Fix or switch the CIBC account fee
 - [ ] Cancel CIBC Payment Protector
 - [ ] Confirm PixivFanbox / Patreon are wanted
 - [ ] Join PC Optimum (free, 5 minutes, you already shop there)
 - [ ] Install GasBuddy + Flipp
-- [ ] Run one insurance comparison quote (Ratehub/Kanetix)
+- [ ] Run an auto insurance comparison quote (Ratehub/Kanetix) — Square One is confirmed but may not be cheapest
 
 Do the top ten and the mandatory plan above balances itself — the $268/mo
 buffer probably becomes $350–400/mo without cutting anything you actually enjoy.

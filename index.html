@@ -908,7 +908,7 @@ async function initApp(){
           ${li('→ Mom','$2,000')}
           ${li('→ Rent','$930')}
           ${li('→ Lifestyle (everything else)','$1,463')}
-          ${li('WFG — 3 emails sent, only auto-replies, charged again anyway','$271',1)}
+          ${li('WFG — one-time old license fee, paid in full, $0 balance confirmed Jul 24','$271')}
           <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Chequing: Jul 1 → Jul 27</span><b style="font-family:var(--mono);color:var(--maple)">$3,443 → $950</b></div>
           <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">July wasn't funded by your paycheque — it was funded by your savings.</b> That was a deliberate trade for the car, not a spiral. But the cushion is what paid for it: <b style="color:var(--maple)">the emergency fund is effectively gone.</b> August: rent $930 + mom $2,000 + car $441 = $3,371 against ~$4,250 of pay. It works — with $878 for everything else and nothing behind it. Rebuilding the buffer is the whole job now.</div>
         </div>
@@ -938,7 +938,7 @@ async function initApp(){
         <div class="card">
           ${secTitle('WATCH','Flags From Your Statements','act this week','var(--maple)')}
           ${li('Gas — log every fill-up on the Car card to see the real monthly pace.', gasFillCount?`$${gasMonth.toFixed(2)} so far`:'not tracked yet', gasFillCount?gasMonth>gasBudget:1)}
-          ${li('WFG — 3 emails sent (Jun 15, Jun 22, Jul 2), only auto-replies back, charged again anyway. Email isn\'t working — call CIBC to dispute the charge directly.','$271.20',1)}
+          ${li('WFG — RESOLVED. Old license fee paid, $0 balance confirmed in writing Jul 24.','✓ closed')}
           ${li('THREE AI subs still live — Claude $31.64 + ChatGPT $30.50 + aiboosterlab $36.58. Cancelling two ≈ 1½ months off the e-fund rebuild.','$98.72/mo',1)}
           ${li('CIBC account fee — switch plan or meet the waiver minimum.','$16.95/mo',1)}
           ${li('PixivFanbox — 3 more charges Jul 4. Confirm you meant to keep this.','$9.08',1)}
