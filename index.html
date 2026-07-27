@@ -883,9 +883,13 @@ async function initApp(){
           ${li('Purchase — $3,000 e-transfer + $1,500 cash','$4,500')}
           ${li('Mechanic — suspension, ball joint, rust weld, exhaust','$880')}
           ${li('MTO — plates, transfer, permit','$236')}
-          ${li('Square One Insurance — verify monthly vs annual','$383')}
+          ${li('Square One Insurance — $382.74 = first 2 months upfront','$383')}
           <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Traced across both accounts</span><b style="font-family:var(--mono);color:var(--foil)">$5,999</b></div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">Matches your own $5,923 repair record once the ATM cash is counted. This was an <b>asset purchase, not a leak</b> — but it now has a running cost: <b style="color:var(--maple)">$170 of gas in the first 10 days ≈ $500/month</b> if that pace holds. Bus was $52/month. Drive it like it costs something, because it does.</div>
+          <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--maple);margin:14px 0 4px">What it costs to RUN — every month</div>
+          ${li('Insurance — confirmed monthly','$191',1)}
+          ${li('Gas — budgeted (current pace is ~$500)','$250',1)}
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Monthly to keep it on the road</span><b style="font-family:var(--mono);color:var(--maple)">$441 · vs $52 bus</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px">The purchase matched your own $5,923 record — that part was an <b>asset, not a leak</b>. The real number to sit with is the one below it: <b style="color:var(--maple)">$441/month, ~$5,300/year — more than the car cost to buy.</b> That's the honest price of the freedom. It's affordable on your pay, but only if groceries stay at $350 and delivery stays near zero. Keep gas under $250 and this works.</div>
         </div>
         <div class="card">
           ${secTitle('TRUTH','July Cash Flow','−$2,492 cash','var(--maple)')}
@@ -898,7 +902,7 @@ async function initApp(){
           ${li('→ Lifestyle (everything else)','$1,463')}
           ${li('WFG — charged AGAIN Jul 2, still unresolved','$271',1)}
           <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Chequing: Jul 1 → Jul 27</span><b style="font-family:var(--mono);color:var(--maple)">$3,443 → $950</b></div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">July wasn't funded by your paycheque — it was funded by your savings.</b> That was a deliberate trade for the car, not a spiral. But the cushion is what paid for it: <b style="color:var(--maple)">the emergency fund is effectively gone.</b> August has rent $930 + mom $2,000 against ~$4,250 of pay. It works — with almost nothing behind it. Rebuilding the buffer is the whole job now.</div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">July wasn't funded by your paycheque — it was funded by your savings.</b> That was a deliberate trade for the car, not a spiral. But the cushion is what paid for it: <b style="color:var(--maple)">the emergency fund is effectively gone.</b> August: rent $930 + mom $2,000 + car $441 = $3,371 against ~$4,250 of pay. It works — with $878 for everything else and nothing behind it. Rebuilding the buffer is the whole job now.</div>
         </div>
         <div class="card">
           ${secTitle('PLAN','Monthly Envelopes · post-car','net $4,249')}
@@ -906,13 +910,13 @@ async function initApp(){
           ${li('Rent (Centurion, 1st)','$930')}
           ${li('Fixed: phone $28 + insulin/pharmacy + bank fee $17','$140')}
           ${li('Groceries — the envelope that has to finally get used','$350')}
+          ${li('Car: insurance — confirmed monthly','$191')}
           ${li('Car: gas — drive deliberately, this replaced $52 bus','$250')}
-          ${li('Car: insurance — CONFIRM if Square One is monthly','$0–383',1)}
           ${li('Subscriptions — Spotify + ONE AI tool','$40')}
           ${li('Fun + earned treats','$60')}
           ${li('Cannabis — taper envelope, cash only','$20')}
-          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Left to rebuild the e-fund</span><b style="font-family:var(--mono);color:${'var(--foil)'}">$459 → $76 if insurance is monthly</b></div>
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">The car ate your savings envelope.</b> The $400/mo Equitable contribution is paused reality — you withdrew $2,721 of it. Until the e-fund is back to ~$2k, every dollar of slack goes there. <b style="color:var(--maple)">Priority one: find out whether that $383 insurance is monthly.</b> If it is, this budget only works by holding groceries at $350 and delivery near zero — exactly the thing July proved you can actually do.</div>
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:9px 2px 2px;font-size:14.5px;font-weight:700"><span>Left to rebuild the e-fund</span><b style="font-family:var(--mono);color:var(--foil)">$268/mo</b></div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">This budget balances — with $268 of air.</b> The car costs $441/mo to run, and the $400/mo Equitable contribution is paused reality (you withdrew $2,721 of it). At $268/mo the e-fund is back to $2k in about <b style="color:var(--foil)">7½ months</b> — faster every time delivery money doesn't get spent. Cancel two of the three AI subs and it's ~6 months. The plan works; it just has no slack for a repeat of June.</div>
           <div class="chips" style="margin-top:12px">
             <span class="chip"><b>Uber Eats = $0.</b> Delete the app</span>
             <span class="chip"><b>You own the car now</b> — no Ubers, no rentals</span>
@@ -925,10 +929,9 @@ async function initApp(){
         </div>
         <div class="card">
           ${secTitle('WATCH','Flags From Your Statements','act this week','var(--maple)')}
-          ${li('Square One Insurance — monthly or annual? This one answers whether August works.','$382.74',1)}
+          ${li('Gas pace — $170 in 10 days. The $250 envelope needs you to drive less than that.','~$500/mo',1)}
           ${li('WFG — charged AGAIN Jul 2. Third month. Demand written proof of $0 balance.','$271.20',1)}
-          ${li('Gas pace — $170 in 10 days. Watch it for two weeks before trusting the $250 envelope.','~$500/mo',1)}
-          ${li('THREE AI subs still live — Claude $31.64 + ChatGPT $30.50 + aiboosterlab $36.58.','$98.72/mo',1)}
+          ${li('THREE AI subs still live — Claude $31.64 + ChatGPT $30.50 + aiboosterlab $36.58. Cancelling two ≈ 1½ months off the e-fund rebuild.','$98.72/mo',1)}
           ${li('CIBC account fee — switch plan or meet the waiver minimum.','$16.95/mo',1)}
           ${li('Apollo Insurance — recurring monthly now, still unidentified.','$11.49/mo',1)}
           ${li('PixivFanbox — 3 more charges Jul 4. Confirm you meant to keep this.','$9.08',1)}
