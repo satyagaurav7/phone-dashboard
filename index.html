@@ -449,7 +449,7 @@ async function initApp(){
 
     const SMALL_WINS = [
       ['water','🚰','Hydrated properly'],
-      ['walk','🚶','10-min walk / moved'],
+      ['walk','🤸','Stretch + fill bottles'],
       ['read5','📖','Opened the CELPIP book'],
       ['cookmeal','🍳','Cooked one meal'],
       ['meditate','🧘','One breathing reset'],
@@ -476,7 +476,7 @@ async function initApp(){
       ['black','🍶','Black bottle',800],
       ['glass','🥛','Glass / cup',250],
     ];
-    const KEY_LABELS={anchor:'Anchor ⚓',water:'Hydrate',walk:'Walk',read5:'Open the book',cookmeal:'Cook a meal',meditate:'Breathing reset',phonedown:'Phone down',gym:'Gym',language:'CELPIP 20 min',study:'Upskill hour',cooked:'Full cooked day',smokefree:'Smoke-free stamp',money:'Money move',breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',insulin:'Insulin',omega3:'Omega-3',bonehealth:'Bone health',vitcd:'Vit C+D3',creatine:'Creatine'};
+    const KEY_LABELS={anchor:'Anchor ⚓',water:'Hydrate',walk:'Stretch + bottles',read5:'Open the book',cookmeal:'Cook a meal',meditate:'Breathing reset',phonedown:'Phone down',gym:'Gym',language:'CELPIP 20 min',study:'Upskill hour',cooked:'Full cooked day',smokefree:'Smoke-free stamp',money:'Money move',breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',insulin:'Insulin',omega3:'Omega-3',bonehealth:'Bone health',vitcd:'Vit C+D3',creatine:'Creatine'};
     const hydroTotal=d=>((d&&d.hydro)||[]).reduce((t,x)=>t+(x.ml||0),0);
     const FUEL = [
       ['breakfast','🌅','Breakfast','core'],
@@ -615,7 +615,7 @@ async function initApp(){
         <div class="anchorBtn${anchored?' done':''}" role="button" tabindex="0" aria-pressed="${anchored}" data-toggle="days.${Dash.today}.anchor" aria-label="Anchor: ${anchored?'done — day counted':'not yet'}">
           <span class="aEmo" aria-hidden="true">⚓</span>
           <span><span class="aLbl">${anchored?'Anchored':'Drop the anchor'}</span>
-          <div class="aSub">CGM checked · insulin on track · I'm here${anchored||!IT.anchor?'':' · best right after waking'}</div></span>
+          <div class="aSub">Bed made · blanket folded · day started right${anchored||!IT.anchor?'':' · do it right after waking'}</div></span>
           <span class="stamp">${anchored?('✓ '+((d.log&&d.log.anchor)||'+10')):'TAP'}</span>
         </div>
         ${anchored?'':'<div style="font-size:12px;color:var(--sub);margin-top:8px">This is the only thing the day asks of you. Do it and the day counts — no matter what else happens.</div>'}

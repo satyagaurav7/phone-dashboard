@@ -145,7 +145,7 @@ function composeStreak(data, now) {
     title: '⚓ 2 minutes — today isn\'t counted yet',
     body: g > 0
       ? `You already banked +${g} momentum today. Drop the anchor and the day counts.`
-      : `Tap the anchor: CGM checked, insulin on track, you're here. Momentum ${m} is waiting.`
+      : `Tap the anchor: bed made, blanket folded, day started right. Momentum ${m} is waiting.`
   };
 }
 
