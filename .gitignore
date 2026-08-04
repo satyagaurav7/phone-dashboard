@@ -1,3 +1,6 @@
 node_modules/
 scripts/package-lock.json
 .claude/
+
+# Raw bank statement exports — real transaction detail, never belongs in a public repo
+RAW-TRANSACTIONS*.md

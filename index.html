@@ -13,7 +13,9 @@
 <title>FLOWSTATE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;600;700&family=B612+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=B612+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
     /* — FLOWSTATE palette: dark canvas, earned light —
@@ -28,16 +30,23 @@
     --foil:#C9A227;       /* gold — PR narrative   */
     --violet:#8B7CF6;     /* secondary accent      */
     --line:#232B3E; --sub:#8A94AD; --card:#111624; --well:#161D2E;
-    --disp:'Barlow Condensed',ui-sans-serif,sans-serif;
-    --body:'Public Sans',system-ui,sans-serif;
+    --disp:'Clash Display','Barlow Condensed',ui-sans-serif,sans-serif;
+    --body:'Satoshi','Public Sans',system-ui,sans-serif;
     --mono:'B612 Mono',ui-monospace,monospace;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
+    /* Aurora field — layered radial glows (Haikei-style mesh, written in CSS so
+       it costs no extra request and still renders offline). Fixed attachment so
+       the light stays put while content scrolls past it. */
     background:
-      radial-gradient(ellipse 120% 60% at 50% -10%, rgba(79,216,235,.06), transparent 60%),
+      radial-gradient(ellipse 90% 55% at 15% -5%,  rgba(79,216,235,.16), transparent 62%),
+      radial-gradient(ellipse 80% 50% at 88% 8%,   rgba(139,124,246,.14), transparent 60%),
+      radial-gradient(ellipse 120% 60% at 50% 42%, rgba(79,216,235,.05), transparent 70%),
+      radial-gradient(ellipse 90% 60% at 20% 100%, rgba(139,124,246,.08), transparent 65%),
       var(--page);
+    background-attachment:fixed;
     color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
     -webkit-tap-highlight-color:transparent;
   }
@@ -46,18 +55,24 @@
   :focus-visible{outline:3px solid var(--foil);outline-offset:2px;border-radius:4px}
 
   /* ============ hero (passport cover) ============ */
-  .cover{background:linear-gradient(160deg,#101A2C 0%,var(--passport) 55%);border-radius:10px;color:#fff;padding:18px 18px 0;
-    border:1.5px solid var(--line);border-top:2px solid rgba(79,216,235,.55);overflow:hidden}
+  .cover{background:linear-gradient(160deg,#101A2C 0%,var(--passport) 55%);border-radius:14px;color:#fff;padding:15px 18px 0;
+    border:1.5px solid var(--line);border-top:2px solid rgba(79,216,235,.55);overflow:hidden;
+    box-shadow:0 10px 34px -22px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.05)}
   .cover .kicker{font-family:var(--disp);font-weight:600;letter-spacing:.22em;font-size:13px;color:var(--foil);text-transform:uppercase}
-  .cover h1{font-family:var(--disp);font-weight:700;font-size:30px;margin:2px 0 0;letter-spacing:.02em;text-transform:uppercase}
+  /* Clash Display is far wider than the condensed face it replaced — dropped the
+     uppercase (it has real character in lowercase) and tightened to fit 375px. */
+  .cover h1{font-family:var(--disp);font-weight:700;font-size:27px;margin:3px 0 0;letter-spacing:-.005em;line-height:1.12}
   .cover .date{font-family:var(--mono);font-size:12.5px;color:#B9C6DE;margin-top:3px}
-  .heroRow{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:16px 0 14px}
-  .streakBig{font-family:var(--mono);font-weight:700;font-size:52px;line-height:1;color:#fff}
-  .streakLbl{font-family:var(--disp);font-weight:600;letter-spacing:.18em;font-size:13px;color:#B9C6DE;text-transform:uppercase}
-  .bestLbl{font-family:var(--mono);font-size:12.5px;color:var(--foil);margin-top:6px}
+  /* Sized down so the ring + today's gain sit side by side and the Anchor card
+     clears the fold. Clash Display is much heavier than the old condensed face,
+     so the same px value reads far bigger than it used to. */
+  .heroRow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 0 12px}
+  .streakBig{font-family:var(--mono);font-weight:700;font-size:34px;line-height:1;color:#fff}
+  .streakLbl{font-family:var(--disp);font-weight:600;letter-spacing:.14em;font-size:11.5px;color:#B9C6DE;text-transform:uppercase}
+  .bestLbl{font-family:var(--mono);font-size:11px;color:var(--foil);margin-top:5px;line-height:1.35}
   .statusLine{font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.04em;color:#EAD9A0;padding:0 0 14px}
-  .mrz{background:rgba(79,216,235,.07);color:#9FE8F2;font-family:var(--mono);font-size:12px;letter-spacing:2px;
-    padding:8px 12px;margin:0 -18px;white-space:nowrap;overflow:hidden;border-top:1.5px dashed rgba(79,216,235,.25)}
+  .mrz{background:rgba(79,216,235,.055);color:rgba(159,232,242,.75);font-family:var(--mono);font-size:9.5px;letter-spacing:1.4px;
+    padding:5px 12px;margin:0 -18px;white-space:nowrap;overflow:hidden;border-top:1px dashed rgba(79,216,235,.2)}
   #syncStatus{font-family:var(--mono);font-size:11px;color:var(--foil);opacity:.85;margin-top:2px}
   .xpWrap{padding:0 0 14px}
   .xpTop{display:flex;justify-content:space-between;font-family:var(--disp);font-weight:600;letter-spacing:.14em;font-size:12px;color:var(--foil);text-transform:uppercase;margin-bottom:5px}
@@ -73,20 +88,31 @@
   .secTitle .tally{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:13px}
 
   /* stamp rows */
-  .row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border:1.5px solid var(--line);
-    border-radius:6px;margin-bottom:8px;background:var(--well);cursor:pointer;user-select:none;transition:background .15s,box-shadow .25s}
-  .row:active{transform:scale(.99)}
+  .row{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:12px 13px;border:1.5px solid var(--line);
+    border-radius:11px;margin-bottom:8px;cursor:pointer;user-select:none;
+    background:linear-gradient(160deg,rgba(255,255,255,.035),rgba(255,255,255,0) 55%),var(--well);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 4px 14px -10px rgba(0,0,0,.85);
+    transition:transform .12s cubic-bezier(.2,.8,.3,1),border-color .25s,box-shadow .3s,background .25s}
+  .row:active{transform:scale(.975)}
   .row .emo{font-size:19px;flex:0 0 auto}
   .row .lbl{font-weight:600;font-size:15.5px}
   .row .subt{font-size:12.5px;color:var(--sub);font-weight:400;margin-top:1px}
   .row .spacer{flex:1}
   .stamp{flex:0 0 auto;font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.08em;
     border:2px dashed #3A4560;color:var(--sub);border-radius:6px;padding:7px 10px;transform:rotate(0)}
-  .row.done{background:rgba(79,216,235,.08);border-color:rgba(79,216,235,.45);box-shadow:0 0 14px -6px rgba(79,216,235,.5)}
-  .row.done .stamp{border:2px solid var(--customs);color:var(--customs);background:rgba(79,216,235,.08);transform:rotate(-3deg);animation:slam .28s cubic-bezier(.2,1.6,.5,1)}
-  .row.navyInk.done{background:rgba(139,124,246,.08);border-color:rgba(139,124,246,.45);box-shadow:0 0 14px -6px rgba(139,124,246,.5)}
+  .row.done{background:linear-gradient(160deg,rgba(79,216,235,.17),rgba(79,216,235,.04) 62%),var(--well);
+    border-color:rgba(79,216,235,.55);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(79,216,235,.13), 0 0 22px -8px rgba(79,216,235,.6)}
+  .row.done .stamp{border:2px solid var(--customs);color:var(--customs);background:rgba(79,216,235,.08);transform:rotate(-3deg)}
+  /* the slam only plays on the row you JUST tapped — see .justDone below */
+  .row.done.justDone .stamp{animation:slam .28s cubic-bezier(.2,1.6,.5,1)}
+  .row.navyInk.done{background:linear-gradient(160deg,rgba(139,124,246,.17),rgba(139,124,246,.04) 62%),var(--well);
+    border-color:rgba(139,124,246,.55);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(139,124,246,.13), 0 0 22px -8px rgba(139,124,246,.6)}
   .row.navyInk.done .stamp{border-color:var(--violet);color:var(--violet);background:rgba(139,124,246,.08)}
-  .row.mapleInk.done{background:rgba(201,162,39,.08);border-color:rgba(201,162,39,.45);box-shadow:0 0 14px -6px rgba(201,162,39,.5)}
+  .row.mapleInk.done{background:linear-gradient(160deg,rgba(201,162,39,.17),rgba(201,162,39,.04) 62%),var(--well);
+    border-color:rgba(201,162,39,.55);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(201,162,39,.13), 0 0 22px -8px rgba(201,162,39,.6)}
   .row.mapleInk.done .stamp{border-color:var(--foil);color:var(--foil);background:rgba(201,162,39,.08)}
   @keyframes slam{0%{transform:rotate(7deg) scale(1.5);opacity:0}60%{transform:rotate(-5deg) scale(.96);opacity:1}100%{transform:rotate(-3deg) scale(1)}}
   .timeWrap{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-right:2px}
@@ -183,8 +209,22 @@
   .pcSq{position:absolute;left:0;top:0;width:8px;height:8px;border-radius:1px;animation:fly 1.3s ease-out forwards}
   @keyframes fly{from{opacity:1;transform:translate(0,0) rotate(0)}to{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
   /* ============ anchor + momentum ============ */
-  .anchorBtn{display:flex;align-items:center;gap:14px;width:100%;padding:16px 14px;border:1.5px solid rgba(79,216,235,.4);
-    border-radius:8px;background:linear-gradient(135deg,rgba(79,216,235,.10),rgba(139,124,246,.06));cursor:pointer;user-select:none;transition:box-shadow .25s}
+  .anchorBtn{display:flex;align-items:center;gap:14px;width:100%;padding:17px 15px;border:1.5px solid rgba(79,216,235,.4);
+    border-radius:13px;background:linear-gradient(135deg,rgba(79,216,235,.12),rgba(139,124,246,.07));cursor:pointer;user-select:none;
+    transition:transform .12s cubic-bezier(.2,.8,.3,1),box-shadow .3s,border-color .25s,background .25s}
+  .anchorBtn:active{transform:scale(.98)}
+  /* Undone anchor breathes to pull the eye — the one thing the day asks for.
+     Goes still the moment it's done. Killed entirely by prefers-reduced-motion. */
+  @keyframes anchorBreathe{
+    0%,100%{box-shadow:0 0 0 0 rgba(79,216,235,.24), 0 8px 26px -16px rgba(0,0,0,.9)}
+    50%{box-shadow:0 0 0 8px rgba(79,216,235,0), 0 8px 26px -16px rgba(0,0,0,.9)}
+  }
+  .anchorBtn:not(.done){animation:anchorBreathe 3s ease-in-out infinite}
+  @keyframes bloom{from{box-shadow:0 0 0 0 rgba(79,216,235,.55), 0 0 26px -6px rgba(79,216,235,.7)}
+    to{box-shadow:0 0 0 22px rgba(79,216,235,0), 0 0 26px -6px rgba(79,216,235,.7)}}
+  .anchorBtn.done.justDone{animation:bloom .6s ease-out}
+  @keyframes pop{0%{transform:scale(1)}42%{transform:scale(1.07)}100%{transform:scale(1)}}
+  .swin.done.justDone{animation:pop .34s cubic-bezier(.2,1.5,.4,1)}
   .anchorBtn .aEmo{font-size:26px;flex:0 0 auto}
   .anchorBtn .aLbl{font-family:var(--disp);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
   .anchorBtn .aSub{font-size:12.5px;color:var(--sub);font-weight:400;margin-top:2px;text-transform:none;letter-spacing:0;font-family:var(--body)}
@@ -192,11 +232,37 @@
   .anchorBtn.done{border-color:var(--customs);box-shadow:0 0 24px -6px rgba(79,216,235,.65);background:linear-gradient(135deg,rgba(79,216,235,.16),rgba(79,216,235,.05))}
   .anchorBtn.done .stamp{border:2px solid var(--customs);color:var(--customs)}
   .smallGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .swin{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--well);
-    padding:10px;cursor:pointer;user-select:none;font-size:13px;font-weight:600;color:var(--ink)}
-  .swin .pts{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--sub);white-space:nowrap}
-  .swin.done{background:rgba(79,216,235,.10);border-color:rgba(79,216,235,.5);box-shadow:0 0 12px -5px rgba(79,216,235,.55)}
+  /* min-width:0 lets the grid cell shrink below its content; without it the wider
+     display font pushes the whole page into horizontal scroll. */
+  .swin{min-width:0;position:relative;display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:11px;
+    background:linear-gradient(160deg,rgba(255,255,255,.04),rgba(255,255,255,0) 60%),var(--well);
+    padding:11px 10px;cursor:pointer;user-select:none;font-size:13px;font-weight:600;color:var(--ink);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 4px 12px -10px rgba(0,0,0,.85);
+    transition:transform .12s cubic-bezier(.2,.8,.3,1),border-color .25s,box-shadow .3s,background .25s}
+  .swin:active{transform:scale(.955)}
+  .swin>span:first-child{flex:0 0 auto}
+  /* break-word, not anywhere — 'anywhere' splits mid-word ("Cooke/d one meal") */
+  .swin>span:nth-child(2){flex:1 1 auto;min-width:0;overflow-wrap:break-word;line-height:1.25}
+  .swin .pts{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--sub);white-space:nowrap;flex:0 0 auto}
+  .swin.done{background:linear-gradient(160deg,rgba(79,216,235,.2),rgba(79,216,235,.05) 62%),var(--well);
+    border-color:rgba(79,216,235,.55);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(79,216,235,.13), 0 0 18px -6px rgba(79,216,235,.6)}
   .swin.done .pts{color:var(--customs)}
+
+  /* ============ pointer trail (hero) ============
+     Ported from the 21st.dev image-mousetrail technique: a fixed pool of
+     elements, activated one at a time as the pointer travels a threshold
+     distance, each fading itself out. Images swapped for glow orbs — this is
+     a dark momentum app, not a photo gallery. pointer-events:none so it can
+     never swallow a tap on the hero. */
+  .trailLayer{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:10px;z-index:0}
+  .trailDot{position:absolute;width:120px;height:120px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle closest-side, rgba(79,216,235,.55), rgba(139,124,246,.18) 45%, rgba(79,216,235,0) 78%);
+    transform:translate(-50%,-50%) scale(.2);opacity:0;
+    transition:transform .55s cubic-bezier(.16,1,.3,1), opacity .55s ease-out}
+  .trailDot[data-status="active"]{transform:translate(-50%,-50%) scale(1);opacity:1}
+  /* hero content sits above the trail (explicit, not relying on DOM order) */
+  .cover > *:not(.trailLayer){position:relative;z-index:1}
 
   /* ============ auth gate ============ */
   #authGate{
@@ -411,6 +477,10 @@ async function initApp(){
           else if (value===false) delete day.log[parts[2]];
         }
       }
+      // Remember what was just switched ON so the next render can celebrate
+      // only that one element (see .justDone). Without this, every re-render
+      // replays the completion animation on everything already done at once.
+      this._lastSet = (value === true) ? path : null;
       saveLocal(); saveCloud();
       if (this._fn) this._fn(this.state);
     },
@@ -448,12 +518,15 @@ async function initApp(){
     const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const SMALL_WINS = [
-      ['water','🚰','Hydrated properly'],
-      ['walk','🤸','Stretch + fill bottles'],
-      ['read5','📖','Opened the CELPIP book'],
-      ['cookmeal','🍳','Cooked one meal'],
-      ['meditate','🧘','One breathing reset'],
-      ['phonedown','🌙','Phone down before bed'],
+      // Short labels so each chip stays one or two lines in the 2-col grid —
+      // and they now match KEY_LABELS exactly, so the app and the push
+      // notifications finally call these the same thing.
+      ['water','🚰','Hydrate'],
+      ['walk','🤸','Stretch + bottles'],
+      ['read5','📖','Open the book'],
+      ['cookmeal','🍳','Cook a meal'],
+      ['meditate','🧘','Breathe'],
+      ['phonedown','🌙','Phone down'],
     ];
     const BIG_WINS = [
       ['gym','🏋️','Gym session','showing up is the win'],
@@ -476,7 +549,7 @@ async function initApp(){
       ['black','🍶','Black bottle',800],
       ['glass','🥛','Glass / cup',250],
     ];
-    const KEY_LABELS={anchor:'Anchor ⚓',water:'Hydrate',walk:'Stretch + bottles',read5:'Open the book',cookmeal:'Cook a meal',meditate:'Breathing reset',phonedown:'Phone down',gym:'Gym',language:'CELPIP 20 min',study:'Upskill hour',cooked:'Full cooked day',smokefree:'Smoke-free stamp',money:'Money move',breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',insulin:'Insulin',omega3:'Omega-3',bonehealth:'Bone health',vitcd:'Vit C+D3',creatine:'Creatine'};
+    const KEY_LABELS={anchor:'Anchor ⚓',water:'Hydrate',walk:'Stretch + bottles',read5:'Open the book',cookmeal:'Cook a meal',meditate:'Breathe',phonedown:'Phone down',gym:'Gym',language:'CELPIP 20 min',study:'Upskill hour',cooked:'Full cooked day',smokefree:'Smoke-free stamp',money:'Money move',breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',insulin:'Insulin',omega3:'Omega-3',bonehealth:'Bone health',vitcd:'Vit C+D3',creatine:'Creatine'};
     const hydroTotal=d=>((d&&d.hydro)||[]).reduce((t,x)=>t+(x.ml||0),0);
     const FUEL = [
       ['breakfast','🌅','Breakfast','core'],
@@ -545,7 +618,7 @@ async function initApp(){
     function momentumRing(m, todayGain){
       const C=2*Math.PI*56, off=C*(1-m/100);
       const st=flowStateOf(m);
-      return `<svg width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Momentum ${m} of 100 — ${st[2]}">
+      return `<svg width="128" height="128" viewBox="0 0 160 160" role="img" aria-label="Momentum ${m} of 100 — ${st[2]}">
         <circle cx="80" cy="80" r="56" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
         <circle cx="80" cy="80" r="56" fill="none" stroke="rgba(79,216,235,.28)" stroke-width="15" stroke-linecap="round"
           stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 80 80)"/>
@@ -732,7 +805,7 @@ async function initApp(){
             <div>
               <div class="streakBig">+${gToday}</div>
               <div class="streakLbl">Today's Flow</div>
-              <div class="bestLbl">ANCHOR ${anchored?'DOWN ⚓':'OPEN'} · BEST RUN ${s.best}</div>
+              <div class="bestLbl">${anchored?'⚓ ANCHORED':'⚓ OPEN'} · BEST ${s.best}</div>
             </div>
           </div>
           <div class="statusLine">${status}</div>
@@ -1332,6 +1405,51 @@ async function initApp(){
       setTimeout(()=>toast.remove(), 2600);
     }
 
+    /* ---------- hero pointer trail ----------
+       Adapted from the 21st.dev image-mousetrail component. Same core idea:
+       a recycled pool of nodes, the lead one activated wherever the pointer
+       has travelled far enough, the one 5 behind it retired.
+       Changes made for this app:
+       - glow orbs instead of <img>, sized for a phone hero
+       - pointerdown/move covers mouse AND touch through one API
+       - honours prefers-reduced-motion (whole effect is skipped)
+       - fixed a real bug in the original: (index - 5) % length goes NEGATIVE
+         for the first five moves, so the tail never retired early on. The
+         original masked it with ?.current instead of fixing the modulo. */
+    function mountTrail(root){
+      if(REDUCED) return;
+      const cover=root.querySelector('.cover');
+      if(!cover) return;
+      const POOL=14, GAP=34, LIFE=680;
+      const layer=document.createElement('div');
+      layer.className='trailLayer';
+      const dots=Array.from({length:POOL},()=>{
+        const el=document.createElement('span');
+        el.className='trailDot'; el.dataset.status='inactive';
+        layer.appendChild(el); return el;
+      });
+      cover.insertBefore(layer, cover.firstChild);
+
+      let i=0, last=null;
+      const fire=(x,y)=>{
+        if(last && Math.hypot(x-last.x, y-last.y) < GAP) return;
+        const r=cover.getBoundingClientRect();
+        if(x<r.left||x>r.right||y<r.top||y>r.bottom) return;   // hero only
+        const lead=dots[i%POOL];
+        lead.style.left=(x-r.left)+'px';
+        lead.style.top=(y-r.top)+'px';
+        lead.style.zIndex=String((i%POOL)+1);
+        lead.dataset.status='active';
+        clearTimeout(lead._t);
+        lead._t=setTimeout(()=>{ lead.dataset.status='inactive'; }, LIFE);
+        const tail=dots[((i-5)%POOL+POOL)%POOL];               // non-negative modulo
+        if(tail && tail!==lead) tail.dataset.status='inactive';
+        i++; last={x,y};
+      };
+      cover.addEventListener('pointermove', e=>fire(e.clientX,e.clientY), {passive:true});
+      cover.addEventListener('pointerleave', ()=>{ last=null; }, {passive:true});
+    }
+
     function draw(s){
       const root=document.getElementById('appRoot');
       const d=(s.days&&s.days[Dash.today])||{};
@@ -1345,6 +1463,16 @@ async function initApp(){
         :tab==='money'?moneyHTML(s)
         :tab==='history'?historyHTML(s)
         :healthHTML()) + navHTML();
+
+      mountTrail(root);
+
+      // Tag only the just-tapped element so its completion animation fires once,
+      // instead of every completed item re-animating on every render.
+      if(Dash._lastSet){
+        const el=root.querySelector('[data-toggle="'+Dash._lastSet+'"]');
+        if(el) el.classList.add('justDone');
+        Dash._lastSet=null;
+      }
 
       root.querySelectorAll('[data-toggle]').forEach(el=>{
         const fire=()=>{
