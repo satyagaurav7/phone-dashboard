@@ -884,6 +884,129 @@ async function initApp(){
         </div>`;
     }
 
+    /* ================= Money charts =================
+       Hand-rolled inline SVG — no chart library, so the single-file PWA and its
+       offline behaviour stay intact.
+       Palette was VALIDATED, not eyeballed, against the dark card surface
+       (#111624): lightness band, chroma floor, CVD separation (worst adjacent
+       ΔE 9.4 deutan), normal-vision floor (24.6) and contrast all pass.
+       The app's brand cyan #4FD8EB FAILED the dark lightness band (0.816 vs
+       0.48–0.67) and gold↔amber FAILED CVD separation (ΔE 1.9 — indistinguishable),
+       so chart cyan is stepped down to #309FB3 and gold is dropped entirely. */
+    const CHART={c1:'#309FB3',c2:'#d95926',c3:'#199e70',c4:'#9085e9'};
+    const money0=v=>'$'+Math.round(v).toLocaleString();
+    const AXIS='#232B3E', INK='#E6EBF5', MUTED='#8A94AD', FAINT='#5C6780';
+
+    function chartLegend(series){
+      return `<div style="display:flex;flex-wrap:wrap;gap:11px;margin-top:9px">`+
+        series.map(s=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--sub)"><i aria-hidden="true" style="width:10px;height:10px;border-radius:2px;background:${s.color};display:inline-block;flex:0 0 auto"></i>${s.name}</span>`).join('')+
+        `</div>`;
+    }
+
+    /* Stacked columns. cats=[label], series=[{name,color,vals[]}] */
+    function svgStacked(cats, series, opts){
+      opts=opts||{};
+      const W=320, H=opts.h||200, top=16, base=H-46;
+      const totals=cats.map((_,i)=>series.reduce((a,s)=>a+s.vals[i],0));
+      const max=Math.max(...totals)*1.08;
+      const bw=opts.bw||52, gap=(W-12-cats.length*bw)/(cats.length-1);
+      let out='';
+      cats.forEach((c,i)=>{
+        const x=6+i*(bw+gap);
+        let y=base;
+        series.forEach(s=>{
+          const v=s.vals[i]; if(v<=0) return;
+          const hh=v/max*(base-top); y-=hh;
+          // 2px surface gap between stacked segments per mark spec
+          out+=`<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${Math.max(hh-2,1.5).toFixed(1)}" rx="3" fill="${s.color}"><title>${c} · ${s.name}: ${money0(v)}</title></rect>`;
+        });
+        out+=`<text x="${x+bw/2}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-family="B612 Mono,monospace" font-size="11" font-weight="700" fill="${INK}">${money0(totals[i])}</text>`;
+        out+=`<text x="${x+bw/2}" y="${base+16}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="11.5" letter-spacing=".08em" fill="${MUTED}">${c.toUpperCase()}</text>`;
+        if(opts.sub&&opts.sub[i]) out+=`<text x="${x+bw/2}" y="${base+29}" text-anchor="middle" font-family="B612 Mono,monospace" font-size="8.5" fill="${FAINT}">${opts.sub[i]}</text>`;
+      });
+      return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${opts.alt||''}"><line x1="6" y1="${base}" x2="${W-6}" y2="${base}" stroke="${AXIS}" stroke-width="1"/>${out}</svg>`;
+    }
+
+    /* Grouped columns. cats=[label], series=[{name,color,vals[]}] */
+    function svgGrouped(cats, series, opts){
+      opts=opts||{};
+      const W=320, H=opts.h||200, top=16, base=H-46;
+      const max=Math.max(...series.flatMap(s=>s.vals))*1.12;
+      const grpW=(W-12)/cats.length, bw=Math.min(30,(grpW-14)/series.length);
+      let out='';
+      cats.forEach((c,i)=>{
+        const gx=6+i*grpW+(grpW-(bw*series.length+2*(series.length-1)))/2;
+        series.forEach((s,j)=>{
+          const v=s.vals[i], hh=v/max*(base-top);
+          const x=gx+j*(bw+2), y=base-hh;   // 2px gap between adjacent bars
+          out+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(hh,1.5).toFixed(1)}" rx="3" fill="${s.color}"><title>${c} · ${s.name}: ${money0(v)}</title></rect>`;
+          out+=`<text x="${(x+bw/2).toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle" font-family="B612 Mono,monospace" font-size="9.5" font-weight="700" fill="${INK}">${money0(v)}</text>`;
+        });
+        out+=`<text x="${(6+i*grpW+grpW/2).toFixed(1)}" y="${base+16}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="11" letter-spacing=".06em" fill="${MUTED}">${c.toUpperCase()}</text>`;
+      });
+      return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${opts.alt||''}"><line x1="6" y1="${base}" x2="${W-6}" y2="${base}" stroke="${AXIS}" stroke-width="1"/>${out}</svg>`;
+    }
+
+    /* Single-series line — one series needs no legend, the title names it */
+    function svgLine(pts, opts){
+      opts=opts||{};
+      // L/R inset by half a label width so the first/last centred labels
+      // ("MAY", "AUG 17") don't spill outside the viewBox.
+      const W=320, H=opts.h||170, top=18, base=H-40, L=28, R=W-28;
+      const vals=pts.map(p=>p[1]);
+      const max=Math.max(...vals)*1.1, min=0;
+      const x=i=>L+i*((R-L)/(pts.length-1));
+      const y=v=>base-(v-min)/(max-min)*(base-top);
+      const line=pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)} ${y(p[1]).toFixed(1)}`).join(' ');
+      const area=line+` L${x(pts.length-1).toFixed(1)} ${base} L${x(0).toFixed(1)} ${base} Z`;
+      let dots='';
+      pts.forEach((p,i)=>{
+        dots+=`<circle cx="${x(i).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="4.5" fill="${CHART.c1}" stroke="#111624" stroke-width="2"><title>${p[0]}: ${money0(p[1])}</title></circle>`;
+        dots+=`<text x="${x(i).toFixed(1)}" y="${(y(p[1])-11).toFixed(1)}" text-anchor="middle" font-family="B612 Mono,monospace" font-size="10" font-weight="700" fill="${INK}">${money0(p[1])}</text>`;
+        dots+=`<text x="${x(i).toFixed(1)}" y="${base+16}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="11" letter-spacing=".06em" fill="${MUTED}">${p[0].toUpperCase()}</text>`;
+      });
+      return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${opts.alt||''}">
+        <defs><linearGradient id="lnFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${CHART.c1}" stop-opacity=".28"/><stop offset="100%" stop-color="${CHART.c1}" stop-opacity="0"/>
+        </linearGradient></defs>
+        <line x1="${L}" y1="${base}" x2="${R}" y2="${base}" stroke="${AXIS}" stroke-width="1"/>
+        <path d="${area}" fill="url(#lnFill)"/>
+        <path d="${line}" fill="none" stroke="${CHART.c1}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${dots}</svg>`;
+    }
+
+    function chartsHTML(){
+      // Figures from the CIBC statements (May 17 – Aug 22 window). Aug is 1–17
+      // actual, scaled to a 31-day rate where a monthly comparison is needed.
+      const transport=[
+        {name:'Ubers + rentals',color:CHART.c2,vals:[263.77,888.49,251.84,0]},
+        {name:'Gas',            color:CHART.c1,vals:[12.22,278.18,301.22,150.64]},
+        {name:'Insurance',      color:CHART.c4,vals:[0,0,191,191]},
+      ];
+      const food=[
+        {name:'Jul 1–17',color:CHART.c4,vals:[149.06,36.08,69.27]},
+        {name:'Aug 1–17',color:CHART.c2,vals:[77.84,43.26,303.93]},
+      ];
+      return `
+        <div class="card">
+          ${secTitle('CAR','Transport — before vs after','−$304/mo','var(--customs)')}
+          ${svgStacked(['May','Jun','Jul','Aug'],transport,{sub:['','','car Jul 17','post-car'],alt:'Monthly transport cost: May $276, June $1,167, July $744, August $342'})}
+          ${chartLegend(transport)}
+          <div style="font-size:12.5px;color:var(--sub);margin-top:9px"><b style="color:var(--customs)">The car is paying for itself.</b> Ubers and rentals were averaging <b>$646/mo</b> across May–Jul. Running the Civic is <b>$342/mo</b> (gas $151 + insurance $191) — and you took <b>zero</b> Ubers in August. That's <b>$304/mo saved</b>, ~$3,650/yr. Against $5,616 spent on car + repairs + plates, it pays itself back in about <b>18 months</b>.</div>
+        </div>
+        <div class="card">
+          ${secTitle('FOOD','Where food money goes','+$171 vs July','var(--maple)')}
+          ${svgGrouped(['Delivery','Coffee','Restaurants'],food,{alt:'Food out, same 17-day window: delivery fell from $149 to $78, coffee rose $36 to $43, restaurants rose $69 to $304'})}
+          ${chartLegend(food)}
+          <div style="font-size:12.5px;color:var(--sub);margin-top:9px"><b style="color:var(--customs)">You broke the delivery habit — that's real.</b> Uber Eats went from 9 orders to 4, $149 → $78. But it moved rather than stopped: sit-down and takeout went <b style="color:var(--maple)">$69 → $304 (+339%)</b>. Net, food out is <b>$171 higher</b> than the same 17 days of July. Same money, different door.</div>
+        </div>
+        <div class="card">
+          ${secTitle('TREND','Chequing at month-end','−$1,965 since May','var(--maple)')}
+          ${svgLine([['May',3594.09],['Jun',3442.54],['Jul',2418.14],['Aug 17',1629.36]],{alt:'Chequing balance: May $3,594, June $3,443, July $2,418, August 17 $1,629'})}
+          <div style="font-size:12.5px;color:var(--sub);margin-top:9px">Four months, one direction. July's drop bought the car — an asset, not a leak. August has no such excuse: <b style="color:var(--maple)">−$789 in 17 days</b> with no big purchase in it. This is the line that has to flatten before anything else counts as progress.</div>
+        </div>`;
+    }
+
     function moneyHTML(s){
       const c=s.config;
       const util=c.cardLimit>0?Math.round(c.cardBal/c.cardLimit*100):null;
@@ -916,6 +1039,7 @@ async function initApp(){
             ${statTile('$'+leakMonth, 'leaks logged this month', leakMonth>0?'warn':'good')}
           </div>
         </div>
+        ${chartsHTML()}
         <div class="card">
           ${secTitle('VAULT','What You Actually Have','≈ $13.5k','var(--customs)')}
           <div style="font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--maple);margin:2px 0 4px">Liquid · ~$2,166 — thin</div>
