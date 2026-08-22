@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" width="400" height="800">
+  <!-- meridian - background mood - unlocked at 200 anchored days
+       The 200-day payoff, so it has to be the loudest file in the set. Its
+       signature is spanning warm to cool in one image: accent-pr gold at the
+       top, accent-alt violet at the horizon. #C9A227 is the fourth hue nobody
+       else uses.
+
+       meridian-ember was the worst stop in the first pass - #C9A227 at .22 over
+       the blue-biased base composited to chroma 2 with B above R, i.e. the gold
+       inverted to a cool grey, on the largest shape in the file. It is now a
+       real #F0733A core at .46. -->
+  <defs>
+    <radialGradient id="meridian-gold" gradientUnits="userSpaceOnUse" cx="296" cy="152" r="300" fx="330" fy="110">
+      <stop offset="0" stop-color="#C9A227" stop-opacity=".58"/>
+      <stop offset=".34" stop-color="#C9A227" stop-opacity=".33"/>
+      <stop offset=".70" stop-color="#E8A13C" stop-opacity=".11"/>
+      <stop offset="1" stop-color="#E8A13C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="meridian-amber" gradientUnits="userSpaceOnUse" cx="176" cy="300" r="400" fx="144" fy="256">
+      <stop offset="0" stop-color="#E8A13C" stop-opacity=".56"/>
+      <stop offset=".36" stop-color="#E8A13C" stop-opacity=".31"/>
+      <stop offset=".70" stop-color="#C9A227" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#C9A227" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="meridian-ember" gradientUnits="userSpaceOnUse" cx="250" cy="436" r="340">
+      <stop offset="0" stop-color="#F0733A" stop-opacity=".46"/>
+      <stop offset=".38" stop-color="#E8A13C" stop-opacity=".25"/>
+      <stop offset=".72" stop-color="#C9A227" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#C9A227" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="meridian-violet" gradientUnits="userSpaceOnUse" cx="112" cy="616" r="400">
+      <stop offset="0" stop-color="#8B7CF6" stop-opacity=".26"/>
+      <stop offset=".38" stop-color="#8B7CF6" stop-opacity=".14"/>
+      <stop offset=".72" stop-color="#8B7CF6" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#8B7CF6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="meridian-dusk" gradientUnits="userSpaceOnUse" cx="300" cy="706" r="280">
+      <stop offset="0" stop-color="#C9A227" stop-opacity=".40"/>
+      <stop offset=".42" stop-color="#C9A227" stop-opacity=".21"/>
+      <stop offset=".76" stop-color="#E8A13C" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#8B7CF6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="meridian-veil" gradientUnits="userSpaceOnUse" x1="200" y1="-60" x2="200" y2="860">
+      <stop offset="0" stop-color="#C9A227" stop-opacity=".10"/>
+      <stop offset=".50" stop-color="#E8A13C" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#8B7CF6" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="112" cy="616" rx="400" ry="400" fill="url(#meridian-violet)"/>
+  <ellipse cx="300" cy="706" rx="280" ry="280" fill="url(#meridian-dusk)"/>
+  <ellipse cx="250" cy="436" rx="340" ry="340" fill="url(#meridian-ember)"/>
+  <ellipse cx="176" cy="300" rx="400" ry="400" fill="url(#meridian-amber)"/>
+  <ellipse cx="296" cy="152" rx="300" ry="300" fill="url(#meridian-gold)"/>
+  <rect x="-60" y="-60" width="520" height="920" fill="url(#meridian-veil)"/>
+</svg>

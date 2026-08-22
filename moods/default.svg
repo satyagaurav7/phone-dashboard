@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" width="400" height="800">
+  <!-- default - background mood, always unlocked (baseline)
+       Cores sit inside x[55,345] y[78,723] - the only region a phone ever shows
+       once #moodLayer's inset:-12% and background-size:cover have cropped it. -->
+  <defs>
+    <radialGradient id="default-a" gradientUnits="userSpaceOnUse" cx="96" cy="150" r="360" fx="64" fy="104">
+      <stop offset="0" stop-color="#4FD8EB" stop-opacity=".44"/>
+      <stop offset=".42" stop-color="#4FD8EB" stop-opacity=".22"/>
+      <stop offset=".74" stop-color="#4FD8EB" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#4FD8EB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="default-b" gradientUnits="userSpaceOnUse" cx="322" cy="104" r="310" fx="352" fy="70">
+      <stop offset="0" stop-color="#8B7CF6" stop-opacity=".38"/>
+      <stop offset=".44" stop-color="#8B7CF6" stop-opacity=".19"/>
+      <stop offset=".76" stop-color="#8B7CF6" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#8B7CF6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="default-c" gradientUnits="userSpaceOnUse" cx="198" cy="428" r="462">
+      <stop offset="0" stop-color="#4FD8EB" stop-opacity=".22"/>
+      <stop offset=".40" stop-color="#4FD8EB" stop-opacity=".13"/>
+      <stop offset=".72" stop-color="#4FD8EB" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#4FD8EB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="default-d" gradientUnits="userSpaceOnUse" cx="88" cy="672" r="340" fx="52" fy="716">
+      <stop offset="0" stop-color="#8B7CF6" stop-opacity=".36"/>
+      <stop offset=".43" stop-color="#8B7CF6" stop-opacity=".18"/>
+      <stop offset=".75" stop-color="#8B7CF6" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#8B7CF6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="default-veil" gradientUnits="userSpaceOnUse" x1="200" y1="-60" x2="200" y2="860">
+      <stop offset="0" stop-color="#4FD8EB" stop-opacity=".10"/>
+      <stop offset=".52" stop-color="#8B7CF6" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#8B7CF6" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="198" cy="428" rx="462" ry="462" fill="url(#default-c)"/>
+  <ellipse cx="96" cy="150" rx="360" ry="360" fill="url(#default-a)"/>
+  <ellipse cx="322" cy="104" rx="310" ry="310" fill="url(#default-b)"/>
+  <ellipse cx="88" cy="672" rx="340" ry="340" fill="url(#default-d)"/>
+  <rect x="-60" y="-60" width="520" height="920" fill="url(#default-veil)"/>
+</svg>

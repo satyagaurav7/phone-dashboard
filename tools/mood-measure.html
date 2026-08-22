@@ -1,0 +1,144 @@
+<!doctype html><meta charset="utf-8"><title>mood check</title>
+<body style="background:#0A0D13;color:#DDE6F2;font:12px monospace">
+<pre id="out">measuring…</pre>
+<script>
+// Throwaway measurement harness — NOT shipped. Rasterises each mood SVG in the
+// real browser (exact fidelity), crops to the window a phone can actually see,
+// and composites over the real page base at the real layer opacity.
+const MOODS=['default','drift','nebula','glacier','cinder','meridian'];
+const AT={default:0,drift:10,nebula:25,glacier:50,cinder:100,meridian:200};
+// Per-mood brightness multiplier — must match MOODS[].k in index.html. The
+// earn-order check below runs on EFFECTIVE alpha (a*k), because that is what
+// reaches the eye; raw SVG density is not what the user experiences.
+const MK={default:1.00,drift:1.26,nebula:1.05,glacier:1.30,cinder:1.08,meridian:1.10};
+// Verified crop window (tightest across Pixel 8 / 8 Pro / iPhone 13 mini / 14)
+const CX0=55,CX1=345,CY0=78,CY1=723;
+// Hero band: where the momentum ring sits
+const HY0=80,HY1=340;
+// Card band: everything below the ring is opaque .card / .card--quiet.
+// This is the band that governs elevation. The hero band above is card-free,
+// so the art is ALLOWED to run bright there — comparing it to card lightness
+// was measuring the wrong thing.
+const KY0=341,KY1=723;
+// Mirrors the -webkit-mask-image falloff on #moodLayer::before. Kept in lockstep
+// with the CSS by hand — if the stops there change, change them here or this
+// harness silently starts measuring a page that no longer exists.
+let MASK=[[0,1],[0.28,1],[0.58,0.16],[1,0.10]];
+function maskAt(py){const t=py/800;
+  for(let i=1;i<MASK.length;i++){const [b,v]=MASK[i],[a,u]=MASK[i-1];
+    if(t<=b)return u+(v-u)*((t-a)/(b-a)||0);}
+  return MASK[MASK.length-1][1];}
+const BASE=[0x0A,0x0D,0x13];
+const SURF1=[0x11,0x16,0x24], SURF2=[0x16,0x1D,0x2E];
+
+const srgb=c=>{c/=255;return c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+const Y=(r,g,b)=>.2126*srgb(r)+.7152*srgb(g)+.0722*srgb(b);
+// CIE L* — perceptual lightness. Relative luminance alone is useless near black
+// (base and surface-1 differ by 0.4 vs 0.8) and hides the elevation problem.
+const lum=(r,g,b)=>{const t=Y(r,g,b);return 116*(t>0.008856?Math.cbrt(t):7.787*t+16/116)-16};
+const chroma=(r,g,b)=>Math.max(r,g,b)-Math.min(r,g,b);
+function hue(r,g,b){const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;if(!d)return -1;
+  let h;if(mx===r)h=((g-b)/d)%6;else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;return h<0?h+360:h}
+
+function load(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error(u));i.src=u+'?v='+Math.random()});}
+
+async function measure(name,K0){
+  const K=K0*(MK[name]||1);
+  const img=await load('../moods/'+name+'.svg');
+  const c=document.createElement('canvas');c.width=400;c.height=800;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  x.clearRect(0,0,400,800);x.drawImage(img,0,0,400,800);
+  const d=x.getImageData(0,0,400,800).data;
+  let n=0,aSum=0,aPeak=0,cSum=0,cPeak=0,lSum=0,lPeak=0,hSum=0,hN=0,cov=0;
+  let hN2=0,hSumRaw=0,heroSum=0,heroN=0,heroL=0,peakAt=null,peakHue=-1;
+  let cardL=0,cardN=0,cardLPeak=0;
+  let hx=0,hy=0,warmN=0,chN=0;
+  for(let py=CY0;py<=CY1;py++)for(let px=CX0;px<=CX1;px++){
+    const i=(py*400+px)*4, a=d[i+3]/255;
+    const eff=a*K*maskAt(py);                       // effective alpha on page
+    const r=BASE[0]*(1-eff)+d[i]*eff, g=BASE[1]*(1-eff)+d[i+1]*eff, b=BASE[2]*(1-eff)+d[i+2]*eff;
+    const ch=chroma(r,g,b), L=lum(r,g,b), hu=hue(r,g,b);
+    n++;aSum+=a;if(a>aPeak){aPeak=a;peakAt=[px,py];peakHue=hu}
+    cSum+=ch;if(ch>cPeak)cPeak=ch;
+    lSum+=L;if(L>lPeak)lPeak=L;
+    if(a>.15)cov++;
+    if(hu>=0&&ch>6){const rad=hu*Math.PI/180;   // ignore near-grey pixels
+      hx+=Math.cos(rad)*ch;hy+=Math.sin(rad)*ch;chN++;
+      if(hu>=10&&hu<=55)warmN++;}
+    if(hu>=0){hSum+=hu;hN++}
+    if(py>=HY0&&py<=HY1){heroSum+=a;heroN++;heroL+=L}
+    if(py>=KY0&&py<=KY1){cardL+=L;cardN++;if(L>cardLPeak)cardLPeak=L}
+  }
+  const mk=MK[name]||1;   // earn order is judged on effective, not raw, alpha
+  return {name,at:AT[name],aMean:mk*aSum/n,aPeak:mk*aPeak,heroMean:mk*heroSum/heroN,heroL:heroL/heroN,
+    hueC:chN?((Math.atan2(hy,hx)*180/Math.PI)+360)%360:-1,
+    warmFrac:chN?warmN/chN:0,
+    cardL:cardL/cardN,cardLPeak,
+    cMean:cSum/n,cPeak,lMean:lSum/n,lPeak,hue:hN?hSum/hN:-1,cov:100*cov/n,peakAt,peakHue};
+}
+
+(async()=>{
+  const K=parseFloat(new URLSearchParams(location.search).get('k')||'0.308');
+  const rows=[];
+  for(const m of MOODS){try{rows.push(await measure(m,K))}catch(e){rows.push({name:m,err:e.message})}}
+  let s='layer opacity K = '+K.toFixed(3)+'   (0.22*1.40 = deep flow)\n';
+  s+='crop x['+CX0+','+CX1+'] y['+CY0+','+CY1+']   base #0A0D13 L='+lum(...BASE).toFixed(1)
+    +'   surface-1 L='+lum(...SURF1).toFixed(1)+'   surface-2 L='+lum(...SURF2).toFixed(1)+'\n\n';
+  s+='mood      day  aMean  aPeak  hero%  cov%   Lmean  Lpeak  chrM  chrP  hue  peak@\n';
+  s+='-'.repeat(88)+'\n';
+  for(const r of rows){
+    if(r.err){s+=r.name+'  ERROR '+r.err+'\n';continue}
+    s+=r.name.padEnd(9)+String(r.at).padStart(4)+'  '
+      +r.aMean.toFixed(3).padStart(5)+'  '+r.aPeak.toFixed(3).padStart(5)+'  '
+      +r.heroMean.toFixed(3).padStart(5)+'  '+r.cov.toFixed(1).padStart(5)+'  '
+      +r.lMean.toFixed(1).padStart(5)+'  '+r.lPeak.toFixed(1).padStart(5)+'  '
+      +r.cMean.toFixed(1).padStart(4)+'  '+r.cPeak.toFixed(0).padStart(4)+'  '
+      +(r.hue<0?'  --':r.hue.toFixed(0).padStart(4))+'  '+(r.peakAt?r.peakAt.join(','):'-')+'\n';
+  }
+  // progression checks in earn order
+  s+='\nEARN-ORDER CHECKS (each unlock must not be a downgrade)\n';
+  const ok=rows.filter(r=>!r.err).sort((a,b)=>a.at-b.at);
+  for(let i=1;i<ok.length;i++){
+    const p=ok[i-1],c=ok[i];
+    const dh=c.heroMean-p.heroMean, dm=c.aMean-p.aMean, dp=c.aPeak-p.aPeak;
+    const bad=(dh<0?1:0)+(dm<0?1:0)+(dp<0?1:0);
+    s+=(bad?'  FAIL ':'  ok   ')+p.name+' -> '+c.name
+      +'   hero '+(dh>=0?'+':'')+dh.toFixed(3)
+      +'   mean '+(dm>=0?'+':'')+dm.toFixed(3)
+      +'   peak '+(dp>=0?'+':'')+dp.toFixed(3)
+      +(bad?'   <-- '+bad+' axis/axes regress':'')+'\n';
+  }
+  s+='\nCARD ELEVATION (card-band L* must stay under surface-1 L*='+lum(...SURF1).toFixed(1)+')\n';
+  s+='       measured y['+KY0+','+KY1+'] where the opaque card surfaces actually sit;\n';
+  s+='       the hero band above is card-free, so the art may run bright there.\n';
+  for(const r of ok){const bad=r.cardL>lum(...SURF1);
+    s+=(bad?'  FAIL ':'  ok   ')+r.name.padEnd(9)+' cardL* '+r.cardL.toFixed(1).padStart(5)
+      +'  peak '+r.cardLPeak.toFixed(1).padStart(5)+'   (hero '+r.heroL.toFixed(1)+')'
+      +(bad?'  > page out-lights cards; they invert into holes':'')+'\n';}
+  s+='\nWARMTH (a mood must read its own name — chroma-weighted CIRCULAR hue,\n';
+  s+='        plus the share of coloured pixels actually in the warm 10-55 band.\n';
+  s+='        A linear hue mean is meaningless here: violet+gold averages to green.)\n';
+  for(const r of ok){const warm=r.name==='cinder'||r.name==='meridian';
+    const bad=warm&&!(r.hueC>=10&&r.hueC<=55&&r.warmFrac>=0.6);
+    s+=(bad?'  FAIL ':'  ok   ')+r.name.padEnd(9)+' hueCirc '+(r.hueC<0?' --':r.hueC.toFixed(0).padStart(3))
+      +'  warm% '+(100*r.warmFrac).toFixed(0).padStart(3)
+      +'  chromaMean '+r.cMean.toFixed(1).padStart(4)
+      +'  (linear mean '+r.hue.toFixed(0)+' — ignore)'
+      +(bad?'  <-- warm mood not reading warm':'')+'\n';}
+  document.getElementById('out').textContent=s;
+  window.__done=true;
+  // Sweep candidate mask tails and report the worst card-band L* each produces,
+  // so the falloff is chosen from the tradeoff curve rather than guessed at.
+  window.__sweep=async(cands)=>{const out=[];
+    for(const c of cands){MASK=c.m;const rs=[];
+      for(const n of MOODS)rs.push(await measure(n,K));
+      const worst=rs.reduce((a,b)=>b.cardL>a.cardL?b:a);
+      const heroAvg=rs.reduce((t,r)=>t+r.heroL,0)/rs.length;
+      out.push(c.name+'  worstCard '+worst.cardL.toFixed(1)+' ('+worst.name+')'
+        +'  peak '+worst.cardLPeak.toFixed(1)
+        +'  heroL avg '+heroAvg.toFixed(1)
+        +(worst.cardL<=6.8?'   PASS':(worst.cardL<=7.4?'   thin':'   FAIL')));}
+    return out.join('\n');};
+})();
+</script>
+</body>

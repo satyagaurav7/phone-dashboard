@@ -1,0 +1,61 @@
+<!doctype html><meta charset="utf-8"><title>mood six-up</title>
+<!-- Throwaway visual proof — NOT shipped. Replicates the real #moodLayer stack
+     from index.html (gradients + masked art layer) so the six moods can be
+     eyeballed under the exact compositing the app uses, with a card sitting in
+     the card band to show elevation. -->
+<style>
+  body{margin:0;background:#05070B;font:11px/1.4 monospace;color:#8FA3BF;
+       display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px}
+  .tile{position:relative}
+  .label{position:absolute;z-index:5;left:6px;top:4px;color:#DDE6F2;
+         text-shadow:0 1px 3px #000;font-weight:700}
+  .frame{position:relative;width:100%;aspect-ratio:400/800;overflow:hidden;
+         background:#0A0D13;border-radius:10px}
+  .moodLayer{position:absolute;inset:0;
+    background:
+      radial-gradient(ellipse 78% 48% at 16% 4%,  rgba(var(--mood-c1),calc(.20 * var(--mood-intensity))), transparent 62%),
+      radial-gradient(ellipse 70% 44% at 86% 12%, rgba(var(--mood-c2),calc(.17 * var(--mood-intensity))), transparent 60%),
+      radial-gradient(ellipse 104% 54% at 52% 46%,rgba(var(--mood-c1),calc(.07 * var(--mood-intensity))), transparent 70%),
+      radial-gradient(ellipse 82% 54% at 18% 98%, rgba(var(--mood-c2),calc(.11 * var(--mood-intensity))), transparent 66%);
+    filter:hue-rotate(var(--mood-hue)) saturate(var(--mood-sat));
+  }
+  .moodLayer::before{content:'';position:absolute;inset:0;
+    background-image:var(--mood-img);background-size:cover;background-position:center;
+    opacity:calc(.22 * var(--mood-intensity) * var(--mood-art-k,1));
+    -webkit-mask-image:linear-gradient(to bottom,#000 0,#000 28%,rgba(0,0,0,.16) 58%,rgba(0,0,0,.10) 100%);
+    mask-image:linear-gradient(to bottom,#000 0,#000 28%,rgba(0,0,0,.16) 58%,rgba(0,0,0,.10) 100%);
+  }
+  /* real card tokens, opaque, in the card band */
+  .card{position:absolute;left:7%;right:7%;background:#111624;
+        border:1.5px solid #1D2436;border-radius:14px;color:#8FA3BF;
+        padding:10px 12px;font-size:10px}
+  .c1{top:46%;height:15%}
+  .c2{top:64%;height:13%;background:#161D2E}
+  .ring{position:absolute;left:50%;top:19%;transform:translateX(-50%);
+        width:44%;aspect-ratio:1;border-radius:50%;border:3px solid rgba(221,230,242,.85)}
+</style>
+<body></body>
+<script>
+const MOODS=[
+ {key:'default', k:1.00,c1:'79,216,235', c2:'139,124,246'},
+ {key:'drift',   k:1.26,c1:'79,216,235', c2:'30,111,134'},
+ {key:'nebula',  k:1.05,c1:'139,124,246',c2:'107,91,214'},
+ {key:'glacier', k:1.30,c1:'127,233,245',c2:'79,216,235'},
+ {key:'cinder',  k:1.08,c1:'232,161,60', c2:'240,115,58'},
+ {key:'meridian',k:1.10,c1:'201,162,39', c2:'232,161,60'}];
+const M=parseFloat(new URLSearchParams(location.search).get('m')||'100');
+const p=Math.max(0,Math.min(1,M/100));
+document.body.innerHTML=MOODS.map(m=>`
+  <div class="tile"><div class="label">${m.key} · momentum ${M}</div>
+    <div class="frame">
+      <div class="moodLayer" style="
+        --mood-intensity:${(0.40+p*1.00).toFixed(2)};
+        --mood-sat:${(0.50+p*0.90).toFixed(2)};
+        --mood-hue:${Math.round(0+(p-0.5)*26)}deg;
+        --mood-c1:${m.c1};--mood-c2:${m.c2};--mood-art-k:${m.k};
+        --mood-img:url('../moods/${m.key}.svg')"></div>
+      <div class="ring"></div>
+      <div class="card c1">card · surface-1</div>
+      <div class="card c2">well · surface-2</div>
+    </div></div>`).join('');
+</script>

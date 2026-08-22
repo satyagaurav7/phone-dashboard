@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" width="400" height="800">
+  <!-- cinder - background mood - unlocked at 100 anchored days
+       Two fixes from the first pass. (1) All five cores were outside the crop
+       window, so only dim skirts showed and the file measured mean hue 243 -
+       blue - in the mood named for embers. Every core is now in frame. (2) The
+       dominant colour was #E8646C, a rose that exists nowhere else in the
+       codebase and that the accent-warn token explicitly refuses ("never shame
+       red"). Replaced with #F0733A ember orange plus accent-warn itself.
+
+       Warm art can't match cool chroma here and that's structural, not a bug:
+       the page base #0A0D13 is blue-biased (B minus R is +9), so a cool core's
+       peak channel aligns with the base's and an ember's fights it. Alphas are
+       therefore run high, and the mood-c1/c2 poles carry the rest. -->
+  <defs>
+    <radialGradient id="cinder-ember" gradientUnits="userSpaceOnUse" cx="168" cy="296" r="400" fx="136" fy="252">
+      <stop offset="0" stop-color="#E8A13C" stop-opacity=".58"/>
+      <stop offset=".36" stop-color="#E8A13C" stop-opacity=".32"/>
+      <stop offset=".70" stop-color="#F0733A" stop-opacity=".11"/>
+      <stop offset="1" stop-color="#F0733A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cinder-flare" gradientUnits="userSpaceOnUse" cx="300" cy="168" r="300" fx="332" fy="128">
+      <stop offset="0" stop-color="#F0733A" stop-opacity=".54"/>
+      <stop offset=".38" stop-color="#F0733A" stop-opacity=".29"/>
+      <stop offset=".72" stop-color="#F0733A" stop-opacity=".09"/>
+      <stop offset="1" stop-color="#F0733A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cinder-glow" gradientUnits="userSpaceOnUse" cx="112" cy="516" r="340">
+      <stop offset="0" stop-color="#F0733A" stop-opacity=".50"/>
+      <stop offset=".38" stop-color="#E8A13C" stop-opacity=".27"/>
+      <stop offset=".72" stop-color="#E8A13C" stop-opacity=".09"/>
+      <stop offset="1" stop-color="#E8A13C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cinder-coal" gradientUnits="userSpaceOnUse" cx="272" cy="644" r="300">
+      <stop offset="0" stop-color="#E8A13C" stop-opacity=".44"/>
+      <stop offset=".40" stop-color="#F0733A" stop-opacity=".23"/>
+      <stop offset=".74" stop-color="#F0733A" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#F0733A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cinder-cold" gradientUnits="userSpaceOnUse" cx="100" cy="132" r="150">
+      <stop offset="0" stop-color="#4FD8EB" stop-opacity=".20"/>
+      <stop offset=".44" stop-color="#4FD8EB" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#4FD8EB" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cinder-veil" gradientUnits="userSpaceOnUse" x1="200" y1="-60" x2="200" y2="860">
+      <stop offset="0" stop-color="#F0733A" stop-opacity=".08"/>
+      <stop offset=".48" stop-color="#E8A13C" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#F0733A" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="112" cy="516" rx="340" ry="340" fill="url(#cinder-glow)"/>
+  <ellipse cx="272" cy="644" rx="300" ry="300" fill="url(#cinder-coal)"/>
+  <ellipse cx="168" cy="296" rx="400" ry="400" fill="url(#cinder-ember)"/>
+  <ellipse cx="300" cy="168" rx="300" ry="300" fill="url(#cinder-flare)"/>
+  <ellipse cx="100" cy="132" rx="150" ry="150" fill="url(#cinder-cold)"/>
+  <rect x="-60" y="-60" width="520" height="920" fill="url(#cinder-veil)"/>
+</svg>

@@ -42,7 +42,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 /* ---------------- app-shell cache ---------------- */
-const CACHE = 'flowstate-v2';
+const CACHE = 'flowstate-v3';
 const SHELL = [
   './',
   'index.html',
@@ -50,6 +50,20 @@ const SHELL = [
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png'
+];
+
+// Background moods — precached so the first offline open has its mood art rather
+// than only the CSS gradient fallback. Deliberately NOT in SHELL: addAll() is
+// atomic, so one 404 here would fail the whole install and leave the app with no
+// service worker. The art is decorative and the gradients render without it, so
+// it gets the same best-effort treatment as the CDN module below.
+const MOOD_ASSETS = [
+  'moods/default.svg',
+  'moods/drift.svg',
+  'moods/nebula.svg',
+  'moods/glacier.svg',
+  'moods/cinder.svg',
+  'moods/meridian.svg'
 ];
 
 // Cross-origin modules worth keeping offline. Version-pinned URLs, so a cached
@@ -63,9 +77,12 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
       .then((c) => c.addAll(SHELL).then(() =>
-        // Best-effort: a blocked or offline CDN must not fail the install and
-        // leave the app without a service worker at all.
-        Promise.all(RUNTIME_PINNED.map((u) => c.add(new Request(u, { mode: 'cors' })).catch(() => {})))
+        // Best-effort: a blocked or offline CDN — or a missing mood file — must not
+        // fail the install and leave the app without a service worker at all.
+        Promise.all(
+          MOOD_ASSETS.map((u) => c.add(u).catch(() => {}))
+            .concat(RUNTIME_PINNED.map((u) => c.add(new Request(u, { mode: 'cors' })).catch(() => {})))
+        )
       ))
       .then(() => self.skipWaiting())
   );

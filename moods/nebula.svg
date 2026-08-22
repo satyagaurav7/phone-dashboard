@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" width="400" height="800">
+  <!-- nebula - background mood - unlocked at 25 anchored days
+       Peak stops pulled down from .60/.50 to .50/.42: at the old values the
+       composited page out-lit the opaque cards sitting on it, so the three card
+       levels read as dark holes punched in a glowing field instead of raised
+       surfaces. Violet-dominant, the only mood with no cyan core. -->
+  <defs>
+    <radialGradient id="nebula-mass" gradientUnits="userSpaceOnUse" cx="252" cy="286" r="440" fx="286" fy="238">
+      <stop offset="0" stop-color="#8B7CF6" stop-opacity=".50"/>
+      <stop offset=".38" stop-color="#8B7CF6" stop-opacity=".27"/>
+      <stop offset=".72" stop-color="#6B5BD6" stop-opacity=".09"/>
+      <stop offset="1" stop-color="#6B5BD6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebula-column" gradientUnits="userSpaceOnUse" cx="176" cy="520" r="380">
+      <stop offset="0" stop-color="#8B7CF6" stop-opacity=".42"/>
+      <stop offset=".42" stop-color="#8B7CF6" stop-opacity=".22"/>
+      <stop offset=".74" stop-color="#6B5BD6" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#6B5BD6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebula-counter" gradientUnits="userSpaceOnUse" cx="96" cy="188" r="330" fx="62" fy="150">
+      <stop offset="0" stop-color="#6B5BD6" stop-opacity=".42"/>
+      <stop offset=".44" stop-color="#6B5BD6" stop-opacity=".21"/>
+      <stop offset=".76" stop-color="#6B5BD6" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#6B5BD6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebula-deep" gradientUnits="userSpaceOnUse" cx="286" cy="662" r="300">
+      <stop offset="0" stop-color="#6B5BD6" stop-opacity=".36"/>
+      <stop offset=".45" stop-color="#6B5BD6" stop-opacity=".18"/>
+      <stop offset=".77" stop-color="#6B5BD6" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#6B5BD6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebula-rim" gradientUnits="userSpaceOnUse" cx="330" cy="556" r="150">
+      <stop offset="0" stop-color="#8B7CF6" stop-opacity=".34"/>
+      <stop offset=".46" stop-color="#8B7CF6" stop-opacity=".17"/>
+      <stop offset=".78" stop-color="#8B7CF6" stop-opacity=".05"/>
+      <stop offset="1" stop-color="#8B7CF6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="nebula-veil" gradientUnits="userSpaceOnUse" x1="200" y1="-60" x2="200" y2="860">
+      <stop offset="0" stop-color="#6B5BD6" stop-opacity=".06"/>
+      <stop offset=".46" stop-color="#8B7CF6" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#6B5BD6" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="96" cy="188" rx="330" ry="330" fill="url(#nebula-counter)"/>
+  <ellipse cx="176" cy="520" rx="380" ry="380" fill="url(#nebula-column)"/>
+  <ellipse cx="252" cy="286" rx="440" ry="440" fill="url(#nebula-mass)"/>
+  <ellipse cx="286" cy="662" rx="300" ry="300" fill="url(#nebula-deep)"/>
+  <ellipse cx="330" cy="556" rx="150" ry="150" fill="url(#nebula-rim)"/>
+  <rect x="-60" y="-60" width="520" height="920" fill="url(#nebula-veil)"/>
+</svg>

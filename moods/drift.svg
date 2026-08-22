@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" width="400" height="800">
+  <!-- drift - background mood - unlocked at 10 anchored days
+       Horizontal strata rather than overlapping orbs: same vocabulary, its own
+       composition rule. #1E6F86 is a shade of the accent-flow token with
+       relative luminance 95 against #4FD8EB's 188 - it cannot lift a near-black
+       page, so it appears only in mid/outer stops as a deepening tint, never as
+       a core. Every core is #4FD8EB or #7FE9F5, brighter than default's,
+       because the first unlock has to teach that unlocks are a reward. -->
+  <defs>
+    <radialGradient id="drift-a" gradientUnits="userSpaceOnUse" cx="150" cy="367" r="430" gradientTransform="scale(1 .3)">
+      <stop offset="0" stop-color="#4FD8EB" stop-opacity=".52"/>
+      <stop offset=".42" stop-color="#4FD8EB" stop-opacity=".27"/>
+      <stop offset=".74" stop-color="#1E6F86" stop-opacity=".09"/>
+      <stop offset="1" stop-color="#1E6F86" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="drift-b" gradientUnits="userSpaceOnUse" cx="245" cy="1154" r="470" gradientTransform="scale(1 .26)">
+      <stop offset="0" stop-color="#4FD8EB" stop-opacity=".46"/>
+      <stop offset=".46" stop-color="#4FD8EB" stop-opacity=".24"/>
+      <stop offset=".78" stop-color="#1E6F86" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#1E6F86" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="drift-c" gradientUnits="userSpaceOnUse" cx="115" cy="1531" fx="55" fy="1469" r="445" gradientTransform="scale(1 .32)">
+      <stop offset="0" stop-color="#7FE9F5" stop-opacity=".40"/>
+      <stop offset=".44" stop-color="#4FD8EB" stop-opacity=".21"/>
+      <stop offset=".76" stop-color="#1E6F86" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#1E6F86" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="drift-d" gradientUnits="userSpaceOnUse" cx="215" cy="2300" r="500" gradientTransform="scale(1 .3)">
+      <stop offset="0" stop-color="#4FD8EB" stop-opacity=".44"/>
+      <stop offset=".45" stop-color="#4FD8EB" stop-opacity=".23"/>
+      <stop offset=".77" stop-color="#1E6F86" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#1E6F86" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="drift-veil" gradientUnits="userSpaceOnUse" x1="0" y1="-40" x2="0" y2="840">
+      <stop offset="0" stop-color="#4FD8EB" stop-opacity="0"/>
+      <stop offset=".38" stop-color="#4FD8EB" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#1E6F86" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="150" cy="110" rx="430" ry="129" fill="url(#drift-a)"/>
+  <ellipse cx="245" cy="300" rx="470" ry="122" fill="url(#drift-b)"/>
+  <ellipse cx="115" cy="490" rx="445" ry="142" fill="url(#drift-c)"/>
+  <ellipse cx="215" cy="690" rx="500" ry="150" fill="url(#drift-d)"/>
+  <rect x="-40" y="-40" width="480" height="880" fill="url(#drift-veil)"/>
+</svg>

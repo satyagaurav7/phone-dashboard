@@ -4,8 +4,9 @@
 2026-07-15). That revamp removed the punishment. This one adds the pull.*
 
 > **Scope decision:** single `index.html`, no build step, still offline-capable, still
-> Firestore-synced. Two new CDN dependencies only: **Motion** (spring physics) and
-> **Haikei**-generated static SVG backgrounds. Nothing else.
+> Firestore-synced. One new CDN dependency only: **Motion** (spring physics), plus static
+> hand-authored mesh-gradient SVGs for the background moods. Nothing else.
+> *(Originally two: Haikei was the planned SVG source and was dropped — see Appendix.)*
 
 ---
 
@@ -190,8 +191,8 @@ it an *earned, spendable object* converts rest from guilt into reward.
 The only currency that's free and infinitely repeatable, so it carries the anti-boredom load.
 
 - **Ring skins:** Filament (default) → Tide → Ember → Aurora → Solstice → **Eclipse** (loot-only)
-- **Background moods:** Haikei-generated SVGs, unlocked at cumulative anchored-day counts
-  (10 / 25 / 50 / 100 / 200)
+- **Background moods:** six static mesh SVGs in `moods/`, unlocked at cumulative anchored-day
+  counts (10 / 25 / 50 / 100 / 200)
 - **Titles:** layered onto the existing Visa Points levels
 
 ### 4. Real-world milestone unlocks → **pre-committed actions**
@@ -312,8 +313,8 @@ Emoji stay *only* where the emoji is the content — the win chips, where it's e
 personal. Replacing structural emoji with real vector icons is most of what separates "quickly
 built" from "insanely good."
 
-> An icon library (Lucide) was considered and dropped: the tool set is Haikei + Motion only,
-> and 14 glyphs don't justify a third dependency.
+> An icon library (Lucide) was considered and dropped: Motion is the only runtime dependency,
+> and 14 glyphs don't justify a second one.
 
 ### Motion — [motion.dev](https://motion.dev), free, one ESM import, no build step
 
@@ -334,18 +335,18 @@ Version pinned (the docs recommend against `latest`). The mini HTML/SVG `animate
 | Adaptive home | Layout transitions between Dawn/Day/Dusk/Night |
 | Loot + unlocks | Escalating celebration — a rare drop must *not* look like a small win |
 
-### Background — Haikei + CSS modulation
+### Background — static mood art + CSS modulation
 
-**Haikei** ([haikei.app](https://haikei.app)) generates the layered mesh-gradient SVGs. Note:
-Haikei outputs a **static** SVG and cannot react to state on its own. So:
+A static SVG cannot react to state on its own, so the reactivity is CSS's job, not the art's:
 
-1. Generate ~6 base mesh SVGs = the unlockable **background moods**
+1. Six base mesh SVGs = the unlockable **background moods** (hand-authored — see Appendix)
 2. Ship them as static assets (zero runtime cost, service-worker cached, works offline)
 3. Modulate **hue-rotate / saturation / opacity / drift speed** on top via CSS custom
    properties set from JS, bound to momentum and time of day
 
-Result: Haikei's visual quality *plus* a background that genuinely differs at momentum 8 and
-88 — fixing gap #6 without a runtime gradient engine.
+Result: real mesh-gradient depth *plus* a background that genuinely differs at momentum 8 and
+88 — fixing gap #6 without a runtime gradient engine. The art sits on `#moodLayer::before`, not
+in the `background` shorthand, so its opacity is momentum-bound like everything else.
 
 ### Removals
 
@@ -384,7 +385,7 @@ S.sealed    = { '2026-08-21': true }
    `BIG_KEYS`, `dayGains`, `clampM`, `flowStateOf`, `momentumNow`). Any change to the momentum
    engine **must** be mirrored there in the same commit, or notifications silently break. This
    plan avoids touching the engine for exactly this reason.
-2. **Offline must survive CDN failure.** Motion and the Haikei SVGs get service-worker cached,
+2. **Offline must survive CDN failure.** Motion and the mood SVGs get service-worker cached,
    and every animation is feature-detected — if `import` fails, the app renders fully and
    statically. No animation is load-bearing for function.
 3. **Honesty is not negotiable.** No invented money. The Weekly $228 and the emergency fund
@@ -407,7 +408,7 @@ change already feels like the new app."* Each phase is one commit, live in ~40s.
 
 | # | Phase | What | Effort |
 |---|---|---|---|
-| **1** | **New Skin & Motion** | Semantic tokens, 3-level elevation, type fix, inline SVG icon sprite, Motion CDN + spring ring + count-up + stagger, kill trail/MRZ, Haikei base mood | ~3h |
+| **1** | **New Skin & Motion** | Semantic tokens, 3-level elevation, type fix, inline SVG icon sprite, Motion CDN + spring ring + count-up + stagger, kill trail/MRZ, six background moods | ~3h |
 | **2** | **Money Engine** | Weekly $228 burn-down, six envelopes, spend logging, Leak Log → spend, emergency fund climb, money hero | ~4h |
 | **3** | **Real Moves** | Dollar-valued action list, `$/month unlocked` counter, unverified-number flags | ~2h |
 | **4** | **Cash-Out** | Rest Tokens, milestone unlocks, Sunday rollover → fund jump | ~3h |
@@ -436,7 +437,8 @@ because he needs to *see* it change.
 
 ## Appendix — tools
 
-Two, as chosen.
+Two were chosen. One survived: Motion. Haikei was dropped once it turned out to require a human
+in a browser — see below.
 
 ### Motion — [motion.dev](https://motion.dev)
 
@@ -447,15 +449,72 @@ Hybrid engine, hardware-accelerated where the property allows, honors reduced-mo
 *Used for:* the spring ring, count-ups, staggered entrances, layout transitions, escalating
 celebration.
 
-### Haikei — [haikei.app](https://haikei.app)
+### ~~Haikei~~ → hand-authored mood SVGs — *superseded 2026-08-21*
 
-Browser-based generator for layered mesh gradients, blobs, and waves; exports SVG.
+Haikei ([haikei.app](https://haikei.app)) is an **interactive browser generator** — sliders and a
+download button, no API, no CLI, no headless export. The one artefact it produces could therefore
+only ever come from Satya sitting in the browser, which made a cosmetic asset a hard human
+dependency. Its licence terms also could not be confirmed: the fetch to haikei.app returned
+content-blocked during research, and still did on re-check.
 
-*Used for:* the ~6 static base mood SVGs, then modulated by CSS custom properties from JS.
+**Decision:** the six mood SVGs are hand-authored to the same brief instead. Haikei outputs a
+static SVG, and a layered mesh gradient is just `<radialGradient>` blobs — nothing about the
+format needed the generator. This also let the brief carry constraints Haikei's output would not
+have honoured:
 
-> ⚠️ **Unverified:** the fetch to haikei.app was content-blocked during research, so its
-> current terms weren't confirmed. It has historically been free with no account required —
-> confirm when you open it.
+- **Transparent base, no opaque backdrop rect** — the page canvas stays authoritative and the
+  opacity blend stays clean.
+- **No `<filter>` / `feGaussianBlur`** — a blurred full-screen background layer is a real GPU
+  cost on a phone. All softness comes from multi-stop gradient falloff.
+- **Alpha ceilings per mood** so nothing fights the foreground cards.
+- Self-contained, no external refs, 2.6–3.6 KB each, id-namespaced per mood.
+
+Shipped in `moods/`: `default` · `drift` (10 anchored days) · `nebula` (25) · `glacier` (50) ·
+`cinder` (100) · `meridian` (200). Cold → warm → gold, so the progression reads as escalating
+reward. Precached in `sw.js` (`flowstate-v3`), and the CSS gradient stack still renders alone if
+they 404.
+
+**Four bugs this surfaced.** The first three were invisible to inspection and only showed up
+once the art was rasterised and measured — see `tools/mood-measure.html`, which now guards all
+of them.
+
+1. **The art ignored momentum.** `--mood-img` was originally a layer in `#moodLayer`'s
+   `background` shorthand, but `--mood-intensity` only scales the gradients through `calc()`
+   inside their `rgba()`. A background-image's alpha can't be reached that way — so the SVG
+   would have sat at full strength at momentum 0 while the gradients dimmed, quietly
+   re-breaking gap #6, the exact problem this layer exists to fix. The art now lives on
+   `#moodLayer::before`, whose `opacity` *is* bound to intensity, inheriting the drift and
+   filter as a group.
+
+2. **No mood could read warm.** The four gradients were hardcoded cyan/violet, so the stack
+   fought any mood that wasn't — cinder's rose and meridian's gold both composited to brown.
+   The poles are now `--mood-c1` / `--mood-c2`, carried per mood in `MOODS[]`, so the whole
+   screen shifts together instead of the art fighting a fixed overlay.
+
+3. **Cards inverted into holes.** Cards are opaque `--surface-1` (L\* 7.4). Measured over the
+   real art at deep flow, the page *behind* the card band sat at L\* 9.3–15.3 — brighter than
+   the cards on top of it, so every card read as a hole punched in a glowing screen. Fixed with
+   a vertical `mask-image` falloff on the art layer: the hero band is card-free so the art keeps
+   full strength where the ring sits, then falls off through the scroll body. Stops were chosen
+   by sweeping candidates through the harness rather than by eye — the hero band loses only
+   0.9 L\* while worst-case card-band lightness drops 9.5 → 6.5.
+
+4. **Two unlocks were downgrades.** The six SVGs were authored independently, so their raw
+   densities didn't line up with the earn order: plain `drift` measured *dimmer* than `default`,
+   and `glacier` dimmer than `nebula`. Earning a reward at day 10 would have made the screen
+   quieter. `MOODS[].k` is a per-mood brightness multiplier that normalises them into a
+   monotonic ramp without re-authoring the art; `default` stays at 1.00 so the shipped baseline
+   is untouched for anyone who has unlocked nothing.
+
+**And one false alarm worth recording.** The harness first reported meridian as reading *green*
+(hue 108) and I nearly "fixed" art that was fine. The metric was wrong, not the SVG: it took a
+**linear** mean of hue, and meridian is a violet/gold composition — averaging 258° and 40° lands
+on green, a colour that appears nowhere in the file. Switching to a chroma-weighted **circular**
+mean put it at hue 23, correctly gold. Measurement gets verified before it gets trusted; the
+same pass also caught that the elevation check was sampling the hero band, which is card-free,
+instead of the band where cards actually sit. Meridian did turn out to need a smaller real fix —
+two violet blobs at .50/.40 opacity made the day-200 gold crown 42% violet — but that is a
+composition judgement, not the thing the broken metric was shouting about.
 
 ### Considered and rejected
 

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" width="400" height="800">
+  <!-- glacier - background mood - unlocked at 50 anchored days
+       Rebuilt placement: the first pass put four of five cores outside the
+       x[55,345] y[78,723] crop window, leaving only the weakest gradient (.19)
+       visible, so the 50-day unlock rendered as dim skirts and measured quieter
+       than the 25-day one. Every core now sits in frame. Icy - no violet
+       anywhere, which is what separates it from default at the same hue. -->
+  <defs>
+    <radialGradient id="glacier-a" gradientUnits="userSpaceOnUse" cx="288" cy="156" r="360" fx="322" fy="112">
+      <stop offset="0" stop-color="#7FE9F5" stop-opacity=".52"/>
+      <stop offset=".26" stop-color="#7FE9F5" stop-opacity=".30"/>
+      <stop offset=".62" stop-color="#4FD8EB" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#4FD8EB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glacier-d" gradientUnits="userSpaceOnUse" cx="104" cy="264" r="280" fx="72" fy="228">
+      <stop offset="0" stop-color="#A8DFF0" stop-opacity=".46"/>
+      <stop offset=".28" stop-color="#A8DFF0" stop-opacity=".26"/>
+      <stop offset=".64" stop-color="#4FD8EB" stop-opacity=".09"/>
+      <stop offset="1" stop-color="#4FD8EB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glacier-c" gradientUnits="userSpaceOnUse" cx="312" cy="430" r="300">
+      <stop offset="0" stop-color="#7FE9F5" stop-opacity=".42"/>
+      <stop offset=".30" stop-color="#7FE9F5" stop-opacity=".23"/>
+      <stop offset=".66" stop-color="#4FD8EB" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#4FD8EB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glacier-b" gradientUnits="userSpaceOnUse" cx="108" cy="566" r="360">
+      <stop offset="0" stop-color="#4FD8EB" stop-opacity=".48"/>
+      <stop offset=".28" stop-color="#4FD8EB" stop-opacity=".27"/>
+      <stop offset=".64" stop-color="#4FD8EB" stop-opacity=".09"/>
+      <stop offset="1" stop-color="#4FD8EB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glacier-e" gradientUnits="userSpaceOnUse" cx="222" cy="700" r="290">
+      <stop offset="0" stop-color="#7FE9F5" stop-opacity=".40"/>
+      <stop offset=".30" stop-color="#4FD8EB" stop-opacity=".22"/>
+      <stop offset=".66" stop-color="#4FD8EB" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#4FD8EB" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glacier-veil" gradientUnits="userSpaceOnUse" x1="200" y1="-60" x2="200" y2="860">
+      <stop offset="0" stop-color="#A8DFF0" stop-opacity=".10"/>
+      <stop offset=".54" stop-color="#7FE9F5" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#4FD8EB" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="108" cy="566" rx="360" ry="360" fill="url(#glacier-b)"/>
+  <ellipse cx="312" cy="430" rx="300" ry="300" fill="url(#glacier-c)"/>
+  <ellipse cx="288" cy="156" rx="360" ry="360" fill="url(#glacier-a)"/>
+  <ellipse cx="104" cy="264" rx="280" ry="280" fill="url(#glacier-d)"/>
+  <ellipse cx="222" cy="700" rx="290" ry="290" fill="url(#glacier-e)"/>
+  <rect x="-60" y="-60" width="520" height="920" fill="url(#glacier-veil)"/>
+</svg>

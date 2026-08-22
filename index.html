@@ -64,6 +64,11 @@
 
     /* mood layer — set live from JS (momentum + time of day) */
     --mood-hue:0deg; --mood-intensity:1; --mood-sat:1;
+    /* The two gradient poles, as bare RGB triplets so rgba() can take an alpha.
+       These were hardcoded cyan/violet, which meant the gradient stack fought
+       any mood that wasn't cyan/violet — the warm moods composited to brown.
+       applyMood() now sets them per mood so the whole screen shifts together. */
+    --mood-c1:79,216,235; --mood-c2:139,124,246;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -79,22 +84,50 @@
      drifts, and its hue / intensity / saturation are driven from JS via the
      --mood-* custom properties (see applyMood()).
 
-     Haikei drop-in: generate a mesh-gradient SVG at haikei.app, save it to
-     moods/<name>.svg, and set --mood-img:url(moods/<name>.svg) — it layers
-     underneath these gradients and inherits the same drift + filter for free. */
+     The unlockable mood art lives in moods/<name>.svg and is layered by the
+     ::before below, underneath these gradients. It inherits this element's
+     drift animation and hue/saturate filter for free, because filter and
+     transform both apply to the element and its pseudo-children as a group. */
   #moodLayer{
     position:fixed;inset:-12% -12% -12% -12%;z-index:-1;pointer-events:none;
     background:
-      radial-gradient(ellipse 78% 48% at 16% 4%,  rgba(79,216,235,calc(.20 * var(--mood-intensity))), transparent 62%),
-      radial-gradient(ellipse 70% 44% at 86% 12%, rgba(139,124,246,calc(.17 * var(--mood-intensity))), transparent 60%),
-      radial-gradient(ellipse 104% 54% at 52% 46%,rgba(79,216,235,calc(.07 * var(--mood-intensity))), transparent 70%),
-      radial-gradient(ellipse 82% 54% at 18% 98%, rgba(139,124,246,calc(.11 * var(--mood-intensity))), transparent 66%),
-      var(--mood-img,none);
+      radial-gradient(ellipse 78% 48% at 16% 4%,  rgba(var(--mood-c1),calc(.20 * var(--mood-intensity))), transparent 62%),
+      radial-gradient(ellipse 70% 44% at 86% 12%, rgba(var(--mood-c2),calc(.17 * var(--mood-intensity))), transparent 60%),
+      radial-gradient(ellipse 104% 54% at 52% 46%,rgba(var(--mood-c1),calc(.07 * var(--mood-intensity))), transparent 70%),
+      radial-gradient(ellipse 82% 54% at 18% 98%, rgba(var(--mood-c2),calc(.11 * var(--mood-intensity))), transparent 66%);
     background-size:cover;background-position:center;
     filter:hue-rotate(var(--mood-hue)) saturate(var(--mood-sat));
     animation:moodDrift 44s ease-in-out infinite;
     transition:filter 1.2s ease-out;
     will-change:transform;
+  }
+  /* The mood art needs its OWN layer rather than a slot in the shorthand above.
+     --mood-intensity scales the gradients through calc() inside their rgba(), but
+     a background-image's alpha can't be reached that way — so as a background
+     layer the SVG would sit at full strength at momentum 0 while the gradients
+     dimmed, quietly re-breaking the "looks identical at 8 and 88" problem this
+     whole layer exists to fix. As a pseudo-element its opacity is bound too. */
+  #moodLayer::before{
+    content:'';position:absolute;inset:0;
+    background-image:var(--mood-img,none);
+    background-size:cover;background-position:center;
+    opacity:calc(.22 * var(--mood-intensity) * var(--mood-art-k,1));  /* .09 cold → .31 deep flow */
+    transition:opacity 1.2s ease-out;
+    /* Vertical falloff — the art has to yield to the content below the ring.
+       Cards are opaque --surface-1 (L*7.4). Measured over the real rasterised
+       SVGs, an unmasked layer put the page behind the cards at L* 9.3-15.3 at
+       deep flow: brighter than the cards themselves, so every card read as a
+       hole punched in a glowing screen rather than a surface floating above it.
+       The hero band is card-free, so the art keeps full strength where the
+       momentum ring sits and falls off through the scroll body.
+       Stops chosen by sweeping candidates through the measurement harness: the
+       hero band only loses 0.9 L* between the loosest and this, while worst-case
+       card-band lightness drops 9.5 -> 6.5 (surface-1 is 7.4). The falloff is
+       nearly free where the art matters and decisive where the cards are. */
+    -webkit-mask-image:linear-gradient(to bottom,
+      #000 0, #000 28%, rgba(0,0,0,.16) 58%, rgba(0,0,0,.10) 100%);
+    mask-image:linear-gradient(to bottom,
+      #000 0, #000 28%, rgba(0,0,0,.16) 58%, rgba(0,0,0,.10) 100%);
   }
   @keyframes moodDrift{
     0%,100%{transform:translate3d(0,0,0) scale(1)}
@@ -351,7 +384,10 @@
   #authGate .err{color:var(--maple);font-size:13.5px;margin-top:12px;min-height:18px}
 
   @media (prefers-reduced-motion: reduce){
-    *{animation:none !important;transition:none !important}
+    /* `*` does not match pseudo-elements — verified in-browser that a bare
+       `*{transition:none}` leaves ::before at its full 1.2s. The mood art layer
+       lives on #moodLayer::before, so the pseudo selectors are load-bearing. */
+    *,*::before,*::after{animation:none !important;transition:none !important}
   }
 </style>
 </head>
@@ -527,6 +563,10 @@ async function initApp(){
     S.days = S.days || {};
     S.fcmTokens = Array.isArray(S.fcmTokens) ? S.fcmTokens : [];
     S.gasLog = Array.isArray(S.gasLog) ? S.gasLog : [];
+    // Declared in the planned shape so Phase 4 (Cash-Out) fills these in rather
+    // than migrating them. Phase 1 only reads `mood` — the six moods/*.svg exist
+    // now; nothing grants one yet. Additive: no existing field changes meaning.
+    S.rewards = Object.assign({ tokens:[], unlocks:[], skin:'filament', mood:'default' }, S.rewards||{});
     S.streak = S.streak || 0; S.best = S.best || 0; S.lastComplete = S.lastComplete || null;
     // Migrate the old streak into starting momentum, once. streak/best stay as legacy stats.
     if (!S.flow || typeof S.flow.m !== 'number' || !/^\d{4}-\d{2}-\d{2}$/.test(String(S.flow.asOf))) S.flow = { m: clampM((S.streak||0)*8 + 20), asOf: T };
@@ -654,11 +694,45 @@ async function initApp(){
     /* The background answers to momentum and to the hour. This is the fix for
        "the screen looks identical at momentum 8 and 88": cold start is dim and
        nearly grey, deep flow is bright and saturated. Dawn pulls warm, night
-       pulls cool. Written as custom properties so a Haikei SVG dropped into
-       --mood-img inherits the same treatment. */
+       pulls cool. Written as custom properties so the mood art in moods/*.svg
+       inherits the same treatment through #moodLayer::before. */
+
+    /* Unlockable background moods, in earn order. The plan named Haikei as the
+       source; it's an interactive browser generator with no export API, so these
+       six were hand-authored to the same brief (transparent base, radialGradient
+       falloff only, no filters — a blurred fullscreen background is a real GPU
+       cost on a phone). `at` is cumulative anchored days. The unlock *trigger*
+       is Phase 4/8 work: this reads S.rewards.mood and falls back to default, so
+       an unknown or absent value degrades to the shipped baseline.
+
+       c1/c2 are the gradient poles the mood art is composited under. They have
+       to travel with the mood: verified in-browser that the previously hardcoded
+       cyan/violet stack neutralised cinder's rose and meridian's gold to brown,
+       so a warm mood could never actually read as warm.
+
+       `k` is a per-mood brightness multiplier on the art layer. The six SVGs
+       were authored independently, so their raw densities don't happen to line
+       up with the earn order: measured over the real rasterised art, plain
+       drift came out DIMMER than default and glacier dimmer than nebula, i.e.
+       two of the five unlocks were downgrades — you'd earn a reward at day 10
+       and the screen would get quieter. k normalises them into a monotonic
+       ramp without re-authoring the art. default stays at 1.00 so the shipped
+       baseline is untouched for anyone who has unlocked nothing. */
+    const MOODS = [
+      { key:'default',  at:0,   label:'Default',  k:1.00, c1:'79,216,235',  c2:'139,124,246' },
+      { key:'drift',    at:10,  label:'Drift',    k:1.26, c1:'79,216,235',  c2:'30,111,134'  },
+      { key:'nebula',   at:25,  label:'Nebula',   k:1.05, c1:'139,124,246', c2:'107,91,214'  },
+      { key:'glacier',  at:50,  label:'Glacier',  k:1.30, c1:'127,233,245', c2:'79,216,235'  },
+      { key:'cinder',   at:100, label:'Cinder',   k:1.08, c1:'232,161,60',  c2:'240,115,58'  },
+      { key:'meridian', at:200, label:'Meridian', k:1.10, c1:'201,162,39',  c2:'232,161,60'  }
+    ];
+    const MOOD_BY_KEY = new Map(MOODS.map(x => [x.key, x]));
+    const moodOf = () => MOOD_BY_KEY.get(S.rewards && S.rewards.mood) || MOOD_BY_KEY.get('default');
+
     let moodApplied = null;
     function applyMood(m){
-      const key = Math.round(m / 4) + ':' + new Date().getHours();
+      const mood = moodOf();
+      const key = Math.round(m / 4) + ':' + new Date().getHours() + ':' + mood.key;
       if(key === moodApplied) return;                  // avoid pointless repaints
       moodApplied = key;
       const p = Math.max(0, Math.min(1, m / 100));
@@ -668,6 +742,10 @@ async function initApp(){
       r.setProperty('--mood-intensity', (0.40 + p * 1.00).toFixed(2));
       r.setProperty('--mood-sat',       (0.50 + p * 0.90).toFixed(2));
       r.setProperty('--mood-hue',       Math.round(tod + (p - 0.5) * 26) + 'deg');
+      r.setProperty('--mood-c1',        mood.c1);
+      r.setProperty('--mood-c2',        mood.c2);
+      r.setProperty('--mood-art-k',     (mood.k || 1).toFixed(2));
+      r.setProperty('--mood-img',       'url("moods/' + mood.key + '.svg")');
     }
 
     const icon = (name, cls) => `<svg class="ic ${cls||''}" aria-hidden="true" focusable="false"><use href="#i-${name}"/></svg>`;
