@@ -42,7 +42,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 /* ---------------- app-shell cache ---------------- */
-const CACHE = 'flowstate-v1';
+const CACHE = 'flowstate-v2';
 const SHELL = [
   './',
   'index.html',
@@ -52,8 +52,23 @@ const SHELL = [
   'icons/icon-512.png'
 ];
 
+// Cross-origin modules worth keeping offline. Version-pinned URLs, so a cached
+// copy is never stale — cache-first is correct and saves the import round-trip
+// that would otherwise delay the first ring animation on every cold open.
+const RUNTIME_PINNED = [
+  'https://cdn.jsdelivr.net/npm/motion@11.11.13/+esm'
+];
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((c) => c.addAll(SHELL).then(() =>
+        // Best-effort: a blocked or offline CDN must not fail the install and
+        // leave the app without a service worker at all.
+        Promise.all(RUNTIME_PINNED.map((u) => c.add(new Request(u, { mode: 'cors' })).catch(() => {})))
+      ))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -65,10 +80,24 @@ self.addEventListener('activate', (event) => {
 });
 
 // Network-first for same-origin GETs (the app is one file that changes often);
-// fall back to cache when offline. Cross-origin (Firebase, fonts) passes through.
+// fall back to cache when offline. Pinned cross-origin modules are cache-first.
+// Everything else cross-origin (Firebase, fonts) passes straight through.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (req.method !== 'GET') return;
+
+  if (new URL(req.url).origin !== self.location.origin) {
+    if (!RUNTIME_PINNED.includes(req.url.split('?')[0])) return;
+    event.respondWith(
+      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy));
+        return res;
+      }))
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(req)
       .then((res) => {

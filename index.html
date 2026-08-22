@@ -14,78 +14,144 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<!-- Two families, one request. Clash Display was dropped in FLOWSTATE II: five
+     separate CSS comments in this file documented it being tightened to fit
+     375px, and it still forced horizontal scroll in grid cells. Satoshi 700/900
+     carries display duty at the same weight without the width. -->
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=B612+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* — FLOWSTATE palette: dark canvas, earned light —
-       Variable names kept from the passport era so every reference reskins:
-       --passport = hero/nav surface · --maple = amber urgency (never shame red)
-       --customs = flow accent (progress cyan) · --foil = gold (PR story) */
-    --passport:#0E1420;   /* hero / nav surface    */
-    --page:#0B0E14;       /* dark canvas           */
-    --ink:#E6EBF5;        /* primary text          */
-    --maple:#E8A13C;      /* amber — urgency, info, never punishment */
-    --customs:#4FD8EB;    /* flow cyan — progress glow */
-    --foil:#C9A227;       /* gold — PR narrative   */
-    --violet:#8B7CF6;     /* secondary accent      */
-    --line:#232B3E; --sub:#8A94AD; --card:#111624; --well:#161D2E;
-    --disp:'Clash Display','Barlow Condensed',ui-sans-serif,sans-serif;
+    /* ————— FLOWSTATE II — semantic token layer —————
+       Source of truth. The archaeological passport-era names below are kept as
+       ALIASES so every existing rule reskins from here instead of being edited. */
+    --surface-0:#0A0D13;   /* page canvas — deepest        */
+    --surface-1:#111624;   /* standard card    (L1)        */
+    --surface-2:#161D2E;   /* inset well       (L0)        */
+    --surface-3:#0E1420;   /* raised hero/nav  (L2)        */
+    --hairline:#232B3E;    /* default border               */
+    --hairline-hi:#2E3752; /* border on raised surfaces    */
+    --text-1:#E6EBF5;      /* primary text                 */
+    --text-2:#8A94AD;      /* secondary text               */
+    --text-3:#B9C6DE;      /* on-hero secondary            */
+
+    --accent-flow:#4FD8EB;   /* progress / momentum — earned light */
+    --accent-money:#5BE9A6;  /* the money hero (Phase 2)          */
+    --accent-warn:#E8A13C;   /* pace + urgency — never shame red  */
+    --accent-pr:#C9A227;     /* gold — the PR narrative           */
+    --accent-alt:#8B7CF6;    /* violet — secondary                */
+
+    /* elevation: L0 recessed · L1 standard · L2 hero */
+    --elev-0:inset 0 2px 6px -2px rgba(0,0,0,.55);
+    --elev-1:0 4px 14px -10px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.035);
+    --elev-2:0 18px 44px -26px rgba(0,0,0,.95), 0 2px 0 -1px rgba(255,255,255,.05) inset;
+    --r-sm:8px; --r-md:11px; --r-lg:16px;
+
+    /* ————— aliases (do not use in new rules) ————— */
+    --passport:var(--surface-3);
+    --page:var(--surface-0);
+    --ink:var(--text-1);
+    --maple:var(--accent-warn);
+    --customs:var(--accent-flow);
+    --foil:var(--accent-pr);
+    --violet:var(--accent-alt);
+    --line:var(--hairline); --sub:var(--text-2);
+    --card:var(--surface-1); --well:var(--surface-2);
+
+    --disp:'Satoshi','Public Sans',system-ui,sans-serif;
     --body:'Satoshi','Public Sans',system-ui,sans-serif;
     --mono:'B612 Mono',ui-monospace,monospace;
+
+    /* mood layer — set live from JS (momentum + time of day) */
+    --mood-hue:0deg; --mood-intensity:1; --mood-sat:1;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
-    /* Aurora field — layered radial glows (Haikei-style mesh, written in CSS so
-       it costs no extra request and still renders offline). Fixed attachment so
-       the light stays put while content scrolls past it. */
-    background:
-      radial-gradient(ellipse 90% 55% at 15% -5%,  rgba(79,216,235,.16), transparent 62%),
-      radial-gradient(ellipse 80% 50% at 88% 8%,   rgba(139,124,246,.14), transparent 60%),
-      radial-gradient(ellipse 120% 60% at 50% 42%, rgba(79,216,235,.05), transparent 70%),
-      radial-gradient(ellipse 90% 60% at 20% 100%, rgba(139,124,246,.08), transparent 65%),
-      var(--page);
-    background-attachment:fixed;
-    color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+    background:var(--surface-0);
+    color:var(--text-1);font-family:var(--body);font-size:16px;line-height:1.5;
     -webkit-tap-highlight-color:transparent;
+  }
+  /* ============ mood layer ============
+     Was: four radial-gradients painted on <body> with background-attachment:fixed,
+     which meant the "aurora" literally never moved and the screen looked identical
+     at momentum 8 and momentum 88. Now it's its own compositing layer that
+     drifts, and its hue / intensity / saturation are driven from JS via the
+     --mood-* custom properties (see applyMood()).
+
+     Haikei drop-in: generate a mesh-gradient SVG at haikei.app, save it to
+     moods/<name>.svg, and set --mood-img:url(moods/<name>.svg) — it layers
+     underneath these gradients and inherits the same drift + filter for free. */
+  #moodLayer{
+    position:fixed;inset:-12% -12% -12% -12%;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(ellipse 78% 48% at 16% 4%,  rgba(79,216,235,calc(.20 * var(--mood-intensity))), transparent 62%),
+      radial-gradient(ellipse 70% 44% at 86% 12%, rgba(139,124,246,calc(.17 * var(--mood-intensity))), transparent 60%),
+      radial-gradient(ellipse 104% 54% at 52% 46%,rgba(79,216,235,calc(.07 * var(--mood-intensity))), transparent 70%),
+      radial-gradient(ellipse 82% 54% at 18% 98%, rgba(139,124,246,calc(.11 * var(--mood-intensity))), transparent 66%),
+      var(--mood-img,none);
+    background-size:cover;background-position:center;
+    filter:hue-rotate(var(--mood-hue)) saturate(var(--mood-sat));
+    animation:moodDrift 44s ease-in-out infinite;
+    transition:filter 1.2s ease-out;
+    will-change:transform;
+  }
+  @keyframes moodDrift{
+    0%,100%{transform:translate3d(0,0,0) scale(1)}
+    33%    {transform:translate3d(2.2%,-1.6%,0) scale(1.05)}
+    66%    {transform:translate3d(-1.8%,1.9%,0) scale(1.03)}
   }
   #appRoot{max-width:780px;margin:0 auto;padding:14px 14px calc(104px + env(safe-area-inset-bottom));display:none}
   button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer;text-align:left}
   :focus-visible{outline:3px solid var(--foil);outline-offset:2px;border-radius:4px}
 
-  /* ============ hero (passport cover) ============ */
-  .cover{background:linear-gradient(160deg,#101A2C 0%,var(--passport) 55%);border-radius:14px;color:#fff;padding:15px 18px 0;
-    border:1.5px solid var(--line);border-top:2px solid rgba(79,216,235,.55);overflow:hidden;
-    box-shadow:0 10px 34px -22px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.05)}
-  .cover .kicker{font-family:var(--disp);font-weight:600;letter-spacing:.22em;font-size:13px;color:var(--foil);text-transform:uppercase}
-  /* Clash Display is far wider than the condensed face it replaced — dropped the
-     uppercase (it has real character in lowercase) and tightened to fit 375px. */
-  .cover h1{font-family:var(--disp);font-weight:700;font-size:27px;margin:3px 0 0;letter-spacing:-.005em;line-height:1.12}
-  .cover .date{font-family:var(--mono);font-size:12.5px;color:#B9C6DE;margin-top:3px}
-  /* Sized down so the ring + today's gain sit side by side and the Anchor card
-     clears the fold. Clash Display is much heavier than the old condensed face,
-     so the same px value reads far bigger than it used to. */
-  .heroRow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 0 12px}
-  .streakBig{font-family:var(--mono);font-weight:700;font-size:34px;line-height:1;color:#fff}
-  .streakLbl{font-family:var(--disp);font-weight:600;letter-spacing:.14em;font-size:11.5px;color:#B9C6DE;text-transform:uppercase}
-  .bestLbl{font-family:var(--mono);font-size:11px;color:var(--foil);margin-top:5px;line-height:1.35}
-  .statusLine{font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.04em;color:#EAD9A0;padding:0 0 14px}
-  .mrz{background:rgba(79,216,235,.055);color:rgba(159,232,242,.75);font-family:var(--mono);font-size:9.5px;letter-spacing:1.4px;
-    padding:5px 12px;margin:0 -18px;white-space:nowrap;overflow:hidden;border-top:1px dashed rgba(79,216,235,.2)}
-  #syncStatus{font-family:var(--mono);font-size:11px;color:var(--foil);opacity:.85;margin-top:2px}
+  /* ============ hero — elevation L2 ============ */
+  .cover{position:relative;border-radius:var(--r-lg);color:#fff;padding:16px 18px 4px;overflow:hidden;
+    background:linear-gradient(158deg,#131C30 0%,var(--surface-3) 58%);
+    border:1.5px solid var(--hairline-hi);border-top:2px solid rgba(79,216,235,.6);
+    box-shadow:var(--elev-2)}
+  /* A single sheen across the top edge — the cue that this surface is raised. */
+  .cover::before{content:"";position:absolute;inset:0 0 auto;height:52%;pointer-events:none;
+    background:linear-gradient(180deg,rgba(255,255,255,.055),transparent)}
+  .cover > *{position:relative;z-index:1}
+  .cover .kicker{font-family:var(--disp);font-weight:700;letter-spacing:.3em;font-size:11.5px;color:var(--accent-pr);text-transform:uppercase}
+  .cover h1{font-family:var(--disp);font-weight:900;font-size:29px;margin:4px 0 0;letter-spacing:-.02em;line-height:1.1}
+  .cover .date{font-family:var(--mono);font-size:12.5px;color:var(--text-3);margin-top:3px}
+  .heroRow{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px 0}
+  .streakBig{font-family:var(--mono);font-weight:700;font-size:36px;line-height:1;color:#fff}
+  .streakLbl{font-family:var(--disp);font-weight:700;letter-spacing:.16em;font-size:11px;color:var(--text-3);text-transform:uppercase;margin-top:3px}
+  .bestLbl{font-family:var(--mono);font-size:11px;color:var(--accent-pr);margin-top:6px;line-height:1.35}
+  .statusLine{font-family:var(--disp);font-weight:700;font-size:16.5px;letter-spacing:-.005em;line-height:1.35;color:#EAD9A0;padding:0 0 14px}
+  #syncStatus{font-family:var(--mono);font-size:11px;color:var(--accent-pr);opacity:.85;margin-top:2px}
   .xpWrap{padding:0 0 14px}
   .xpTop{display:flex;justify-content:space-between;font-family:var(--disp);font-weight:600;letter-spacing:.14em;font-size:12px;color:var(--foil);text-transform:uppercase;margin-bottom:5px}
   .xpBar{height:8px;background:rgba(255,255,255,.14);border-radius:4px;overflow:hidden}
   .xpFill{height:100%;background:var(--foil)}
   .xpSub{font-family:var(--mono);font-size:11px;color:#B9C6DE;margin-top:4px}
 
-  /* ============ form cards ============ */
-  .card{background:var(--card);border:1.5px solid var(--line);border-radius:8px;padding:16px;margin-top:14px}
-  .secTitle{display:flex;align-items:baseline;gap:8px;margin:0 0 12px}
-  .secTitle .no{font-family:var(--mono);font-size:11px;color:var(--sub)}
-  .secTitle h2{font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:.14em;text-transform:uppercase;margin:0}
+  /* ============ cards — three elevation levels ============
+     Every card used to be var(--card) + a 1.5px hairline, so Supplements carried
+     exactly the same visual weight as the Anchor. Now the surface itself says
+     how much a card matters. */
+  .card{background:var(--surface-1);border:1.5px solid var(--hairline);border-radius:var(--r-md);
+    padding:16px;margin-top:14px;box-shadow:var(--elev-1)}
+  /* L2 — primary. What the day is actually asking for. */
+  .card--hero{background:linear-gradient(158deg,#141D31,var(--surface-3) 62%);
+    border-color:var(--hairline-hi);border-top:2px solid rgba(79,216,235,.5);
+    border-radius:var(--r-lg);box-shadow:var(--elev-2)}
+  /* L0 — recessed. Reference material: read it, don't be pulled by it. */
+  .card--quiet{background:var(--surface-2);border-color:#1D2436;box-shadow:var(--elev-0)}
+  .card--quiet .secTitle h2{color:var(--text-2)}
+
+  .secTitle{display:flex;align-items:center;gap:9px;margin:0 0 12px}
+  .secTitle .ic{flex:0 0 auto;width:17px;height:17px;color:var(--text-2);opacity:.85}
+  .secTitle .no{font-family:var(--mono);font-size:10.5px;color:var(--text-2);letter-spacing:.06em}
+  .secTitle h2{font-family:var(--disp);font-weight:700;font-size:14px;letter-spacing:.17em;text-transform:uppercase;margin:0}
   .secTitle .tally{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:13px}
+
+  /* icon sprite: inherits colour, never a font, never a network request */
+  .ic{display:inline-block;width:1em;height:1em;fill:none;stroke:currentColor;
+    stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.14em}
 
   /* stamp rows */
   .row{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:12px 13px;border:1.5px solid var(--line);
@@ -178,13 +244,18 @@
   .hmLegend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 
   /* ============ bottom nav ============ */
-  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--passport);border-top:2px solid rgba(79,216,235,.35);padding-bottom:env(safe-area-inset-bottom)}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:40;padding-bottom:env(safe-area-inset-bottom);
+    background:rgba(14,20,32,.86);backdrop-filter:blur(14px) saturate(1.3);
+    border-top:1px solid var(--hairline-hi);box-shadow:0 -12px 30px -20px rgba(0,0,0,.9)}
   .navIn{max-width:780px;margin:0 auto;display:flex}
-  .navBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 12px;color:#55617F;position:relative}
-  .navBtn .nEmo{font-size:19px;line-height:1}
-  .navBtn .nLbl{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .navBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 2px 13px;color:#5A6684;position:relative;
+    transition:color .2s ease-out}
+  .navBtn .ic{width:21px;height:21px;stroke-width:1.9}
+  .navBtn .nLbl{font-family:var(--disp);font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase}
   .navBtn.on{color:#fff}
-  .navBtn.on::after{content:"";position:absolute;top:-2px;left:22%;right:22%;height:2px;background:var(--customs);box-shadow:0 0 8px rgba(79,216,235,.8)}
+  .navBtn.on .ic{color:var(--accent-flow);filter:drop-shadow(0 0 7px rgba(79,216,235,.65))}
+  .navBtn.on::after{content:"";position:absolute;top:-1px;left:24%;right:24%;height:2px;border-radius:2px;
+    background:var(--accent-flow);box-shadow:0 0 10px rgba(79,216,235,.9)}
 
   /* ============ modal ============ */
   .overlay{position:fixed;inset:0;z-index:60;background:rgba(20,33,61,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px}
@@ -249,20 +320,13 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(79,216,235,.13), 0 0 18px -6px rgba(79,216,235,.6)}
   .swin.done .pts{color:var(--customs)}
 
-  /* ============ pointer trail (hero) ============
-     Ported from the 21st.dev image-mousetrail technique: a fixed pool of
-     elements, activated one at a time as the pointer travels a threshold
-     distance, each fading itself out. Images swapped for glow orbs — this is
-     a dark momentum app, not a photo gallery. pointer-events:none so it can
-     never swallow a tap on the hero. */
-  .trailLayer{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:10px;z-index:0}
-  .trailDot{position:absolute;width:120px;height:120px;border-radius:50%;pointer-events:none;
-    background:radial-gradient(circle closest-side, rgba(79,216,235,.55), rgba(139,124,246,.18) 45%, rgba(79,216,235,0) 78%);
-    transform:translate(-50%,-50%) scale(.2);opacity:0;
-    transition:transform .55s cubic-bezier(.16,1,.3,1), opacity .55s ease-out}
-  .trailDot[data-status="active"]{transform:translate(-50%,-50%) scale(1);opacity:1}
-  /* hero content sits above the trail (explicit, not relying on DOM order) */
-  .cover > *:not(.trailLayer){position:relative;z-index:1}
+  /* ============ momentum ring ============
+     The pointer-trail effect that used to live here was deleted in FLOWSTATE II:
+     it was a desktop mouse effect (pointermove barely fires on touch) occupying
+     the most valuable pixels on a phone-first app. */
+  .ringWrap{flex:0 0 auto;position:relative;line-height:0}
+  .ringWrap svg{overflow:visible}
+  .ringWrap .glow{filter:blur(7px);opacity:.55}
 
   /* ============ auth gate ============ */
   #authGate{
@@ -292,6 +356,35 @@
 </style>
 </head>
 <body>
+  <div id="moodLayer" aria-hidden="true"></div>
+
+  <!-- Icon sprite. Hand-authored on a 24×24 grid, ~1.4 KB, no network request,
+       no icon-font dependency. Referenced as <svg class="ic"><use href="#i-x"/></svg>
+       so every glyph inherits currentColor. Emoji survive only where the emoji
+       IS the content — the win chips. -->
+  <svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false"><defs>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20.5 6.5 9.5 17.5 4 12"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.2V12l3.4 2.1"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20V9.5"/><path d="M19.5 4.5c1 6.2-2.3 11-8.5 11-2.9 0-5.2-1-6.6-2.6C6 8.6 12.2 5.2 19.5 4.5Z"/></symbol>
+    <symbol id="i-cash" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 10v4M18 10v4"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2.5 12h4l2-4.5 3.2 9L14 12h7.5"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8.5 3v4M15.5 3v4"/></symbol>
+    <symbol id="i-anchor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.4"/><path d="M12 7.4V21"/><path d="M4 13.5a8 8 0 0 0 16 0"/><path d="M2.6 13.5h2.8M18.6 13.5h2.8"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.4L19.5 10l-5.6 1.6L12 17l-1.9-5.4L4.5 10l5.6-1.6L12 3Z"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.5 2.5 5 13.5h5.5L9.5 21.5 18.5 10H13l.5-7.5Z"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 21c3.6 0 6-2.3 6-5.4 0-4.4-4.4-5.6-3.6-10.6C11.6 6.6 6 9.4 6 15.6 6 18.7 8.4 21 12 21Z"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3.2c3.4 4 6 6.9 6 10.1a6 6 0 0 1-12 0c0-3.2 2.6-6.1 6-10.1Z"/></symbol>
+    <symbol id="i-pill" viewBox="0 0 24 24"><rect x="2.5" y="8.5" width="19" height="7" rx="3.5"/><path d="M12 8.5v7"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5S6.5 14 6.5 10Z"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7.5 2.8v5.4c0 4.6-3.1 8-7.5 9.8-4.4-1.8-7.5-5.2-7.5-9.8V5.8L12 3Z"/></symbol>
+    <symbol id="i-arrowdown" viewBox="0 0 24 24"><path d="M12 4.5v14M6 13l6 6 6-6"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8l-5-5Z"/><path d="M14 3v5h5"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M2.5 3.5h2.6l2.6 10.4h9.9l2.3-7.6H6.4"/><circle cx="9.5" cy="19" r="1.7"/><circle cx="17" cy="19" r="1.7"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M3 14.5 5 8.6A2 2 0 0 1 6.9 7.2h10.2A2 2 0 0 1 19 8.6l2 5.9v3.5h-18v-3.5Z"/><path d="M3 14.5h18"/><circle cx="7.2" cy="18" r="1.5"/><circle cx="16.8" cy="18" r="1.5"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M6 8.6v4.4a4 4 0 0 0 4 4h5.4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2.4"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></symbol>
+  </defs></svg>
+
   <div id="authGate">
     <div class="lock">🌊</div>
     <h2>Welcome back, Satya</h2>
@@ -323,6 +416,18 @@ const VAPID_KEY = 'BGuB7tmolQ5QSqAERQjBe8yp_SBXHWY7WScV2ZdK-ULsiID4_4rSEznIGkDpI
 const swReady = ('serviceWorker' in navigator)
   ? navigator.serviceWorker.register('sw.js').catch((e) => { console.warn('SW registration failed', e); return null; })
   : Promise.resolve(null);
+
+/* ---------- Motion (motion.dev) — spring physics, loaded non-blockingly ----------
+   Version is pinned: the docs warn against @latest in production. This is a
+   dynamic import kicked off without await, so a slow or dead CDN can never
+   delay the auth gate or the first paint. Every caller goes through
+   withMotion(), which simply does nothing if the import failed — no animation
+   in this app is load-bearing for function. The SW caches the module so it
+   works offline after the first successful load. */
+const MOTION_URL = 'https://cdn.jsdelivr.net/npm/motion@11.11.13/+esm';
+const motionReady = import(/* @vite-ignore */ MOTION_URL)
+  .then(m => (typeof m.animate === 'function' ? { animate: m.animate, stagger: m.stagger } : null))
+  .catch(e => { console.warn('Motion unavailable — running without animation', e); return null; });
 
 const firebaseConfig = {
   apiKey: "AIzaSyAiFSwmMc-qYYtXgsiaENQ3nRBBrmy7dc8",
@@ -517,6 +622,56 @@ async function initApp(){
     'use strict';
     const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    /* ---------- Motion + mood plumbing ----------
+       MO is the resolved Motion module or null. Everything that touches it is
+       guarded, so a blocked CDN degrades to a fully-functional static app. */
+    let MO = null;
+    motionReady.then(m => { MO = m; });
+    const moving = () => (MO && !REDUCED);
+    function spring(targets, keyframes, opts){
+      if(!moving()) return;
+      try { MO.animate(targets, keyframes, Object.assign({type:'spring'}, opts||{})); }
+      catch(e){ /* never let a missing animation break a render */ }
+    }
+
+    /* Numbers count instead of snapping. Hand-rolled rAF rather than Motion's
+       value animation so the two never have to agree on an API. */
+    function countUp(el, from, to, ms, fmt){
+      fmt = fmt || (v => String(Math.round(v)));
+      if(!el) return;
+      if(REDUCED || from === to){ el.textContent = fmt(to); return; }
+      const t0 = performance.now();
+      el.textContent = fmt(from);
+      const step = now => {
+        if(!el.isConnected) return;                    // render replaced it — stop
+        const p = Math.min(1, (now - t0) / ms);
+        el.textContent = fmt(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+        if(p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+
+    /* The background answers to momentum and to the hour. This is the fix for
+       "the screen looks identical at momentum 8 and 88": cold start is dim and
+       nearly grey, deep flow is bright and saturated. Dawn pulls warm, night
+       pulls cool. Written as custom properties so a Haikei SVG dropped into
+       --mood-img inherits the same treatment. */
+    let moodApplied = null;
+    function applyMood(m){
+      const key = Math.round(m / 4) + ':' + new Date().getHours();
+      if(key === moodApplied) return;                  // avoid pointless repaints
+      moodApplied = key;
+      const p = Math.max(0, Math.min(1, m / 100));
+      const hr = new Date().getHours();
+      const tod = hr < 10 ? 16 : hr < 17 ? 0 : hr < 22 ? -12 : -28;
+      const r = document.documentElement.style;
+      r.setProperty('--mood-intensity', (0.40 + p * 1.00).toFixed(2));
+      r.setProperty('--mood-sat',       (0.50 + p * 0.90).toFixed(2));
+      r.setProperty('--mood-hue',       Math.round(tod + (p - 0.5) * 26) + 'deg');
+    }
+
+    const icon = (name, cls) => `<svg class="ic ${cls||''}" aria-hidden="true" focusable="false"><use href="#i-${name}"/></svg>`;
+
     const SMALL_WINS = [
       // Short labels so each chip stays one or two lines in the 2-col grid —
       // and they now match KEY_LABELS exactly, so the app and the push
@@ -615,19 +770,27 @@ async function initApp(){
       return {idx:i,name:LEVELS[i][1],next,progress:next?(xp-LEVELS[i][0])/(next[0]-LEVELS[i][0]):1};
     }
 
+    /* The ring is rendered at its CORRECT value, always. draw() rewinds it to
+       the previous value and springs forward only when Motion is confirmed
+       loaded — so a dead CDN shows a correct static ring instead of a wrong one,
+       and there is never a flash of the wrong length. */
     function momentumRing(m, todayGain){
       const C=2*Math.PI*56, off=C*(1-m/100);
       const st=flowStateOf(m);
-      return `<svg width="128" height="128" viewBox="0 0 160 160" role="img" aria-label="Momentum ${m} of 100 — ${st[2]}">
-        <circle cx="80" cy="80" r="56" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
-        <circle cx="80" cy="80" r="56" fill="none" stroke="rgba(79,216,235,.28)" stroke-width="15" stroke-linecap="round"
+      return `<div class="ringWrap"><svg width="132" height="132" viewBox="0 0 160 160" role="img" aria-label="Momentum ${m} of 100 — ${st[2]}">
+        <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#8B7CF6"/><stop offset="52%" stop-color="#4FD8EB"/><stop offset="100%" stop-color="#5BE9A6"/>
+        </linearGradient></defs>
+        <circle cx="80" cy="80" r="56" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="11"/>
+        <circle class="glow ringArc" cx="80" cy="80" r="56" fill="none" stroke="url(#ringGrad)" stroke-width="11" stroke-linecap="round"
           stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 80 80)"/>
-        <circle cx="80" cy="80" r="56" fill="none" stroke="#4FD8EB" stroke-width="6" stroke-linecap="round"
-          stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 80 80)"/>
-        <text x="80" y="78" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="36" fill="#fff">${m}</text>
-        <text x="80" y="98" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="11.5" fill="#4FD8EB" letter-spacing="2.5">${st[2].toUpperCase()}</text>
-        ${todayGain>0?`<text x="80" y="116" text-anchor="middle" font-family="B612 Mono,monospace" font-size="10.5" fill="#C9A227">+${todayGain} today</text>`:''}
-      </svg>`;
+        <circle class="ringArc" cx="80" cy="80" r="56" fill="none" stroke="url(#ringGrad)" stroke-width="7" stroke-linecap="round"
+          stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 80 80)"
+          data-c="${C.toFixed(1)}" data-m="${m}"/>
+        <text class="ringNum" x="80" y="77" text-anchor="middle" font-family="B612 Mono,monospace" font-weight="700" font-size="38" fill="#fff">${m}</text>
+        <text x="80" y="97" text-anchor="middle" font-family="Satoshi,system-ui,sans-serif" font-weight="700" font-size="10.5" fill="#4FD8EB" letter-spacing="2.6">${st[2].toUpperCase()}</text>
+        ${todayGain>0?`<text x="80" y="115" text-anchor="middle" font-family="B612 Mono,monospace" font-size="10.5" fill="#C9A227">+${todayGain} today</text>`:''}
+      </svg></div>`;
     }
 
     function rowHTML(path, emo, lbl, sub, state, inkClass, extra, doneAt){
@@ -640,8 +803,23 @@ async function initApp(){
         <span class="stamp">${stamp}</span>
       </div>`;
     }
+    /* Section headers: one vector icon, the title, an optional right-aligned
+       tally. Every key below is mapped, because the half-mapped version put a
+       mono kicker AND an icon on some headers and read "⚡ SMALL SMALL WINS" —
+       the kicker existed only because there was no iconography before. It now
+       survives solely as a fallback for a key nobody has drawn a glyph for. */
+    const SEC_ICONS={
+      '⚓':'anchor','NOW':'clock','SMALL':'spark','BIG':'bolt','WINS':'bolt',
+      'FUEL':'flame','SUPP':'pill','MED':'pill','LEAKS':'arrowdown','KEEL':'shield',
+      'PLAN':'calendar','TIMETABLE':'clock','ROUTE':'route','CAR':'car','FOOD':'cart',
+      'VISA':'leaf','LANG':'file','FILE':'file','NOTE':'file','AUDIT':'file','CLAIM':'file',
+      'ALERT':'bell','WATCH':'bell','RECORD':'calendar','LOG':'calendar',
+      'LEDGER':'cash','WEEK':'cash','VAULT':'lock','TRUTH':'shield','TREND':'pulse'
+    };
     function secTitle(no,txt,tally,tone){
-      return `<div class="secTitle"><span class="no">${no}</span><h2>${txt}</h2>${tally?`<span class="tally" style="color:${tone||'var(--sub)'}">${tally}</span>`:''}</div>`;
+      const ic=SEC_ICONS[no];
+      const lead=ic?icon(ic):`<span class="no">${no}</span>`;
+      return `<div class="secTitle">${lead}<h2>${txt}</h2>${tally?`<span class="tally" style="color:${tone||'var(--text-2)'}">${tally}</span>`:''}</div>`;
     }
     function tileHTML(key,big,cap,tone){
       return `<button class="tile t-${tone}" data-edit="${key}">
@@ -671,10 +849,6 @@ async function initApp(){
                     : 'The anchor takes 2 minutes. Everything after it is bonus.')
         : gToday>=26 ? `Deep work day — +${gToday} momentum and glowing.`
         : `Day counted ⚓ +${gToday} momentum${bigDone?` · ${bigDone} big win${bigDone>1?'s':''}`:''}. Every extra tap is pure gain.`;
-      const mrzPad = t => (t + '<'.repeat(44)).slice(0,44).replace(/</g,'&lt;');
-      const mrz1 = mrzPad('SATYA<GAURAV<<FLOWSTATE');
-      const mrz2 = mrzPad(`FLOW<${pad(m,3)}<${st[2].toUpperCase().replace(/ /g,'<')}<DAY<${anchored?'COUNTED':'OPEN'}<PR<2027`);
-      const mrz=`${mrz1}<br>${mrz2}`;
 
       const xp=calcXP(s), lv=levelInfo(xp);
       const xpBlock=`<div class="xpWrap">
@@ -683,8 +857,8 @@ async function initApp(){
         <div class="xpSub">${lv.next?`${lv.next[0]-xp} pts to ${lv.next[1].toUpperCase()}`:'MAX LEVEL — you made it home'} · gains only: anchor +10 · big +5 · small +2 · PR action +100</div>
       </div>`;
 
-      const anchorCard=`<div class="card" style="border-color:rgba(79,216,235,.35)">
-        ${secTitle('⚓','The Anchor', anchored?'DAY COUNTED':(IT.anchor?'~'+IT.anchor+' · 2 minutes':'2 minutes'), anchored?'var(--customs)':'var(--sub)')}
+      const anchorCard=`<div class="card card--hero">
+        ${secTitle('⚓','The Anchor', anchored?'DAY COUNTED':(IT.anchor?'~'+IT.anchor+' · 2 minutes':'2 minutes'), anchored?'var(--accent-flow)':'var(--text-3)')}
         <div class="anchorBtn${anchored?' done':''}" role="button" tabindex="0" aria-pressed="${anchored}" data-toggle="days.${Dash.today}.anchor" aria-label="Anchor: ${anchored?'done — day counted':'not yet'}">
           <span class="aEmo" aria-hidden="true">⚓</span>
           <span><span class="aLbl">${anchored?'Anchored':'Drop the anchor'}</span>
@@ -759,12 +933,12 @@ async function initApp(){
         const hyd=d.hydro||[];
         const lastSip=hyd.length?hyd[hyd.length-1].t:null;
         const sipGap=lastSip?nowM-toM(lastSip):null;
-        const hydLine=`💧 ${litre(waterMl)} / ${litre(waterGoal)}${lastSip?` · last sip ${lastSip}${sipGap>90?' — sip now':''}`:(waterMl===0?' · start sipping':'')}`;
+        const hydLine=`${icon('drop')} ${litre(waterMl)} / ${litre(waterGoal)}${lastSip?` · last sip ${lastSip}${sipGap>90?' — sip now':''}`:(waterMl===0?' · start sipping':'')}`;
         const pendingT=Object.entries(IT).filter(([k])=>k!=='anchor'&&d[k]!==true).map(([k,t])=>({k,mm:toM(t),t})).sort((a,b)=>a.mm-b.mm);
         const over=pendingT.filter(x=>x.mm<nowM-10);
         const nextTap=pendingT.find(x=>x.mm>=nowM-10);
         const rhythmBits=[];
-        if(over.length)rhythmBits.push(`⏰ Catch up: ${over.slice(-2).map(x=>`${KEY_LABELS[x.k]||x.k} (${x.t})`).join(' · ')}${over.length>2?` +${over.length-2} more`:''}`);
+        if(over.length)rhythmBits.push(`${icon('clock')} Catch up: ${over.slice(-2).map(x=>`${KEY_LABELS[x.k]||x.k} (${x.t})`).join(' · ')}${over.length>2?` +${over.length-2} more`:''}`);
         if(nextTap)rhythmBits.push(`Next: ${KEY_LABELS[nextTap.k]||nextTap.k} · ${nextTap.t}`);
         return `<div class="card" style="border-left:3px solid var(--customs)">
           ${secTitle('NOW','Right Now')}
@@ -780,7 +954,7 @@ async function initApp(){
         ? `<div class="card" style="border-left:4px solid var(--maple)">
             ${secTitle('ALERT','Notifications')}
             <div style="font-size:13.5px;color:var(--ink);margin-bottom:10px">The <b>7 AM flow brief</b>, <b>tap-window nudges</b> only while items sit open, and a <b>9 PM anchor reminder</b> if the day isn't counted. Do the things and the phone stays silent.</div>
-            <button id="pushEnable" class="row" style="margin-bottom:0"><span class="emo" aria-hidden="true">🔔</span><span class="lbl">Enable notifications</span><span class="spacer"></span><span class="stamp">TAP</span></button>
+            <button id="pushEnable" class="row" style="margin-bottom:0">${icon('bell','emo')}<span class="lbl">Enable notifications</span><span class="spacer"></span><span class="stamp">TAP</span></button>
             <div id="pushMsg" style="font-size:12.5px;color:var(--sub);margin-top:6px;min-height:16px"></div>
           </div>`
         : '';
@@ -810,7 +984,6 @@ async function initApp(){
           </div>
           <div class="statusLine">${status}</div>
           ${xpBlock}
-          <div class="mrz" aria-hidden="true">${mrz}</div>
         </div>
         ${rightNow}
         ${anchorCard}
@@ -830,24 +1003,24 @@ async function initApp(){
             ${secTitle('FUEL','Meals + Insulin',`${['breakfast','lunch','dinner'].filter(k=>d[k]===true).length}/3 meals`, 'var(--customs)')}
             ${fuelRows}
           </div>
-          <div class="card">
-            ${secTitle('SUPP','Supplements',`${suppDone}/${SUPPS.length}`, suppDone===SUPPS.length?'var(--customs)':'var(--sub)')}
+          <div class="card card--quiet">
+            ${secTitle('SUPP','Supplements',`${suppDone}/${SUPPS.length}`, suppDone===SUPPS.length?'var(--accent-flow)':'var(--text-2)')}
             ${suppRows}
           </div>
         </div>
         <div class="card">
-          ${secTitle('LEAKS','Leak Log', fines.length?`$${fineTotal} today`:'$0 today', 'var(--sub)')}
+          ${secTitle('LEAKS','Leak Log', fines.length?`$${fineTotal} today`:'$0 today', 'var(--text-2)')}
           ${fineRows}
           ${fineLog}
-          <div style="font-size:12px;color:var(--sub);margin-top:6px">Just data, not judgment — tap when money leaks so the Money tab stays honest. Monthly total lives there.</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:6px">Just data, not judgment — tap when money leaks so the Money tab stays honest. Monthly total lives there.</div>
         </div>
-        <div class="card">
+        <div class="card card--quiet">
           ${secTitle('KEEL','Guardrails')}
           <div class="chips">${chips}</div>
         </div>
-        <div class="card">
+        <div class="card card--quiet">
           ${secTitle('PLAN','Timetable')}
-          <div style="font-size:14px;color:var(--ink)">🕐 Your full minute-by-minute day — bus, meals, gym, everything — lives on the <b>Plan</b> tab. Blocks are tappable; skipping one is allowed.</div>
+          <div style="font-size:14px;color:var(--text-1)">Your full minute-by-minute day — bus, meals, gym, everything — lives on the <b>Plan</b> tab. Blocks are tappable; skipping one is allowed.</div>
         </div>`;
     }
 
@@ -921,7 +1094,7 @@ async function initApp(){
           out+=`<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${Math.max(hh-2,1.5).toFixed(1)}" rx="3" fill="${s.color}"><title>${c} · ${s.name}: ${money0(v)}</title></rect>`;
         });
         out+=`<text x="${x+bw/2}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-family="B612 Mono,monospace" font-size="11" font-weight="700" fill="${INK}">${money0(totals[i])}</text>`;
-        out+=`<text x="${x+bw/2}" y="${base+16}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="11.5" letter-spacing=".08em" fill="${MUTED}">${c.toUpperCase()}</text>`;
+        out+=`<text x="${x+bw/2}" y="${base+16}" text-anchor="middle" font-family="Satoshi,system-ui,sans-serif" font-weight="600" font-size="11.5" letter-spacing=".08em" fill="${MUTED}">${c.toUpperCase()}</text>`;
         if(opts.sub&&opts.sub[i]) out+=`<text x="${x+bw/2}" y="${base+29}" text-anchor="middle" font-family="B612 Mono,monospace" font-size="8.5" fill="${FAINT}">${opts.sub[i]}</text>`;
       });
       return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${opts.alt||''}"><line x1="6" y1="${base}" x2="${W-6}" y2="${base}" stroke="${AXIS}" stroke-width="1"/>${out}</svg>`;
@@ -942,7 +1115,7 @@ async function initApp(){
           out+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(hh,1.5).toFixed(1)}" rx="3" fill="${s.color}"><title>${c} · ${s.name}: ${money0(v)}</title></rect>`;
           out+=`<text x="${(x+bw/2).toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle" font-family="B612 Mono,monospace" font-size="9.5" font-weight="700" fill="${INK}">${money0(v)}</text>`;
         });
-        out+=`<text x="${(6+i*grpW+grpW/2).toFixed(1)}" y="${base+16}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="11" letter-spacing=".06em" fill="${MUTED}">${c.toUpperCase()}</text>`;
+        out+=`<text x="${(6+i*grpW+grpW/2).toFixed(1)}" y="${base+16}" text-anchor="middle" font-family="Satoshi,system-ui,sans-serif" font-weight="600" font-size="11" letter-spacing=".06em" fill="${MUTED}">${c.toUpperCase()}</text>`;
       });
       return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${opts.alt||''}"><line x1="6" y1="${base}" x2="${W-6}" y2="${base}" stroke="${AXIS}" stroke-width="1"/>${out}</svg>`;
     }
@@ -963,7 +1136,7 @@ async function initApp(){
       pts.forEach((p,i)=>{
         dots+=`<circle cx="${x(i).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="4.5" fill="${CHART.c1}" stroke="#111624" stroke-width="2"><title>${p[0]}: ${money0(p[1])}</title></circle>`;
         dots+=`<text x="${x(i).toFixed(1)}" y="${(y(p[1])-11).toFixed(1)}" text-anchor="middle" font-family="B612 Mono,monospace" font-size="10" font-weight="700" fill="${INK}">${money0(p[1])}</text>`;
-        dots+=`<text x="${x(i).toFixed(1)}" y="${base+16}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="600" font-size="11" letter-spacing=".06em" fill="${MUTED}">${p[0].toUpperCase()}</text>`;
+        dots+=`<text x="${x(i).toFixed(1)}" y="${base+16}" text-anchor="middle" font-family="Satoshi,system-ui,sans-serif" font-weight="600" font-size="11" letter-spacing=".06em" fill="${MUTED}">${p[0].toUpperCase()}</text>`;
       });
       return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${opts.alt||''}">
         <defs><linearGradient id="lnFill" x1="0" y1="0" x2="0" y2="1">
@@ -1469,10 +1642,10 @@ async function initApp(){
         </div>`;
     }
 
-    const TABS=[['today','✓','Today'],['plan','🕐','Plan'],['pr','🍁','PR'],['money','💵','Money'],['health','🩺','Health'],['history','🗓️','History']];
+    const TABS=[['today','check','Today'],['plan','clock','Plan'],['pr','leaf','PR'],['money','cash','Money'],['health','pulse','Health'],['history','calendar','History']];
     function navHTML(){
-      return `<nav aria-label="Sections"><div class="navIn">${TABS.map(([k,e,l])=>
-        `<button class="navBtn ${tab===k?'on':''}" data-tab="${k}" aria-current="${tab===k}"><span class="nEmo" aria-hidden="true">${e}</span><span class="nLbl">${l}</span></button>`).join('')}</div></nav>`;
+      return `<nav aria-label="Sections"><div class="navIn">${TABS.map(([k,ic,l])=>
+        `<button class="navBtn ${tab===k?'on':''}" data-tab="${k}" aria-current="${tab===k}">${icon(ic)}<span class="nLbl">${l}</span></button>`).join('')}</div></nav>`;
     }
 
     const EDITS={
@@ -1529,56 +1702,22 @@ async function initApp(){
       setTimeout(()=>toast.remove(), 2600);
     }
 
-    /* ---------- hero pointer trail ----------
-       Adapted from the 21st.dev image-mousetrail component. Same core idea:
-       a recycled pool of nodes, the lead one activated wherever the pointer
-       has travelled far enough, the one 5 behind it retired.
-       Changes made for this app:
-       - glow orbs instead of <img>, sized for a phone hero
-       - pointerdown/move covers mouse AND touch through one API
-       - honours prefers-reduced-motion (whole effect is skipped)
-       - fixed a real bug in the original: (index - 5) % length goes NEGATIVE
-         for the first five moves, so the tail never retired early on. The
-         original masked it with ?.current instead of fixing the modulo. */
-    function mountTrail(root){
-      if(REDUCED) return;
-      const cover=root.querySelector('.cover');
-      if(!cover) return;
-      const POOL=14, GAP=34, LIFE=680;
-      const layer=document.createElement('div');
-      layer.className='trailLayer';
-      const dots=Array.from({length:POOL},()=>{
-        const el=document.createElement('span');
-        el.className='trailDot'; el.dataset.status='inactive';
-        layer.appendChild(el); return el;
-      });
-      cover.insertBefore(layer, cover.firstChild);
-
-      let i=0, last=null;
-      const fire=(x,y)=>{
-        if(last && Math.hypot(x-last.x, y-last.y) < GAP) return;
-        const r=cover.getBoundingClientRect();
-        if(x<r.left||x>r.right||y<r.top||y>r.bottom) return;   // hero only
-        const lead=dots[i%POOL];
-        lead.style.left=(x-r.left)+'px';
-        lead.style.top=(y-r.top)+'px';
-        lead.style.zIndex=String((i%POOL)+1);
-        lead.dataset.status='active';
-        clearTimeout(lead._t);
-        lead._t=setTimeout(()=>{ lead.dataset.status='inactive'; }, LIFE);
-        const tail=dots[((i-5)%POOL+POOL)%POOL];               // non-negative modulo
-        if(tail && tail!==lead) tail.dataset.status='inactive';
-        i++; last={x,y};
-      };
-      cover.addEventListener('pointermove', e=>fire(e.clientX,e.clientY), {passive:true});
-      cover.addEventListener('pointerleave', ()=>{ last=null; }, {passive:true});
-    }
+    /* ---------- render ----------
+       The hero pointer-trail (a port of the 21st.dev image-mousetrail) used to
+       be mounted here. Deleted in FLOWSTATE II: pointermove barely fires on
+       touch, so on the device this app actually runs on it was invisible work
+       occupying the most valuable pixels on the screen. */
+    let lastTab=null, lastM=null;
 
     function draw(s){
       const root=document.getElementById('appRoot');
       const d=(s.days&&s.days[Dash.today])||{};
       const anchoredNow=d.anchor===true;
       const bigNow=BIG_KEYS.filter(k=>d[k]===true).length;
+      const mNow=momentumNow(s);
+
+      applyMood(mNow);
+      const tabChanged = tab!==lastTab;
 
       root.innerHTML =
         (tab==='today'?todayHTML(s,d)
@@ -1588,7 +1727,38 @@ async function initApp(){
         :tab==='history'?historyHTML(s)
         :healthHTML()) + navHTML();
 
-      mountTrail(root);
+      /* The ring fill — the most satisfying moment in the app, and until now it
+         didn't move: the SVG was simply re-rendered at the new dash offset.
+         Rewind to the previous value and spring forward. Only when Motion is
+         confirmed present, so the static fallback is always the true value.
+         [data-c] matters: the blurred glow twin also carries .ringArc but has
+         no dataset, and it is the one querySelector would find first.
+         Rewind via setAttribute, NOT style — Motion animates SVG geometry by
+         writing attributes, and an inline style outranks an attribute, so a
+         style rewind pins the arc at the start value forever. */
+      const arc=root.querySelector('.ringArc[data-c]');
+      if(arc && moving()){
+        const C=parseFloat(arc.dataset.c);
+        const toM=parseFloat(arc.dataset.m);
+        const fromM=(lastM==null)?0:lastM;              // first open sweeps up from empty
+        if(fromM!==toM){
+          const from=C*(1-fromM/100), to=C*(1-toM/100);
+          const arcs=root.querySelectorAll('.ringArc');
+          arcs.forEach(a=>a.setAttribute('stroke-dashoffset', from.toFixed(1)));
+          spring(arcs,{strokeDashoffset:[from,to]},{stiffness:110,damping:17,mass:1});
+          countUp(root.querySelector('.ringNum'), fromM, toM, 950);
+        }
+      }
+      if(arc) lastM=parseFloat(arc.dataset.m);
+
+      /* Cards arrive instead of appearing — but only on a tab change. Staggering
+         on every tap would make logging a win feel like a page load. */
+      if(tabChanged && moving()){
+        const cards=root.querySelectorAll('.cover, .card');
+        if(cards.length) spring(cards,{opacity:[0,1],y:[16,0]},
+          {stiffness:230,damping:26,delay:MO.stagger?MO.stagger(0.035):0});
+      }
+      lastTab=tab;
 
       // Tag only the just-tapped element so its completion animation fires once,
       // instead of every completed item re-animating on every render.
@@ -1687,7 +1857,13 @@ async function initApp(){
       prevBig=bigNow;
     }
 
-    Dash.render(draw);
+    /* Hold the very first paint for Motion — but never for long. The opening
+       ring sweep from 0 is the signature moment; losing it to a cold CDN import
+       would mean the app's first impression is a static number. 700 ms is the
+       ceiling: past that the app draws anyway, unanimated. motionReady starts
+       at module parse, well before the Firestore read finishes, so on a warm
+       cache this resolves instantly and costs nothing. */
+    Promise.race([motionReady, new Promise(r=>setTimeout(r,700))]).then(()=>Dash.render(draw));
   })();
 }
 </script>
