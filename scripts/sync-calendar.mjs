@@ -55,6 +55,26 @@ const API = 'https://www.googleapis.com/calendar/v3';
 // cleaned up without touching anything you created by hand.
 const TAG = 'flowstate-rhythm';
 
+// Reminders on the moments that actually cost you the day if missed, and
+// nowhere else. Every block would be ~20 popups a day, which is how you end up
+// muting the calendar entirely. Value is minutes of warning.
+const REMIND = {
+  wake: 0,        // the anchor hangs off this
+  bus1: 10,       // office days: miss it and the morning is gone
+  gym: 10,        // needs a running start
+  eatbfast: 0,    // bolus + supplements
+  cooklunch: 5,   // the delivery-trigger hour
+  lunch: 5,
+  upskill: 5,     // CELPIP + money move
+  prep: 0         // creatine + wind down
+};
+
+// What a hand edit changes. If the event on Google no longer hashes to what we
+// last wrote, someone (you, or ChatGPT on your phone) moved it, and the sync
+// leaves it alone from then on.
+const hashOf = (summary, start, end) =>
+  createHash('sha1').update(`${summary}|${start}|${end}`).digest('hex').slice(0, 16);
+
 // Today's date in Toronto, regardless of where the runner sits.
 function torontoToday() {
   const p = new Intl.DateTimeFormat('en-CA', {
@@ -88,17 +108,27 @@ function buildDay(date) {
     if (!start) continue;
     // The last row of the day ("Lights out") carries no end time.
     const finish = end || '23:59';
+    const summary = `${emoji} ${title}`;
+    const startAt = `${dateStr}T${start}:00`;
+    const endAt = `${dateStr}T${finish}:00`;
+    const mins = REMIND[key];
     events.push({
       id: eventId(dateStr, key),
-      summary: `${emoji} ${title}`,
+      summary,
       description: `FLOWSTATE ${sched.kindTitles[kind] || kind}\n${APP_URL}`,
-      start: { dateTime: `${dateStr}T${start}:00`, timeZone: TZ },
-      end: { dateTime: `${dateStr}T${finish}:00`, timeZone: TZ },
+      start: { dateTime: startAt, timeZone: TZ },
+      end: { dateTime: endAt, timeZone: TZ },
       // Free, not busy — the rhythm should never make you look booked.
       transparency: 'transparent',
-      // Silent: the dashboard's own push notifications do the nudging.
-      reminders: { useDefault: false, overrides: [] },
-      extendedProperties: { private: { source: TAG, kind, key, date: dateStr } }
+      reminders: mins === undefined
+        ? { useDefault: false, overrides: [] }
+        : { useDefault: false, overrides: [{ method: 'popup', minutes: mins }] },
+      extendedProperties: {
+        private: {
+          source: TAG, kind, key, date: dateStr,
+          syncHash: hashOf(summary, startAt, endAt)
+        }
+      }
     });
   }
   return { kind, dateStr, events };
@@ -170,16 +200,58 @@ async function main() {
     }
   }
 
-  let created = 0, updated = 0, failed = 0;
+  // One listing for the whole window beats a GET per event, and the
+  // privateExtendedProperty filter means only this project's events come back.
+  const existing = new Map();
+  {
+    // Pad the window by a day either side. timeMin/timeMax are UTC and Toronto
+    // runs 4-5 hours behind it, so a tight window drops the last day's
+    // late-evening blocks — they'd then miss the edit check below and get
+    // overwritten even after you'd moved them by hand.
+    const u = new URL(`${API}/calendars/${cal}/events`);
+    u.searchParams.set('timeMin', `${iso(addDays(start, -1))}T00:00:00Z`);
+    u.searchParams.set('timeMax', `${iso(addDays(start, DAYS + 1))}T00:00:00Z`);
+    u.searchParams.set('privateExtendedProperty', `source=${TAG}`);
+    u.searchParams.set('showDeleted', 'false');
+    u.searchParams.set('maxResults', '2500');
+    const res = await fetch(u, { headers });
+    if (res.ok) {
+      const { items = [] } = await res.json();
+      for (const e of items) existing.set(e.id, e);
+    }
+  }
+
+  let created = 0, updated = 0, skipped = 0, failed = 0;
   for (const day of days) {
     for (const ev of day.events) {
+      const prev = existing.get(ev.id);
+      if (prev) {
+        // Google echoes dateTime back with the zone offset appended
+        // ("...T06:45:00-04:00") while we send bare local wall time. Compare the
+        // first 19 chars so a round-trip doesn't read as somebody's edit —
+        // otherwise every event looks touched and the sync silently stops
+        // propagating schedule.json forever.
+        const wall = s => String(s || '').slice(0, 19);
+        const live = hashOf(prev.summary || '', wall(prev.start?.dateTime), wall(prev.end?.dateTime));
+        const ours = prev.extendedProperties?.private?.syncHash;
+        if (ours && live !== ours) {
+          // Edited by hand since the last sync — leave it be.
+          skipped++;
+          continue;
+        }
+        if (ours === ev.extendedProperties.private.syncHash) {
+          // Already correct. Nothing to write.
+          skipped++;
+          continue;
+        }
+      }
       const r = await writeEvent(ev);
       if (r === 'created') created++; else if (r === 'updated') updated++; else failed++;
       // Cheap insurance against tripping the limiter in the first place.
       await sleep(120);
     }
   }
-  console.log(`Created ${created}, updated ${updated}, failed ${failed}.`);
+  console.log(`Created ${created}, updated ${updated}, left alone ${skipped}, failed ${failed}.`);
   if (failed) process.exitCode = 1;
 }
 
