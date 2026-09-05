@@ -16,10 +16,11 @@ import { readFileSync } from 'node:fs';
 const MODE = (process.argv.find(a => a.startsWith('--mode=')) || '--mode=brief').split('=')[1];
 const FORCE = process.argv.includes('--force');
 
-// FLOWSTATE momentum model — keep in sync with the constants in index.html.
+// FLOWSTATE scoring model — keep in sync with the constants in index.html.
+// Momentum itself is no longer read here: notifications report action days, a
+// count of real days, rather than a score. P0.1.
 const SMALL_KEYS = ['water', 'walk', 'read5', 'cookmeal', 'meditate', 'phonedown'];
 const BIG_KEYS = ['gym', 'language', 'study', 'cooked', 'smokefree', 'money'];
-const clampM = m => Math.max(0, Math.min(100, m));
 const dayGains = d => {
   if (!d) return 0;
   let g = (d.anchor === true || d.completed === true) ? 10 : 0;
@@ -27,8 +28,21 @@ const dayGains = d => {
   g += BIG_KEYS.filter(k => d[k] === true).length * 8;
   return g;
 };
-const flowStateOf = m => m >= 75 ? 'Deep flow' : m >= 50 ? 'Flow' : m >= 25 ? 'In motion' : 'Cold start';
-const momentumNow = (data, today) => clampM((data.flow?.m ?? 20) + dayGains((data.days || {})[today]));
+
+// Mirrors actionDays() in index.html. The live "lately" signal is a count of
+// real days, not a score — a quiet day isn't counted rather than penalised, and
+// one action tomorrow moves it straight back up. P0.1.
+const ACTION_WINDOW = 14;
+const shiftDate = (s, n) => {
+  const d = new Date(s + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+const actionDays = (data, today, n = ACTION_WINDOW) => {
+  let c = 0, d = today;
+  for (let i = 0; i < n; i++) { if (dayGains((data.days || {})[d]) > 0) c++; d = shiftDate(d, -1); }
+  return c;
+};
 
 const sched = JSON.parse(readFileSync(new URL('../schedule.json', import.meta.url), 'utf8'));
 const TZ = sched.timezone || 'America/Toronto';
@@ -93,8 +107,10 @@ function composeBrief(data, now) {
     if (n !== null && n >= 0 && n <= 3) lines.push(fmtDue(label, n));
   }
 
-  const m = momentumNow(data, now.date);
-  lines.push(`🌊 Momentum ${m} — ${flowStateOf(m)}. One small win keeps it climbing.`);
+  // A count of days, not a score to defend. Reads the same either way, but it
+  // recovers by doing something rather than by not missing.
+  const act = actionDays(data, now.date);
+  lines.push(`🌊 ${act} action day${act === 1 ? '' : 's'} in the last ${ACTION_WINDOW}. One small win adds today.`);
 
   const urgent = lines.some(l => l.includes('DUE TODAY'));
   return {
@@ -120,11 +136,10 @@ function composeNudge(data, now) {
     const pending = slots[i].keys.filter(k => d[k] !== true);
     if (pending.length === 0) continue;
     const names = pending.map(k => labels[k] || k).join(' · ');
-    const m = momentumNow(data, now.date);
     return {
       logField: `nudge${i}`,
       title: `${slots[i].title} — ${pending.length} tap${pending.length === 1 ? '' : 's'} open`,
-      body: `${names}\n🌊 Momentum ${m} — each tap moves it.`
+      body: `${names}\n🌊 Any one of these counts the day.`
     };
   }
   return null;

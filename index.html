@@ -111,7 +111,7 @@
     content:'';position:absolute;inset:0;
     background-image:var(--mood-img,none);
     background-size:cover;background-position:center;
-    opacity:calc(.22 * var(--mood-intensity) * var(--mood-art-k,1));  /* .09 cold → .31 deep flow */
+    opacity:calc(.22 * var(--mood-intensity) * var(--mood-art-k,1));  /* ~.24 at the fixed 1.10 intensity */
     transition:opacity 1.2s ease-out;
     /* Vertical falloff — the art has to yield to the content below the ring.
        Cards are opaque --surface-1 (L*7.4). Measured over the real rasterised
@@ -544,10 +544,18 @@ async function initApp(){
   const blankDay = () => ({anchor:false,water:false,walk:false,read5:false,cookmeal:false,phonedown:false,smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],sched:{},hydro:[],log:{},completed:false});
 
   /* ---------- momentum engine (shared constants with scripts/notify.mjs) ----------
-     Anchor +10 · small win +3 (max 4 count) · big win +8 · each new day −4 drift.
+     Anchor +10 · small win +3 (max 4 count) · big win +8.
      Momentum lives in S.flow = {m, asOf}: m is the value at the START of asOf;
      today's gains are layered on live, then committed at the next day rollover.
-     It can dip. It can never be reset to zero by a bad day. */
+
+     It only goes up. The old −4-per-elapsed-day drift was removed: it walked a
+     quiet fortnight down toward zero and, because applyMood() read the same
+     number, visibly dimmed the whole app while it did — a punishment mechanic
+     wearing a neutral name. Absence is not a debt.
+
+     The live "how has it been lately" signal is actionDays() instead: a count
+     of real days, which recovers by doing something rather than by not missing.
+     See CHECKINS-IMPLEMENTATION-PLAN.md P0.1. */
   const SMALL_KEYS = ['water','walk','read5','cookmeal','meditate','phonedown'];
   const BIG_KEYS = ['gym','language','study','cooked','smokefree','money'];
   const clampM = m => Math.max(0, Math.min(100, m));
@@ -577,16 +585,27 @@ async function initApp(){
     S.streak = S.streak || 0; S.best = S.best || 0; S.lastComplete = S.lastComplete || null;
     // Migrate the old streak into starting momentum, once. streak/best stay as legacy stats.
     if (!S.flow || typeof S.flow.m !== 'number' || !/^\d{4}-\d{2}-\d{2}$/.test(String(S.flow.asOf))) S.flow = { m: clampM((S.streak||0)*8 + 20), asOf: T };
-    // Day rollover: commit each passed day's gains, apply −4 drift per day.
+    // Day rollover: commit each passed day's gains. No drift — a day you didn't
+    // open the app contributes 0, which is not the same as costing you 4.
     if (S.flow.asOf < T) {
       let m = S.flow.m, d = S.flow.asOf;
-      while (d < T) { m = clampM(m + dayGains(S.days[d]) - 4); d = addDays(d, 1); }
+      while (d < T) { m = clampM(m + dayGains(S.days[d])); d = addDays(d, 1); }
       S.flow = { m, asOf: T };
     }
     S.days[T] = Object.assign(blankDay(), S.days[T]||{});
   }
   normalize();
   const momentumNow = s => clampM(s.flow.m + dayGains(s.days[T]));
+
+  /* Days in the last n (today included) on which anything at all was recorded.
+     This is the honest "lately" number: a missed day just isn't counted, and
+     one action tomorrow moves it back up. Nothing is ever subtracted. */
+  const ACTION_WINDOW = 14;
+  const actionDays = (s, n = ACTION_WINDOW) => {
+    let c = 0, d = T;
+    for (let i = 0; i < n; i++) { if (dayGains((s.days || {})[d]) > 0) c++; d = addDays(d, -1); }
+    return c;
+  };
 
   const syncEl = () => document.getElementById('syncStatus');
   const setSyncUI = (text) => { const el = syncEl(); if (el) el.textContent = text; };
@@ -698,11 +717,12 @@ async function initApp(){
       requestAnimationFrame(step);
     }
 
-    /* The background answers to momentum and to the hour. This is the fix for
-       "the screen looks identical at momentum 8 and 88": cold start is dim and
-       nearly grey, deep flow is bright and saturated. Dawn pulls warm, night
-       pulls cool. Written as custom properties so the mood art in moods/*.svg
-       inherits the same treatment through #moodLayer::before. */
+    /* The background answers to the hour, and to whichever mood is unlocked.
+       It deliberately does NOT answer to momentum any more — tying brightness
+       to the score meant a bad fortnight dimmed the app while you were using
+       it. Dawn pulls warm, night pulls cool. Written as custom properties so
+       the mood art in moods/*.svg inherits the same treatment through
+       #moodLayer::before. */
 
     /* Unlockable background moods, in earn order. The plan named Haikei as the
        source; it's an interactive browser generator with no export API, so these
@@ -737,18 +757,23 @@ async function initApp(){
     const moodOf = () => MOOD_BY_KEY.get(S.rewards && S.rewards.mood) || MOOD_BY_KEY.get('default');
 
     let moodApplied = null;
-    function applyMood(m){
+    function applyMood(){
       const mood = moodOf();
-      const key = Math.round(m / 4) + ':' + new Date().getHours() + ':' + mood.key;
+      const key = new Date().getHours() + ':' + mood.key;
       if(key === moodApplied) return;                  // avoid pointless repaints
       moodApplied = key;
-      const p = Math.max(0, Math.min(1, m / 100));
+      /* Brightness no longer answers to momentum. It used to run 0.40→1.40 with
+         the score, so a quiet fortnight left the app visibly dim and greyed —
+         the screen telling you off. Readability is not a reward, so intensity
+         and saturation are now constant and the hour is the only thing that
+         moves the light. The earned cosmetic is the mood art itself (c1/c2/k),
+         which still changes when a mood is unlocked. P0.1. */
       const hr = new Date().getHours();
       const tod = hr < 10 ? 16 : hr < 17 ? 0 : hr < 22 ? -12 : -28;
       const r = document.documentElement.style;
-      r.setProperty('--mood-intensity', (0.40 + p * 1.00).toFixed(2));
-      r.setProperty('--mood-sat',       (0.50 + p * 0.90).toFixed(2));
-      r.setProperty('--mood-hue',       Math.round(tod + (p - 0.5) * 26) + 'deg');
+      r.setProperty('--mood-intensity', '1.10');
+      r.setProperty('--mood-sat',       '1.10');
+      r.setProperty('--mood-hue',       tod + 'deg');
       r.setProperty('--mood-c1',        mood.c1);
       r.setProperty('--mood-c2',        mood.c2);
       r.setProperty('--mood-art-k',     (mood.k || 1).toFixed(2));
@@ -835,10 +860,12 @@ async function initApp(){
     const pad=(n,w)=>String(n).padStart(w,'0');
     const addDaysStr=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);const t=new Date(d.getTime()-d.getTimezoneOffset()*60000);return t.toISOString().slice(0,10);};
 
-    /* ---------- Visa Points (XP) — derived from real record, never stored ---------- */
+    /* ---------- Actions completed (XP) — derived from real record, never stored ----------
+       Renamed from "Visa Points": tying a score label to immigration status
+       mixes gamification into a legal outcome it has no bearing on. P0/§0. */
     const LEVELS=[[0,'Visitor'],[150,'Student'],[400,'Worker'],[800,'Candidate'],[1400,'Nominee'],[2200,'Permanent Resident']];
     function calcXP(s){
-      // FLOWSTATE: additive only. Nothing you do can subtract Visa Points.
+      // FLOWSTATE: additive only. Nothing you do can subtract this.
       let xp=0;
       for(const k in (s.days||{})){
         const d=s.days[k]; if(!d) continue;
@@ -937,7 +964,7 @@ async function initApp(){
 
       const xp=calcXP(s), lv=levelInfo(xp);
       const xpBlock=`<div class="xpWrap">
-        <div class="xpTop"><span>Visa Points · ${xp}</span><span>Lv${lv.idx+1} · ${lv.name}</span></div>
+        <div class="xpTop"><span>Actions completed · ${xp}</span><span>Lv${lv.idx+1} · ${lv.name}</span></div>
         <div class="xpBar"><div class="xpFill" style="width:${Math.round(lv.progress*100)}%"></div></div>
         <div class="xpSub">${lv.next?`${lv.next[0]-xp} pts to ${lv.next[1].toUpperCase()}`:'MAX LEVEL — you made it home'} · gains only: anchor +10 · big +5 · small +2 · PR action +100</div>
       </div>`;
@@ -1438,14 +1465,15 @@ async function initApp(){
       }
       const DOW=['M','','W','','F','',''];
       const xp=calcXP(s), lv=levelInfo(xp);
-      const m=momentumNow(s), fst=flowStateOf(m);
+      const m=momentumNow(s);
       return `
         <div class="card">
           ${secTitle('RECORD','The Record')}
           <div class="tiles">
-            ${statTile(m,'momentum · '+fst[2].toLowerCase(),m>=50?'good':'idle')}
+            ${statTile(actionDays(s)+'/'+ACTION_WINDOW,'action days · last '+ACTION_WINDOW,'idle')}
+            ${statTile(m,'momentum · earned',m>=50?'good':'idle')}
             ${statTile(anchorTotal,'days showed up',anchorTotal>0?'good':'idle')}
-            ${statTile(xp,'visa points',xp>0?'good':'idle')}
+            ${statTile(xp,'actions completed',xp>0?'good':'idle')}
             ${statTile('L'+(lv.idx+1),lv.name,'idle')}
             ${statTile(p7+'%','anchored · last 7 days',p7>=70?'good':'idle')}
             ${statTile(p30+'%','anchored · last 30 days',p30>=70?'good':'idle')}
@@ -1801,7 +1829,7 @@ async function initApp(){
       const bigNow=BIG_KEYS.filter(k=>d[k]===true).length;
       const mNow=momentumNow(s);
 
-      applyMood(mNow);
+      applyMood();
       const tabChanged = tab!==lastTab;
 
       root.innerHTML =
