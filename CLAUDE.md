@@ -3,6 +3,18 @@
 Read this file before changing the application, schedules, Google integrations,
 or GitHub Actions.
 
+## Daily check-ins and rewards research
+
+Read [DAILY-CHECKINS-AND-REWARDS.md](DAILY-CHECKINS-AND-REWARDS.md) for the
+2026-09-05 evidence-backed proposal and source audit. It is a proposal, not an
+implemented feature or authorization to change live Google data. For future
+reward work, use it instead of the unsupported dopamine claims, rest gates,
+random payouts, and punitive day-rejection guidance in historical product plans.
+Preserve the full routine checklist, separate private reflection from task
+completion, and verify the Google Tasks bridge before awarding voice-based credit.
+The Calendar/Tasks publisher is paused; the separate notification workflow still
+contains scheduled triggers. Do not claim all automation is paused.
+
 ## Product intent
 
 FLOWSTATE is Satya's personal dashboard. Google Home with Gemini is the voice
