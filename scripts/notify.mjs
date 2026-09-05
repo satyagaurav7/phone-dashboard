@@ -9,7 +9,7 @@
  * Reads dashboard/satya from Firestore and ../schedule.json for the timetable.
  */
 import { initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { readFileSync } from 'node:fs';
 
@@ -198,13 +198,26 @@ async function main() {
 
   // Pick what's due. Dedupe via notifyLog: both DST crons can land in the same
   // window; the workflow's concurrency group serializes runs, so this is safe.
+  // Discretionary-push preferences, set in the app (brief §4). These gate
+  // FLOWSTATE's own pushes only — Google Tasks alerts, Home routines and
+  // anything medical are separate systems this script cannot and must not
+  // touch. Deadlines still reach him through the brief when it is enabled.
+  const pf = data.prefs || {};
+  const wants = k => pf[k] !== false;              // absent means on
+  const snoozed = pf.snoozeUntil === now.date;
+  if (snoozed) console.log(`Snoozed for ${now.date} — discretionary pushes suppressed.`);
+
   let msg = null, logField = null;
   if (MODE === 'auto') {
-    if (now.hour >= 7 && now.hour <= 9 && data.notifyLog?.brief !== now.date) {
+    if (!snoozed && wants('notifyBrief') && now.hour >= 7 && now.hour <= 9 && data.notifyLog?.brief !== now.date) {
       msg = composeBrief(data, now); logField = 'brief';
     }
-    if (!msg) { const n = composeNudge(data, now); if (n) { msg = n; logField = n.logField; } }
-    if (!msg && now.hour >= 21 && now.hour <= 23 && data.notifyLog?.streak !== now.date) {
+    // notifyNudges defaults OFF: absent is not "on" for this one, because the
+    // tap windows duplicate the Google Tasks routine.
+    if (!msg && !snoozed && pf.notifyNudges === true) {
+      const n = composeNudge(data, now); if (n) { msg = n; logField = n.logField; }
+    }
+    if (!msg && !snoozed && wants('notifyEvening') && now.hour >= 21 && now.hour <= 23 && data.notifyLog?.streak !== now.date) {
       msg = composeStreak(data, now); logField = 'streak';
     }
     if (!msg) { console.log(`auto: nothing due at ${now.hour}:${String(now.minute).padStart(2,'0')} ${TZ} — staying silent.`); return; }
@@ -239,7 +252,10 @@ async function main() {
     }
   });
   if (dead.length) {
-    await ref.update({ fcmTokens: tokens.filter(t => !dead.includes(t)) });
+    // arrayRemove, not a rewritten array. Rewriting from `tokens` — read before
+    // the send — would erase any token registered while this run was in flight,
+    // silently unsubscribing a device that had just been set up.
+    await ref.update({ fcmTokens: FieldValue.arrayRemove(...dead) });
     console.log(`Pruned ${dead.length} dead token(s).`);
   }
 
