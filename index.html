@@ -445,7 +445,7 @@ import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteField
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import {
   getMessaging, getToken, isSupported as messagingSupported
@@ -621,10 +621,58 @@ async function initApp(){
   }
 
   const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify(Dash.state)); } catch(e) {} };
-  const saveCloud = async () => {
-    try { setSyncUI('Saving…'); await setDoc(userDocRef, Dash.state, { merge:false }); setSyncUI('Synced'); }
-    catch(e) { setSyncUI('Saved on this device'); }
+
+  /* ---------- cloud writes (P0.2) ----------
+     This used to be setDoc(ref, Dash.state, {merge:false}) — every tap replaced
+     the entire document from whatever this tab happened to hold in memory. Open
+     the app on the phone and the laptop, tap on each, and the slower save wiped
+     the other's work with no error and no sign anything had gone. Reward grants
+     and check-in records cannot be built on that.
+
+     Now each mutation writes only the field paths it actually touched, so two
+     devices editing different things merge instead of racing. A failed write
+     stays queued and the status line says so rather than claiming "Synced".
+     See CHECKINS-IMPLEMENTATION-PLAN.md P0.2. */
+  const REMOVE = Symbol('remove-field');
+  let pendingPatches = [];
+  let flushing = false;
+
+  const syncLabel = () => {
+    if (pendingPatches.length) setSyncUI(`On this device · ${pendingPatches.length} to sync`);
+    else setSyncUI('Synced');
   };
+
+  const flushCloud = async () => {
+    if (flushing || !pendingPatches.length) return;
+    flushing = true;
+    setSyncUI('Saving…');
+    while (pendingPatches.length) {
+      const patch = pendingPatches[0];
+      const remote = {};
+      for (const k in patch) remote[k] = (patch[k] === REMOVE) ? deleteField() : patch[k];
+      try {
+        await updateDoc(userDocRef, remote);
+      } catch (e) {
+        // First run on a fresh account: there is no document to update yet, so
+        // seed it. Writing the whole state is safe here precisely because
+        // nothing exists to overwrite.
+        if (e && e.code === 'not-found') {
+          try { await setDoc(userDocRef, Dash.state, { merge:true }); }
+          catch (e2) { flushing = false; syncLabel(); return; }
+        } else {
+          // Offline or rejected: keep the queue and stay honest about it. The
+          // next set(), or coming back online, retries from the front.
+          flushing = false; syncLabel(); return;
+        }
+      }
+      pendingPatches.shift();
+    }
+    flushing = false;
+    syncLabel();
+  };
+
+  const queuePatch = (patch) => { pendingPatches.push(patch); flushCloud(); };
+  window.addEventListener('online', flushCloud);
 
   const getPath = (o,p) => String(p).split('.').reduce((a,k)=>a==null?a:a[k], o);
 
@@ -632,27 +680,37 @@ async function initApp(){
     today: T,
     state: S,
     _fn: null,
+    REMOVE,
     set(path, value){
       // FLOWSTATE: no streak mutation, no day-locking, no punishment side
       // effects. Momentum is derived from what was actually logged.
-      const parts = String(path).split('.'); let o = this.state;
-      for (let i=0; i<parts.length-1; i++){ if (o[parts[i]] == null) o[parts[i]] = {}; o = o[parts[i]]; }
-      o[parts[parts.length-1]] = value;
+      const patch = { [path]: value };
+      const parts = String(path).split('.');
       // Rhythm tracking: every day-level stamp records WHEN it happened
       // (days.<date>.log.<key> = "HH:MM"); clearing a stamp clears its time.
       if (parts[0]==='days' && parts.length===3){
-        const day=this.state.days[parts[1]];
-        if (day){
-          day.log = day.log || {};
-          if (value===true) day.log[parts[2]] = new Date().toTimeString().slice(0,5);
-          else if (value===false) delete day.log[parts[2]];
-        }
+        if (value===true) patch[`days.${parts[1]}.log.${parts[2]}`] = new Date().toTimeString().slice(0,5);
+        else if (value===false) patch[`days.${parts[1]}.log.${parts[2]}`] = REMOVE;
+      }
+      this.setMany(patch);
+    },
+    /* Several fields changing together — one queued write, so they can't land
+       half-applied. Values may be Dash.REMOVE to delete a field. */
+    setMany(patch){
+      let lastOn = null;
+      for (const path in patch){
+        const value = patch[path];
+        const parts = String(path).split('.'); let o = this.state;
+        for (let i=0; i<parts.length-1; i++){ if (o[parts[i]] == null) o[parts[i]] = {}; o = o[parts[i]]; }
+        const leaf = parts[parts.length-1];
+        if (value === REMOVE) delete o[leaf]; else o[leaf] = value;
+        if (value === true) lastOn = path;
       }
       // Remember what was just switched ON so the next render can celebrate
       // only that one element (see .justDone). Without this, every re-render
       // replays the completion animation on everything already done at once.
-      this._lastSet = (value === true) ? path : null;
-      saveLocal(); saveCloud();
+      this._lastSet = lastOn;
+      saveLocal(); queuePatch(patch);
       if (this._fn) this._fn(this.state);
     },
     render(fn){ this._fn = fn; fn(this.state); }
@@ -1504,16 +1562,20 @@ async function initApp(){
       const ov=document.createElement('div'); ov.className='overlay'; ov.id='dashModal';
       const hhmm=()=>new Date().toTimeString().slice(0,5);
       const applyHydro=(arr)=>{
-        const d=Object.assign({},Dash.state.days[Dash.today]||{});
-        d.hydro=arr;
+        // Writes only hydro/water/log.water rather than replacing the whole day.
+        // Replacing it meant a sip logged here would wipe a gym tap made on
+        // another device in the same day — the read-modify-write P0.2 exists to
+        // remove.
+        const day=Dash.state.days[Dash.today]||{};
         const goal=(Dash.state.config&&Dash.state.config.waterGoal)||2500;
         const total=arr.reduce((t,x)=>t+(x.ml||0),0);
-        d.log=d.log||{};
-        const was=d.water===true;
-        d.water=total>=goal; // Hydrate win is derived from real ml, never hand-toggled
-        if(d.water&&!was){ d.log.water=hhmm(); flowToast('💧 Goal hit — Hydrate stamped'); }
-        if(!d.water) delete d.log.water;
-        Dash.set(`days.${Dash.today}`,d);
+        const was=day.water===true;
+        const hit=total>=goal; // Hydrate win is derived from real ml, never hand-toggled
+        const base=`days.${Dash.today}`;
+        const patch={ [`${base}.hydro`]:arr, [`${base}.water`]:hit };
+        patch[`${base}.log.water`] = hit ? (was ? (day.log&&day.log.water)||hhmm() : hhmm()) : Dash.REMOVE;
+        if(hit&&!was) flowToast('💧 Goal hit — Hydrate stamped');
+        Dash.setMany(patch);
         render();
       };
       const render=()=>{
