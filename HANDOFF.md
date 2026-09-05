@@ -1,5 +1,7 @@
 # FLOWSTATE handoff — 2026-09-05
 
+> Local Midnight UI candidate: see [MIDNIGHT-UI-HANDOFF.md](MIDNIGHT-UI-HANDOFF.md). It supersedes the presentation described below, but is not pushed or deployed. Existing integration limits still apply.
+
 Status of the dashboard after the P1 hardening pass. Written for the next
 session. Nothing sensitive here: no account addresses, tokens, keys, task
 contents, appointment details or event IDs.

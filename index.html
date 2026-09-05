@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0B0E14">
+<meta name="theme-color" content="#07191C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="FLOWSTATE">
@@ -415,8 +415,10 @@
     *,*::before,*::after{animation:none !important;transition:none !important}
   }
 </style>
+<link rel="stylesheet" href="ui/midnight.css">
 </head>
 <body>
+<a class="skip-navigation" href="#viewContent">Skip to content</a>
   <div id="moodLayer" aria-hidden="true"></div>
 
   <!-- Icon sprite. Hand-authored on a 24×24 grid, ~1.4 KB, no network request,
@@ -447,17 +449,18 @@
   </defs></svg>
 
   <div id="authGate">
-    <div class="lock">🌊</div>
-    <h2>Welcome back, Satya</h2>
-    <p class="sub">Enter your password. Enter the flow.</p>
-    <input type="password" id="authPass" placeholder="Password" autocomplete="current-password">
+    <div class="lock">FLOWSTATE</div>
+    <h2>Make room for<br>what matters.</h2>
+    <p class="sub">Your space to plan, reflect, and begin again.</p>
+    <input type="password" id="authPass" aria-label="Password" placeholder="Password" autocomplete="current-password">
     <button id="authSubmit">Unlock</button>
     <div class="err" id="authErr"></div>
   </div>
 
-  <div id="appRoot" aria-live="polite"></div>
+  <div id="appRoot"></div>
 
 <script type="module">
+import * as midnight from "./ui/midnight.mjs";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
@@ -597,7 +600,7 @@ async function initApp(){
     /* Check-ins (P1) live outside S.days on purpose: they are private
        reflection, not a record of what was done, and A21 requires deleting all
        of them without touching a single logged action. Shape per date:
-       { capacity, feeling, focus[], firstStep, cue, obstacle, win, tomorrow,
+       { capacity, feeling, focus, firstStep, cue, obstacle, win, tomorrow,
          closed, created } — every field optional, absence means "skipped". */
     S.checkIns = S.checkIns || {};
     /* Reminder controls (brief §4). notifyNudges defaults OFF: the tap-window
@@ -797,7 +800,7 @@ async function initApp(){
     state: S,
     _fn: null,
     REMOVE,
-    set(path, value){
+    set(path, value, options){
       // FLOWSTATE: no streak mutation, no day-locking, no punishment side
       // effects. Momentum is derived from what was actually logged.
       const patch = { [path]: value };
@@ -808,11 +811,11 @@ async function initApp(){
         if (value===true) patch[`days.${parts[1]}.log.${parts[2]}`] = new Date().toTimeString().slice(0,5);
         else if (value===false) patch[`days.${parts[1]}.log.${parts[2]}`] = REMOVE;
       }
-      this.setMany(patch);
+      this.setMany(patch, options);
     },
     /* Several fields changing together — one queued write, so they can't land
        half-applied. Values may be Dash.REMOVE to delete a field. */
-    setMany(patch){
+    setMany(patch, {render=true}={}){
       let lastOn = null;
       for (const path in patch) if (patch[path] === true) lastOn = path;
       // One implementation, shared with the reload replay, so a local write and
@@ -823,7 +826,7 @@ async function initApp(){
       // replays the completion animation on everything already done at once.
       this._lastSet = lastOn;
       saveLocal(); queuePatch(patch);
-      if (this._fn) this._fn(this.state);
+      if (render && this._fn) this._fn(this.state);
     },
     render(fn){ this._fn = fn; fn(this.state); }
   };
@@ -1016,6 +1019,8 @@ async function initApp(){
       ['permitdoc','Work permit copy — add to PR folder'],
     ];
 
+    let ciPhase=null;
+    const openDisclosures = new Map();
     let tab='today', prevAnchor=null, prevBig=null, modalSpec=null, planDay=null;
 
     const daysUntil = s => { if(!s) return null;
@@ -1143,82 +1148,9 @@ async function initApp(){
       `<button class="chip${on?' on':''}" data-ci="${field}:${val}" aria-pressed="${on?'true':'false'}">${label}</button>`;
 
     function checkInCard(s,d){
-      // Off is a preference, not a punishment: one tap back on, always visible.
-      if(s.prefs&&s.prefs.checkIns===false) return `<div class="card card--quiet">
-        <div class="ciDone">Check-ins are off. <button class="ciLink" data-ci-act="on">Turn them back on</button></div></div>`;
-      const c=(s.checkIns&&s.checkIns[Dash.today])||{};
-      const hr=new Date().getHours();
-      const evening=hr>=17;
-      const off=`<div class="ciFoot"><button class="ciLink" data-ci-act="off">Turn check-ins off</button>${
-        (s.checkIns&&Object.keys(s.checkIns).length)?` · <button class="ciLink" data-ci-act="delete">Delete check-in data</button>`:''}</div>`;
-
-      // Closed for the day: a quiet summary, still editable. Closing stops the
-      // discretionary prompt; it does not lock the record (A16).
-      if(c.closed){
-        const bits=[];
-        if(c.capacity) bits.push(`Capacity ${escHtml(c.capacity)}`);
-        if(c.focus){
-          const hit=[...SMALL_WINS,...BIG_WINS].find(x=>x[0]===c.focus);
-          bits.push(`Focus: ${escHtml(c.focus==='rest'?'Rest':(hit?hit[2]:c.focus))}`);
-        }
-        if(c.obstacle) bits.push(`In the way: ${escHtml((OBSTACLES.find(o=>o[0]===c.obstacle)||[,c.obstacle])[1])}`);
-        if(c.tomorrow) bits.push(`Tomorrow: ${escHtml(c.tomorrow)}`);
-        return `<div class="card card--quiet">
-          ${secTitle('CHECK','Today is closed','','var(--text-2)')}
-          <div class="ciDone">${bits.length?bits.join(' · '):'Closed without notes. That is a complete answer.'}</div>
-          <div style="margin-top:10px"><button class="chip" data-ci-act="reopen">Reopen</button></div>
-          ${off}</div>`;
-      }
-
-      if(!evening){
-        const low=c.capacity==='low';
-        // Low capacity narrows the menu to two-minute moves, and rest is a real
-        // option rather than a consolation prize.
-        const menu=low?SMALL_WINS.map(x=>[x[0],x[2]]):BIG_WINS.map(x=>[x[0],x[2]]);
-        return `<div class="card">
-          ${secTitle('CHECK','Morning check','~45 seconds · all optional','var(--sub)')}
-          <div class="ciQ">How much capacity do you have today?</div>
-          <div class="ciRow">${CAPACITY.map(([v,l])=>ciChip('capacity',v,l,c.capacity===v)).join('')}</div>
-          ${c.capacity?`
-            <div class="ciQ">Anything you want to note? Optional.</div>
-            <div class="ciRow">${FEELINGS.map(([v,l])=>ciChip('feeling',v,l,c.feeling===v)).join('')}
-              <button class="chip" data-ci-act="skipfeeling">Skip</button></div>
-            <div class="ciQ">${low?'One small thing that would still count today.':'What would make today feel worthwhile?'}</div>
-            <div class="ciRow">${menu.map(([k,l])=>ciChip('focus',k,l,c.focus===k)).join('')}
-              ${low?ciChip('focus','rest','Rest today',c.focus==='rest'):''}</div>
-            <div class="ciQ">First small step, and what will cue it?</div>
-            <input class="ciText" data-ci-text="firstStep" value="${escAttr(c.firstStep)}"
-              placeholder="After I put the kettle on, I will open the book" aria-label="First small step and its cue">
-          `:`<div class="ciHint">Answer one thing or none. Skipping costs nothing.</div>`}
-          ${off}</div>`;
-      }
-
-      // Evening. "What moved forward" is stated from what was actually logged
-      // here — never as a claim about the whole day, because actions taken by
-      // voice or in Google Tasks are invisible to this app.
-      const logged=dayGains(d)>0?[SMALL_KEYS,BIG_KEYS].flat().filter(k=>d[k]===true).length+(d.anchor===true?1:0):0;
-      return `<div class="card">
-        ${secTitle('CHECK','Evening review','~60 seconds · all optional','var(--sub)')}
-        <div class="ciQ">What moved forward today?</div>
-        <div class="ciDone">${logged?`${logged} thing${logged===1?'':'s'} recorded in the app today.`
-          :'Nothing recorded in the app today. Anything done by voice or elsewhere would not show here.'}</div>
-        <input class="ciText" data-ci-text="win" value="${escAttr(c.win)}"
-          placeholder="Something real that never got tapped (optional)" aria-label="An unlogged win">
-        <div class="ciQ">What got in the way, if anything?</div>
-        <div class="ciRow">${OBSTACLES.map(([v,l])=>ciChip('obstacle',v,l,c.obstacle===v)).join('')}</div>
-        <div class="ciQ">Tomorrow's first small step?</div>
-        <input class="ciText" data-ci-text="tomorrow" value="${escAttr(c.tomorrow)}"
-          placeholder="One small thing (optional)" aria-label="Tomorrow's first small step">
-        <div class="ciRow" style="margin-top:12px">
-          <button class="chip ciClose" data-ci-act="close">Close the day</button>
-          <button class="chip" data-ci-act="skip">Skip tonight</button>
-        </div>
-        <div class="ciHint">${c.capacity==='low'||c.feeling==='flat'||c.feeling==='tense'
-          ? 'Today was difficult. You don’t need to make it look better in the log — leave one manageable step, or skip the review.'
-          : 'You can stop here. Nothing is owed.'}</div>
-        ${off}</div>`;
+      return midnight.checkIn({state:s,date:Dash.today,day:d,
+        phase:ciPhase||(new Date().getHours()>=17?'evening':'morning'),small:SMALL_WINS,big:BIG_WINS});
     }
-
 
     /* Reminder controls. Deliberately shows what each switch does NOT cover —
        turning an app push off must never read as turning off a medication
@@ -1268,43 +1200,22 @@ async function initApp(){
       </div>`;
     }
 
-    function todayHTML(s,d){
-      const hr=new Date().getHours();
-      const greet=hr<5?'Late night':hr<12?'Good morning':hr<17?'Good afternoon':hr<22?'Good evening':'Late night';
-      const dateStr=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-      const gToday=dayGains(d);
-      const m=momentumNow(s);
-      const st=flowStateOf(m);
+    function activityHTML(s,d){
       const anchored=d.anchor===true;
       const bigDone=BIG_KEYS.filter(k=>d[k]===true).length;
       const waterMl=hydroTotal(d);
       const waterGoal=(s.config&&s.config.waterGoal)||2500;
       const litre=v=>(v/1000).toFixed(1).replace(/\.0$/,'')+'L';
-      // Suggested tap times for today's day kind (schedule.json tapPlan) —
-      // the nudge notifications fire around these same times.
-      const IT=(SCHED_DATA&&SCHED_DATA.tapPlan&&SCHED_DATA.tapPlan.itemTimes&&SCHED_DATA.tapPlan.itemTimes[kindOf(todow(Dash.today))])||{};
-      const status = !anchored
-        ? (gToday>0 ? `+${gToday} momentum already banked — drop the anchor and the day counts.`
-                    : 'The anchor takes 2 minutes. Everything after it is bonus.')
-        : gToday>=26 ? `Deep work day — +${gToday} momentum and glowing.`
-        : `Day counted ⚓ +${gToday} momentum${bigDone?` · ${bigDone} big win${bigDone>1?'s':''}`:''}. Every extra tap is pure gain.`;
-
-      const xp=calcXP(s), lv=levelInfo(xp);
-      const xpBlock=`<div class="xpWrap">
-        <div class="xpTop"><span>Actions completed · ${xp}</span><span>Lv${lv.idx+1} · ${lv.name}</span></div>
-        <div class="xpBar"><div class="xpFill" style="width:${Math.round(lv.progress*100)}%"></div></div>
-        <div class="xpSub">${lv.next?`${lv.next[0]-xp} pts to ${lv.next[1].toUpperCase()}`:'MAX LEVEL — you made it home'} · gains only: anchor +10 · big +5 · small +2 · PR action +100</div>
-      </div>`;
-
+      const IT={}; // Flexible local records do not acquire timetable deadlines.
       const anchorCard=`<div class="card card--hero">
-        ${secTitle('⚓','The Anchor', anchored?'DAY COUNTED':(IT.anchor?'~'+IT.anchor+' · 2 minutes':'2 minutes'), anchored?'var(--accent-flow)':'var(--text-3)')}
-        <div class="anchorBtn${anchored?' done':''}" role="button" tabindex="0" aria-pressed="${anchored}" data-toggle="days.${Dash.today}.anchor" aria-label="Anchor: ${anchored?'done — day counted':'not yet'}">
+        ${secTitle('⚓','The Anchor', anchored?'LOGGED':(IT.anchor?'~'+IT.anchor+' · 2 minutes':'2 minutes'), anchored?'var(--accent-flow)':'var(--text-3)')}
+        <div class="anchorBtn${anchored?' done':''}" role="button" tabindex="0" aria-pressed="${anchored}" data-toggle="days.${Dash.today}.anchor" aria-label="Anchor: ${anchored?'logged':'not yet'}">
           <span class="aEmo" aria-hidden="true">⚓</span>
           <span><span class="aLbl">${anchored?'Anchored':'Drop the anchor'}</span>
           <div class="aSub">Bed made · blanket folded · day started right${anchored||!IT.anchor?'':' · do it right after waking'}</div></span>
           <span class="stamp">${anchored?('✓ '+((d.log&&d.log.anchor)||'+10')):'TAP'}</span>
         </div>
-        ${anchored?'':'<div style="font-size:12px;color:var(--sub);margin-top:8px">This is the only thing the day asks of you. Do it and the day counts — no matter what else happens.</div>'}
+        ${anchored?'':'<div style="font-size:12px;color:var(--sub);margin-top:8px">A small start, if it helps. This is a local activity record.</div>'}
       </div>`;
 
       const smallRows=`<div class="smallGrid">${SMALL_WINS.map(([k,e,l])=>{
@@ -1332,72 +1243,6 @@ async function initApp(){
         ? `<div style="font-size:12.5px;color:var(--sub);margin-top:6px;font-family:var(--mono)">Logged today: ${fines.map(k=>{const f=FINES.find(x=>x[0]===k);return f?f[1]:k;}).join(' ')} · $${fineTotal} <button data-fineundo style="color:var(--sub);text-decoration:underline;font-family:var(--mono);font-size:12px">undo last</button></div>`
         : `<div style="font-size:12.5px;color:var(--sub);margin-top:6px;font-family:var(--mono)">Nothing leaked today.</div>`;
 
-      /* ---------- Right Now: current/next timetable block + today's deadlines ---------- */
-      const rightNow=(()=>{
-        if(!SCHEDS) return '';
-        const blocks=SCHEDS[kindOf(todow(Dash.today))]||[];
-        const nowM=new Date().getHours()*60+new Date().getMinutes();
-        const sched=d.sched||{};
-        let cur=null,nxt=null;
-        for(let i=0;i<blocks.length;i++){
-          const st=toM(blocks[i][1]);
-          const en=blocks[i][2]?toM(blocks[i][2]):(blocks[i+1]?toM(blocks[i+1][1]):24*60);
-          if(nowM>=st&&nowM<en){cur=blocks[i];break;}
-          if(nowM<st){nxt=blocks[i];break;}
-        }
-        const b=cur||nxt;
-        const c=s.config||{};
-        const dueBits=[];
-        if(daysToDay(c.rentDay)===0)dueBits.push('🏠 RENT DUE TODAY');
-        if(daysToDay(c.ccDay)===0)dueBits.push('💳 CARD PAYMENT DUE TODAY');
-        [['permit','🍁 Work permit expires'],['celpipExam','📚 CELPIP retest'],['cecDate','🍁 CEC eligibility']].forEach(([k,l])=>{
-          if(daysUntil(c[k])===0)dueBits.push(`${l} TODAY`);
-        });
-        const flowLine = anchored
-          ? `${st[1]} Momentum ${m} — ${st[2]}. Day counted.`
-          : hr>=18 ? `⚓ Anchor still open — 2 minutes and today counts.`
-          : `🌊 Momentum ${m} — anchor open, day ahead.`;
-        let blockRow;
-        if(b){
-          const [k,bst,en,e,l]=b;
-          const v=sched[k];
-          const cls=v===true?'done':v==='fail'?'fail':'';
-          const stTxt=v===true?'DONE ✓':v==='fail'?'SKIP':cur?'NOW':'···';
-          blockRow=`<div class="tl ${cls}${cur&&!v?' now':''}" role="button" tabindex="0" data-toggle="days.${Dash.today}.sched.${k}" aria-label="${l}: ${v===true?'done':v==='fail'?'skipped':'pending'}">
-            <span class="tlt">${bst}${en?'–'+en:''}</span><span class="emo" aria-hidden="true">${e}</span><span class="lbl">${cur?'':'Next · '}${l}</span><span class="st">${stTxt}</span></div>`;
-        } else {
-          blockRow=`<div style="font-size:13.5px;color:var(--sub)">No more blocks today. ${anchored?'Rest is earned.':'The anchor below still counts the day.'}</div>`;
-        }
-        /* rhythm: hydration pace + what's overdue + what's next, from tapPlan times */
-        const hyd=d.hydro||[];
-        const lastSip=hyd.length?hyd[hyd.length-1].t:null;
-        const sipGap=lastSip?nowM-toM(lastSip):null;
-        const hydLine=`${icon('drop')} ${litre(waterMl)} / ${litre(waterGoal)}${lastSip?` · last sip ${lastSip}${sipGap>90?' — sip now':''}`:(waterMl===0?' · start sipping':'')}`;
-        const pendingT=Object.entries(IT).filter(([k])=>k!=='anchor'&&d[k]!==true).map(([k,t])=>({k,mm:toM(t),t})).sort((a,b)=>a.mm-b.mm);
-        const over=pendingT.filter(x=>x.mm<nowM-10);
-        const nextTap=pendingT.find(x=>x.mm>=nowM-10);
-        const rhythmBits=[];
-        if(over.length)rhythmBits.push(`${icon('clock')} Catch up: ${over.slice(-2).map(x=>`${KEY_LABELS[x.k]||x.k} (${x.t})`).join(' · ')}${over.length>2?` +${over.length-2} more`:''}`);
-        if(nextTap)rhythmBits.push(`Next: ${KEY_LABELS[nextTap.k]||nextTap.k} · ${nextTap.t}`);
-        return `<div class="card" style="border-left:3px solid var(--customs)">
-          ${secTitle('NOW','Right Now')}
-          ${blockRow}
-          <div style="font-size:13.5px;margin-top:8px;color:${anchored?'var(--customs)':'var(--ink)'}">${flowLine}</div>
-          <div style="font-size:13px;margin-top:6px;color:${waterMl>=waterGoal?'var(--customs)':'var(--sub)'};font-family:var(--mono)">${hydLine}</div>
-          ${rhythmBits.map(b=>`<div style="font-size:13px;margin-top:5px;color:var(--sub)">${b}</div>`).join('')}
-          ${dueBits.length?`<div style="font-size:13px;margin-top:6px;color:var(--maple);font-weight:700;font-family:var(--mono)">${dueBits.join(' · ')}</div>`:''}
-        </div>`;
-      })();
-
-      const pushCard=(VAPID_KEY && 'Notification' in window && Notification.permission!=='granted')
-        ? `<div class="card" style="border-left:4px solid var(--maple)">
-            ${secTitle('ALERT','Notifications')}
-            <div style="font-size:13.5px;color:var(--ink);margin-bottom:10px">The <b>7 AM flow brief</b>, <b>tap-window nudges</b> only while items sit open, and a <b>9 PM anchor reminder</b> if the day isn't counted. Do the things and the phone stays silent.</div>
-            <button id="pushEnable" class="row" style="margin-bottom:0">${icon('bell','emo')}<span class="lbl">Enable notifications</span><span class="spacer"></span><span class="stamp">TAP</span></button>
-            <div id="pushMsg" style="font-size:12.5px;color:var(--sub);margin-top:6px;min-height:16px"></div>
-          </div>`
-        : '';
-
       const fuelRows = FUEL.map(([k,e,l,sub])=>{
         const base=sub==='core'?'':sub;
         const t=IT[k]?(base?base+' · ~'+IT[k]:'~'+IT[k]):base;
@@ -1407,29 +1252,7 @@ async function initApp(){
       const suppRows = SUPPS.map(([k,l,sub])=>rowHTML(`days.${Dash.today}.${k}`,'💊',l,sub+(IT[k]?' · ~'+IT[k]:''),d[k],'navyInk',null,d.log&&d.log[k])).join('');
       const chips = GUARDRAILS.map(([b,rest])=>`<span class="chip"><b>${b}</b> ${rest}</span>`).join('');
 
-      return `
-        <div class="cover">
-          <div class="kicker">Flowstate</div>
-          <h1>${greet}, Satya</h1>
-          <div class="date">${dateStr}</div>
-          <div id="syncStatus"></div>
-          <div class="heroRow">
-            ${momentumRing(m,gToday)}
-            <div>
-              <div class="streakBig">+${gToday}</div>
-              <div class="streakLbl">Today's Flow</div>
-              <div class="bestLbl">${anchored?'⚓ ANCHORED':'⚓ OPEN'} · BEST ${s.best}</div>
-            </div>
-          </div>
-          <div class="statusLine">${status}</div>
-          ${xpBlock}
-        </div>
-        ${rightNow}
-        ${anchorCard}
-        ${checkInCard(s,d)}
-        ${reminderCard(s)}
-        ${whereCard()}
-        ${pushCard}
+      return `${anchorCard}
         <div class="card">
           ${secTitle('SMALL','Small Wins',`${smallDone}/${SMALL_WINS.length} · +3 each`, smallDone?'var(--customs)':'var(--sub)')}
           ${smallRows}
@@ -1451,19 +1274,16 @@ async function initApp(){
           </div>
         </div>
         <div class="card">
-          ${secTitle('LEAKS','Leak Log', fines.length?`$${fineTotal} today`:'$0 today', 'var(--text-2)')}
+          ${secTitle('LEAKS','Legacy spending log', fines.length?`$${fineTotal} today`:'$0 today', 'var(--text-2)')}
           ${fineRows}
           ${fineLog}
-          <div style="font-size:12px;color:var(--text-2);margin-top:6px">Just data, not judgment — tap when money leaks so the Money tab stays honest. Monthly total lives there.</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:6px">Legacy estimates only; these fixed amounts are not bank transactions. Your existing records remain available in Money.</div>
         </div>
         <div class="card card--quiet">
           ${secTitle('KEEL','Guardrails')}
           <div class="chips">${chips}</div>
         </div>
-        <div class="card card--quiet">
-          ${secTitle('PLAN','Timetable')}
-          <div style="font-size:14px;color:var(--text-1)">Your full minute-by-minute day — travel, meals, gym, everything — lives on the <b>Plan</b> tab. Blocks are tappable; skipping one is allowed.</div>
-        </div>`;
+`;
     }
 
     function prHTML(s){
@@ -2008,7 +1828,7 @@ async function initApp(){
     const kindOf=dw=>DAY_KINDS[dw]||'sun';
     const toM=t=>{const p=t.split(':');return (+p[0])*60+(+p[1]);};
 
-    function schedHTML(s){
+    function legacyScheduleHTML(s){
       if(!SCHEDS) return `<div class="card">${secTitle('WEEK','Next 7 Days')}<p style="color:var(--sub);font-size:14px;margin:0">Couldn't load schedule.json — check your connection and reload.</p></div>`;
       const days=s.days||{};
       const DNAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -2091,11 +1911,14 @@ async function initApp(){
         </div>`;
     }
 
-    const TABS=[['today','check','Today'],['plan','clock','Plan'],['pr','leaf','PR'],['money','cash','Money'],['health','pulse','Health'],['history','calendar','History']];
-    function navHTML(){
-      return `<nav aria-label="Sections"><div class="navIn">${TABS.map(([k,ic,l])=>
-        `<button class="navBtn ${tab===k?'on':''}" data-tab="${k}" aria-current="${tab===k}">${icon(ic)}<span class="nLbl">${l}</span></button>`).join('')}</div></nav>`;
+    function navHTML(){ return midnight.nav(tab,icon); }
+    function pushSetupHTML(){
+      return VAPID_KEY && 'Notification' in window && Notification.permission!=='granted'
+        ? `<section class="connections"><h2>Device notifications</h2><p>Register this device for your selected app reminders. Delivery still needs a real test.</p><button id="pushEnable" class="outline-button">Enable notifications</button><p id="pushMsg" role="status"></p></section>` : '';
     }
+    function todayHTML(s,d){ return midnight.today({state:s,date:Dash.today,checkIn:checkInCard(s,d),activity:activityHTML(s,d)}); }
+    function schedHTML(){ return midnight.plan(); }
+    function moreHTML(s){ return midnight.more({reminders:reminderCard(s),push:pushSetupHTML()}); }
 
     const EDITS={
       permit:{title:'Work Permit Expiry',fields:[{path:'config.permit',label:'Expiry date',type:'date'}]},
@@ -2160,6 +1983,9 @@ async function initApp(){
 
     function draw(s){
       const root=document.getElementById('appRoot');
+      const focused=document.activeElement;
+      const focusAttr=root.contains(focused) ? Array.from(focused.attributes||[]).find(a=>['data-ci','data-ci-act','data-ci-phase','data-pref','data-pref-snooze','data-toggle'].includes(a.name)) : null;
+      const focusToken=focusAttr ? {name:focusAttr.name,value:focusAttr.value} : null;
       const d=(s.days&&s.days[Dash.today])||{};
       const anchoredNow=d.anchor===true;
       const bigNow=BIG_KEYS.filter(k=>d[k]===true).length;
@@ -2171,13 +1997,23 @@ async function initApp(){
       // to be repainted onto it or it reverts to whatever the template said.
       queueMicrotask(paintSync);
 
-      root.innerHTML =
-        (tab==='today'?todayHTML(s,d)
+      root.querySelectorAll('details[data-disclosure]').forEach(el=>openDisclosures.set(el.dataset.disclosure,el.open));
+      const content = tab==='today'?todayHTML(s,d)
         :tab==='plan'?schedHTML(s)
         :tab==='pr'?prHTML(s)
         :tab==='money'?moneyHTML(s)
-        :tab==='history'?historyHTML(s)
-        :healthHTML()) + navHTML();
+        :tab==='health'?healthHTML()
+        :tab==='schedule'?legacyScheduleHTML(s)
+        :tab==='history'?midnight.record({state:s,history:historyHTML(s)})
+        :moreHTML(s);
+      const reference=['pr','money','health','schedule'].includes(tab)
+        ? '<p class="reference-note">Saved reference material. Verify dates, figures, and guidance before relying on them. This is not live Google data.</p>' : '';
+      root.innerHTML = midnight.header(Dash.today,tab)+`<main id="viewContent" tabindex="-1" class="${tab==='more'?'more-view':''}">${reference}${content}</main>`+navHTML();
+      root.querySelectorAll('details[data-disclosure]').forEach(el=>{
+        if(openDisclosures.has(el.dataset.disclosure)) el.open=openDisclosures.get(el.dataset.disclosure);
+        el.addEventListener('toggle',()=>openDisclosures.set(el.dataset.disclosure,el.open));
+      });
+      root.querySelectorAll('[data-ci-phase]').forEach(el=>el.addEventListener('click',()=>{ciPhase=el.dataset.ciPhase;draw(Dash.state);}));
 
       /* The ring fill — the most satisfying moment in the app, and until now it
          didn't move: the SVG was simply re-rendered at the new dash offset.
@@ -2247,7 +2083,16 @@ async function initApp(){
       root.querySelectorAll('[data-ci-text]').forEach(inp=>{
         const save=()=>{
           const v=inp.value.trim();
-          Dash.set(`checkIns.${Dash.today}.${inp.dataset.ciText}`, v || Dash.REMOVE);
+          if((getPath(Dash.state,`checkIns.${Dash.today}.${inp.dataset.ciText}`)||'')!==v) {
+            Dash.set(`checkIns.${Dash.today}.${inp.dataset.ciText}`, v || Dash.REMOVE, {render:false});
+            const step=root.querySelector('.step-title');
+            if(step && inp.dataset.ciText==='firstStep') {
+              const focus=v || (Dash.state.checkIns?.[Dash.today]?.focus==='rest'?'Make room for rest.':'');
+              step.textContent=focus || 'What matters to you today?';
+              step.previousElementSibling.textContent=focus?'YOUR CHOSEN STEP':'A LITTLE DIRECTION';
+              step.nextElementSibling.textContent=focus?'An intention you chose. Go at your own pace.':'Find your next action in your full checklist.';
+            }
+          }
         };
         // Blur, not input: re-rendering on every keystroke would steal the caret.
         inp.addEventListener('change',save);
@@ -2259,6 +2104,9 @@ async function initApp(){
           if(act==='close')       Dash.set(`${base}.closed`, true);
           else if(act==='reopen') Dash.set(`${base}.closed`, Dash.REMOVE);
           else if(act==='skip')   Dash.set(`${base}.closed`, true);   // skipping IS closing; nothing is owed
+          else if(act==='skipmorning') Dash.set(`${base}.morningSkipped`,true);
+          else if(act==='reopenmorning') Dash.set(`${base}.morningSkipped`,Dash.REMOVE);
+          else if(act==='clearobstacle') Dash.set(`${base}.obstacle`,Dash.REMOVE);
           else if(act==='skipfeeling') Dash.set(`${base}.feeling`, Dash.REMOVE);
           else if(act==='off')    Dash.set('prefs.checkIns', false);
           else if(act==='on')     Dash.set('prefs.checkIns', true);
@@ -2330,7 +2178,7 @@ async function initApp(){
         el.addEventListener('click',()=>openDayModal(el.dataset.hday));
       });
       root.querySelectorAll('[data-tab]').forEach(el=>{
-        el.addEventListener('click',()=>{ tab=el.dataset.tab; draw(Dash.state); window.scrollTo({top:0}); });
+        el.addEventListener('click',e=>{ e.preventDefault(); tab=el.dataset.tab; draw(Dash.state); window.scrollTo({top:0}); document.getElementById('viewContent')?.focus({preventScroll:true}); });
       });
       const pushBtn=root.querySelector('#pushEnable');
       if(pushBtn) pushBtn.addEventListener('click', async ()=>{
@@ -2339,7 +2187,7 @@ async function initApp(){
         if(r.ok){
           // Success re-renders (token saved via Dash.set) and hides the card — confirm with a toast.
           const t=document.createElement('div'); t.className='toast'; t.setAttribute('role','status');
-          t.textContent='🔔 Notifications on — brief lands at 7 AM.';
+          t.textContent='🔔 Device registered — delivery still needs testing.';
           document.body.appendChild(t); setTimeout(()=>t.remove(),3200);
         } else if(msg){
           msg.textContent = r.reason==='denied' ? 'Blocked — allow notifications for this site in Chrome settings, then retry.'
@@ -2349,8 +2197,16 @@ async function initApp(){
         }
       });
 
-      if(prevAnchor===false && anchoredNow) flowToast(`⚓ Day counted — momentum ${momentumNow(s)}`);
+      if(prevAnchor===false && anchoredNow) flowToast(`⚓ Anchor logged — momentum ${momentumNow(s)}`);
       if(prevBig!==null && bigNow>prevBig) flowToast(`⚡ Big win — momentum ${momentumNow(s)}`);
+      if(focusToken){
+        let next=Array.from(root.querySelectorAll('['+focusToken.name+']')).find(el=>el.getAttribute(focusToken.name)===focusToken.value);
+        if(!next && focusToken.name==='data-ci-act'){
+          const alternate={close:'reopen',skip:'reopen',reopen:'close',off:'on',skipmorning:'reopenmorning'}[focusToken.value];
+          if(alternate) next=root.querySelector('[data-ci-act="'+alternate+'"]');
+        }
+        (next || root.querySelector('[data-ci-phase]') || root.querySelector('main'))?.focus({preventScroll:true});
+      }
       prevAnchor=anchoredNow;
       prevBig=bigNow;
     }
