@@ -14,7 +14,7 @@ Local, remote and deployed are three different things. As of writing:
 
 | | Value |
 | --- | --- |
-| Local `main` | `83262f7` |
+| Local `main` | `9a1da67` |
 | Pushed to `origin/main` | see §"Push and deploy" below |
 | Deployed to Pages | **not confirmed by this session** |
 
@@ -41,6 +41,9 @@ These are committed and behave as described in automated tests.
 | Service worker | Prefix-scoped cache deletion, scope-limited fetch, no error caching, messaging isolated |
 | Token pruning | `arrayRemove`, no longer erases a concurrent registration |
 | Calendar/Tasks publisher | Manual, `--dry-run` only, no Google credentials |
+| Status levels | Neutral (Starting…Sustained). Immigration-status ladder removed |
+| Commute | Neutral travel blocks. Bus route, fare maths and cab "fine" removed |
+| Google entry points | Links to Tasks and Calendar, with the local-log limitation stated |
 
 ## Local-only / not in this repository
 
@@ -85,6 +88,10 @@ Classification per the brief. **Inspection alone is not an end-to-end pass.**
 | Momentum: 10 quiet days no longer decays | passed automatically |
 | `actionDays` window arithmetic | passed automatically |
 | Publisher has no schedule, no secrets, both dry-run | passed automatically |
+| Reminder + "where things live" cards render | passed automatically |
+| No immigration-status labels remain in code | passed automatically |
+| `schedule.json` still parses; keys and calendarId intact | passed automatically |
+| Sync line reads "Synced to cloud" after refresh | **passed on the signed-in app** (read path only) |
 | Signed-in save round-trip | **not tested** — blocked |
 | Real phone layout | **not tested** — blocked |
 | Midnight rollover on device | **not tested** — logic only |
@@ -114,8 +121,9 @@ Classification per the brief. **Inspection alone is not an end-to-end pass.**
 Only where a person is genuinely required.
 
 1. **Hard-refresh or force-close the app** so the new service worker activates.
-2. **Confirm the sync line** reads "Synced to cloud" after one tap. If it sticks
-   on "to sync", the writer needs looking at.
+2. **Tap one thing and re-check the sync line.** Load already reads "Synced to
+   cloud", which confirms the read path — a write round-trip still needs a tap.
+   If it sticks on "to sync", the writer needs looking at.
 3. **Count one full day of notifications** across all sources — app push, Google
    Tasks, speaker. Establishes whether Tasks fires once at 09:00 or once per
    task.
