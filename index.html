@@ -220,6 +220,19 @@
   /* chips */
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .chip{font-size:13px;border:1.5px solid var(--line);background:var(--well);border-radius:4px;padding:8px 12px;color:var(--ink)}
+  /* ---- daily check-in (P1) ---- */
+  .chip.on{border-color:var(--customs);color:var(--customs);background:linear-gradient(160deg,rgba(79,216,235,.16),rgba(79,216,235,.04))}
+  .ciQ{font-size:13px;font-weight:600;color:var(--ink);margin:14px 0 8px}
+  .ciQ:first-of-type{margin-top:4px}
+  .ciRow{display:flex;flex-wrap:wrap;gap:7px}
+  .ciText{width:100%;box-sizing:border-box;margin-top:8px;font:inherit;font-size:13px;color:var(--ink);
+    background:var(--well);border:1.5px solid var(--line);border-radius:6px;padding:10px 11px}
+  .ciText:focus{outline:none;border-color:var(--customs)}
+  .ciDone{font-size:13px;color:var(--sub);line-height:1.45}
+  .ciHint{font-size:12px;color:var(--text-2);margin-top:10px;line-height:1.45}
+  .ciClose{border-color:rgba(79,216,235,.6);color:var(--customs);font-weight:700}
+  .ciFoot{margin-top:12px;font-size:11px;color:var(--text-2)}
+  .ciLink{background:none;border:0;padding:0;font:inherit;font-size:11px;color:var(--text-2);text-decoration:underline;cursor:pointer}
   .chip b{color:var(--customs)}
 
   /* tiles */
@@ -576,6 +589,13 @@ async function initApp(){
     S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0,treatsClaimed:0,waterGoal:2500,gasBudget:250}, S.config||{});
     S.actions = Object.assign({oinp:false,wfg:false,carfax:false,pcc:false,celpip:false,innobox:false,resume:false,permitdoc:false}, S.actions||{});
     S.days = S.days || {};
+    /* Check-ins (P1) live outside S.days on purpose: they are private
+       reflection, not a record of what was done, and A21 requires deleting all
+       of them without touching a single logged action. Shape per date:
+       { capacity, feeling, focus[], firstStep, cue, obstacle, win, tomorrow,
+         closed, created } — every field optional, absence means "skipped". */
+    S.checkIns = S.checkIns || {};
+    S.prefs = Object.assign({ checkIns:true }, S.prefs||{});
     S.fcmTokens = Array.isArray(S.fcmTokens) ? S.fcmTokens : [];
     S.gasLog = Array.isArray(S.gasLog) ? S.gasLog : [];
     // Declared in the planned shape so Phase 4 (Cash-Out) fills these in rather
@@ -999,6 +1019,101 @@ async function initApp(){
       </button>`;
     }
 
+    /* ---------- daily check-in (P1) ----------
+       Two short cards: capacity + first step in the morning, evidence +
+       obstacle in the evening. Every field is optional and skipping is free —
+       there is no score attached, no streak to protect, and no follow-up
+       interrogation (A12). A low-capacity answer offers a SMALLER discretionary
+       action; it never touches an appointment, a due date, or anything medical
+       (A13). Mood is recorded only because it changes what gets suggested, and
+       it never changes what an action is worth (A14).
+
+       Storage is S.checkIns[date]; nothing here writes to S.days, so deleting
+       every check-in leaves the record of what was actually done intact (A21). */
+    const CAPACITY=[['low','Low'],['usual','Usual'],['plenty','Plenty']];
+    const FEELINGS=[['calm','Calm'],['tense','Tense'],['flat','Flat'],['distracted','Distracted']];
+    const OBSTACLES=[['toomuch','Too much planned'],['unclear','Unclear next step'],['tired','Tired'],['interrupted','Interrupted'],['waiting','Waiting on someone']];
+
+    const ciChip=(field,val,label,on)=>
+      `<button class="chip${on?' on':''}" data-ci="${field}:${val}" aria-pressed="${on?'true':'false'}">${label}</button>`;
+
+    function checkInCard(s,d){
+      // Off is a preference, not a punishment: one tap back on, always visible.
+      if(s.prefs&&s.prefs.checkIns===false) return `<div class="card card--quiet">
+        <div class="ciDone">Check-ins are off. <button class="ciLink" data-ci-act="on">Turn them back on</button></div></div>`;
+      const c=(s.checkIns&&s.checkIns[Dash.today])||{};
+      const hr=new Date().getHours();
+      const evening=hr>=17;
+      const off=`<div class="ciFoot"><button class="ciLink" data-ci-act="off">Turn check-ins off</button>${
+        (s.checkIns&&Object.keys(s.checkIns).length)?` · <button class="ciLink" data-ci-act="delete">Delete check-in data</button>`:''}</div>`;
+
+      // Closed for the day: a quiet summary, still editable. Closing stops the
+      // discretionary prompt; it does not lock the record (A16).
+      if(c.closed){
+        const bits=[];
+        if(c.capacity) bits.push(`Capacity ${c.capacity}`);
+        if(c.focus){
+          const hit=[...SMALL_WINS,...BIG_WINS].find(x=>x[0]===c.focus);
+          bits.push(`Focus: ${c.focus==='rest'?'Rest':(hit?hit[2]:c.focus)}`);
+        }
+        if(c.obstacle) bits.push(`In the way: ${(OBSTACLES.find(o=>o[0]===c.obstacle)||[,c.obstacle])[1]}`);
+        if(c.tomorrow) bits.push(`Tomorrow: ${c.tomorrow}`);
+        return `<div class="card card--quiet">
+          ${secTitle('CHECK','Today is closed','','var(--text-2)')}
+          <div class="ciDone">${bits.length?bits.join(' · '):'Closed without notes. That is a complete answer.'}</div>
+          <div style="margin-top:10px"><button class="chip" data-ci-act="reopen">Reopen</button></div>
+          ${off}</div>`;
+      }
+
+      if(!evening){
+        const low=c.capacity==='low';
+        // Low capacity narrows the menu to two-minute moves, and rest is a real
+        // option rather than a consolation prize.
+        const menu=low?SMALL_WINS.map(x=>[x[0],x[2]]):BIG_WINS.map(x=>[x[0],x[2]]);
+        return `<div class="card">
+          ${secTitle('CHECK','Morning check','~45 seconds · all optional','var(--sub)')}
+          <div class="ciQ">How much capacity do you have today?</div>
+          <div class="ciRow">${CAPACITY.map(([v,l])=>ciChip('capacity',v,l,c.capacity===v)).join('')}</div>
+          ${c.capacity?`
+            <div class="ciQ">Anything you want to note? Optional.</div>
+            <div class="ciRow">${FEELINGS.map(([v,l])=>ciChip('feeling',v,l,c.feeling===v)).join('')}
+              <button class="chip" data-ci-act="skipfeeling">Skip</button></div>
+            <div class="ciQ">${low?'One small thing that would still count today.':'What would make today feel worthwhile?'}</div>
+            <div class="ciRow">${menu.map(([k,l])=>ciChip('focus',k,l,c.focus===k)).join('')}
+              ${low?ciChip('focus','rest','Rest today',c.focus==='rest'):''}</div>
+            <div class="ciQ">First small step, and what will cue it?</div>
+            <input class="ciText" data-ci-text="firstStep" value="${(c.firstStep||'').replace(/"/g,'&quot;')}"
+              placeholder="After I put the kettle on, I will open the book" aria-label="First small step and its cue">
+          `:`<div class="ciHint">Answer one thing or none. Skipping costs nothing.</div>`}
+          ${off}</div>`;
+      }
+
+      // Evening. "What moved forward" is stated from what was actually logged
+      // here — never as a claim about the whole day, because actions taken by
+      // voice or in Google Tasks are invisible to this app.
+      const logged=dayGains(d)>0?[SMALL_KEYS,BIG_KEYS].flat().filter(k=>d[k]===true).length+(d.anchor===true?1:0):0;
+      return `<div class="card">
+        ${secTitle('CHECK','Evening review','~60 seconds · all optional','var(--sub)')}
+        <div class="ciQ">What moved forward today?</div>
+        <div class="ciDone">${logged?`${logged} thing${logged===1?'':'s'} recorded in the app today.`
+          :'Nothing recorded in the app today. Anything done by voice or elsewhere would not show here.'}</div>
+        <input class="ciText" data-ci-text="win" value="${(c.win||'').replace(/"/g,'&quot;')}"
+          placeholder="Something real that never got tapped (optional)" aria-label="An unlogged win">
+        <div class="ciQ">What got in the way, if anything?</div>
+        <div class="ciRow">${OBSTACLES.map(([v,l])=>ciChip('obstacle',v,l,c.obstacle===v)).join('')}</div>
+        <div class="ciQ">Tomorrow's first small step?</div>
+        <input class="ciText" data-ci-text="tomorrow" value="${(c.tomorrow||'').replace(/"/g,'&quot;')}"
+          placeholder="One small thing (optional)" aria-label="Tomorrow's first small step">
+        <div class="ciRow" style="margin-top:12px">
+          <button class="chip ciClose" data-ci-act="close">Close the day</button>
+          <button class="chip" data-ci-act="skip">Skip tonight</button>
+        </div>
+        <div class="ciHint">${c.capacity==='low'||c.feeling==='flat'||c.feeling==='tense'
+          ? 'Today was difficult. You don’t need to make it look better in the log — leave one manageable step, or skip the review.'
+          : 'You can stop here. Nothing is owed.'}</div>
+        ${off}</div>`;
+    }
+
     function todayHTML(s,d){
       const hr=new Date().getHours();
       const greet=hr<5?'Late night':hr<12?'Good morning':hr<17?'Good afternoon':hr<22?'Good evening':'Late night';
@@ -1157,6 +1272,7 @@ async function initApp(){
         </div>
         ${rightNow}
         ${anchorCard}
+        ${checkInCard(s,d)}
         ${pushCard}
         <div class="card">
           ${secTitle('SMALL','Small Wins',`${smallDone}/${SMALL_WINS.length} · +3 each`, smallDone?'var(--customs)':'var(--sub)')}
@@ -1957,6 +2073,40 @@ async function initApp(){
         };
         el.addEventListener('click',fire);
         el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fire(); } });
+      });
+      /* Check-in controls (P1). Tapping a selected chip clears it — an answer
+         given by accident must be as easy to take back as to give. */
+      root.querySelectorAll('[data-ci]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const [field,val]=el.dataset.ci.split(':');
+          const path=`checkIns.${Dash.today}.${field}`;
+          Dash.set(path, getPath(Dash.state,path)===val ? Dash.REMOVE : val);
+        });
+      });
+      root.querySelectorAll('[data-ci-text]').forEach(inp=>{
+        const save=()=>{
+          const v=inp.value.trim();
+          Dash.set(`checkIns.${Dash.today}.${inp.dataset.ciText}`, v || Dash.REMOVE);
+        };
+        // Blur, not input: re-rendering on every keystroke would steal the caret.
+        inp.addEventListener('change',save);
+        inp.addEventListener('blur',save);
+      });
+      root.querySelectorAll('[data-ci-act]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const act=el.dataset.ciAct, base=`checkIns.${Dash.today}`;
+          if(act==='close')       Dash.set(`${base}.closed`, true);
+          else if(act==='reopen') Dash.set(`${base}.closed`, Dash.REMOVE);
+          else if(act==='skip')   Dash.set(`${base}.closed`, true);   // skipping IS closing; nothing is owed
+          else if(act==='skipfeeling') Dash.set(`${base}.feeling`, Dash.REMOVE);
+          else if(act==='off')    Dash.set('prefs.checkIns', false);
+          else if(act==='on')     Dash.set('prefs.checkIns', true);
+          else if(act==='delete'){
+            // A21: remove every check-in, leave every logged action untouched.
+            if(confirm('Delete all check-in answers? Your logged actions, momentum and milestones are not affected.'))
+              Dash.set('checkIns', {});
+          }
+        });
       });
       root.querySelectorAll('[data-hydro]').forEach(el=>{
         const fire=()=>openHydroModal();
