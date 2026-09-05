@@ -1,22 +1,15 @@
 name: Calendar sync
 
-# Pushes the next 7 days of FLOWSTATE blocks into the Google Calendar that the
-# Google Home Max reads. One-way: nothing is read back, nothing touches
-# Firestore. Event ids are deterministic, so re-running just refreshes the same
-# blocks instead of duplicating them — a late or repeated run is harmless.
+# Automatic routine publishing paused on 2026-09-05 for the Google-native setup.
+# Personal to-dos belong in Google Tasks; primary Calendar is for commitments.
+# This workflow is now inspection-only: it cannot recreate calendar clutter
+# or delete yesterday's generated tasks. Existing Google data is unchanged.
 on:
-  schedule:
-    - cron: '10 9 * * *'   # EDT — lands early morning Toronto, before the brief
-    - cron: '10 10 * * *'  # EST
   workflow_dispatch:
     inputs:
       days:
-        description: 'How many days ahead to sync'
+        description: 'Number of days to preview (no Google writes)'
         default: '7'
-      dryRun:
-        description: 'Print the plan without writing to Calendar'
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -26,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sync:
+  preview:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,24 +31,9 @@ jobs:
       - name: Install deps
         run: npm install --no-audit --no-fund
         working-directory: scripts
-      - name: Sync calendar
-        run: >-
-          node scripts/sync-calendar.mjs
-          --days=${{ inputs.days || '7' }}
-          ${{ inputs.dryRun && '--dry-run' || '' }}
+      - name: Preview calendar (no writes)
+        run: node scripts/sync-calendar.mjs --days="$PREVIEW_DAYS" --dry-run
         env:
-          GOOGLE_CALENDAR_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_CALENDAR_SERVICE_ACCOUNT }}
-          # Unset by default: the script falls back to calendarId in
-          # schedule.json. Set this repo variable only to override.
-          CALENDAR_ID: ${{ vars.CALENDAR_ID }}
-
-      # Tasks is a separate credential path (OAuth, not a service account) and
-      # a separate failure mode, so it runs even if the calendar step failed —
-      # one being broken shouldn't silently take the other down with it.
-      - name: Sync tasks
-        if: ${{ always() && !inputs.dryRun }}
-        run: node scripts/sync-tasks.mjs
-        env:
-          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
-          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
-          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
+          PREVIEW_DAYS: ${{ inputs.days || '7' }}
+      - name: Preview routine tasks (no writes)
+        run: node scripts/sync-tasks.mjs --dry-run
