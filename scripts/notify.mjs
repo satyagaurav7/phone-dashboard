@@ -133,19 +133,23 @@ function composeNudge(data, now) {
 // 9 PM anchor reminder (CLI mode is still called "streak" so the workflow
 // doesn't change). Silent whenever the day is already anchored — silence is
 // the reward. No death language, ever.
+//
+// This reads dashboard flags ONLY. Actions completed by voice, in Google Tasks,
+// or anywhere off the dashboard are invisible here, so it must never claim the
+// day is empty — it can only say what this app has recorded. Offer a review;
+// don't deliver a verdict. See CHECKINS-IMPLEMENTATION-PLAN.md P0.3.
 function composeStreak(data, now) {
   const d = (data.days || {})[now.date] || {};
   if (d.anchor === true || d.completed === true) {
     console.log('Day is anchored — staying silent.');
     return null;
   }
-  const m = momentumNow(data, now.date);
   const g = dayGains(d);
   return {
-    title: '⚓ 2 minutes — today isn\'t counted yet',
+    title: '⚓ Would a quick review help?',
     body: g > 0
-      ? `You already banked +${g} momentum today. Drop the anchor and the day counts.`
-      : `Tap the anchor: bed made, blanket folded, day started right. Momentum ${m} is waiting.`
+      ? `You banked +${g} momentum here today. If the anchor still fits, it's two minutes — otherwise I'll stay quiet.`
+      : `Nothing recorded in the app today — anything done by voice or elsewhere wouldn't show here. Two minutes if you want it.`
   };
 }
 
