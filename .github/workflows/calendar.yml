@@ -48,3 +48,14 @@ jobs:
           # Unset by default: the script falls back to calendarId in
           # schedule.json. Set this repo variable only to override.
           CALENDAR_ID: ${{ vars.CALENDAR_ID }}
+
+      # Tasks is a separate credential path (OAuth, not a service account) and
+      # a separate failure mode, so it runs even if the calendar step failed —
+      # one being broken shouldn't silently take the other down with it.
+      - name: Sync tasks
+        if: ${{ always() && !inputs.dryRun }}
+        run: node scripts/sync-tasks.mjs
+        env:
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
