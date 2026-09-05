@@ -45,4 +45,6 @@ jobs:
           ${{ inputs.dryRun && '--dry-run' || '' }}
         env:
           GOOGLE_CALENDAR_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_CALENDAR_SERVICE_ACCOUNT }}
-          CALENDAR_ID: ${{ vars.CALENDAR_ID || 'primary' }}
+          # Unset by default: the script falls back to calendarId in
+          # schedule.json. Set this repo variable only to override.
+          CALENDAR_ID: ${{ vars.CALENDAR_ID }}

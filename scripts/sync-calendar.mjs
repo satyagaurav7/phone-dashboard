@@ -30,9 +30,23 @@ const arg = name => {
 };
 const DRY = process.argv.includes('--dry-run');
 const DAYS = Math.max(1, Math.min(60, parseInt(arg('days') || '7', 10)));
-const CAL = arg('calendar') || process.env.CALENDAR_ID || 'primary';
 
 const sched = JSON.parse(readFileSync(new URL('../schedule.json', import.meta.url), 'utf8'));
+
+// "primary" resolves against whoever is authenticated — and that's the service
+// account, which owns a calendar nobody ever looks at. Writing there succeeds,
+// reports 110 created, and shows nothing on the phone or the speaker. The
+// target has to be named explicitly.
+const CAL = arg('calendar') || process.env.CALENDAR_ID || sched.calendarId;
+if (!CAL || CAL === 'primary') {
+  console.error(
+    'No target calendar. A service account\'s "primary" is its own empty calendar,\n' +
+    'not yours — writes would succeed and show up nowhere. Set calendarId in\n' +
+    'schedule.json (or the CALENDAR_ID env var) to the account whose calendar was\n' +
+    'shared with the service account, e.g. booms.satya@gmail.com.'
+  );
+  process.exit(1);
+}
 const TZ = sched.timezone || 'America/Toronto';
 const APP_URL = sched.appUrl || 'https://satyagaurav7.github.io/phone-dashboard/';
 const API = 'https://www.googleapis.com/calendar/v3';

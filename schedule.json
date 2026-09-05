@@ -1,5 +1,6 @@
 {
   "timezone": "America/Toronto",
+  "calendarId": "booms.satya@gmail.com",
   "appUrl": "https://satyagaurav7.github.io/phone-dashboard/",
   "dayKinds": ["sun", "office", "office", "wfh", "wfh", "wfh", "sat"],
   "kindTitles": {

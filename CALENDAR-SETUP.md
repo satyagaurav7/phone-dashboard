@@ -1,8 +1,8 @@
 # Google Calendar + Home Max — one-time setup (your part)
 
-The sync code is done. It needs a Google Cloud service account and one calendar
-share. ~10 minutes, in this order. Everything runs server-side in GitHub
-Actions — no browser, no phone, no extension.
+Most of this is already done. **Only step 3 is left** — creating the service
+account key and pasting it into GitHub. Everything runs server-side in GitHub
+Actions: no browser, no phone, no extension.
 
 **Target account: `booms.satya@gmail.com`** — the same account the Home Max is
 signed into and the same one the dashboard authenticates with.
@@ -17,41 +17,43 @@ signed into and the same one the dashboard authenticates with.
   pass silently. Keeping the rhythm in Calendar is what preserves the
   reward-only rule.
 
-## 1. Service account → GitHub secret
+## 1. Service account  —  DONE
 
-1. [Google Cloud Console](https://console.cloud.google.com/) → sign in as
-   **booms.satya@gmail.com** → create a project (or reuse `newt-90ca4`).
-2. **APIs & Services → Library** → search **Google Calendar API** → **Enable**.
-3. **APIs & Services → Credentials → Create credentials → Service account**.
-   Name it `flowstate-calendar`. Skip the optional role/access steps → **Done**.
-4. Click the new service account → **Keys → Add key → Create new key → JSON**.
-   A file downloads.
-5. **Copy the service account's email** — it looks like
-   `flowstate-calendar@<project>.iam.gserviceaccount.com`. You need it in step 2.
-6. GitHub → `satyagaurav7/phone-dashboard` → **Settings → Secrets and variables
+Created 2026-09-04 in Cloud project **Data Collection** (`data-collection-399923`):
+
+- **Google Calendar API** (`calendar-json.googleapis.com`) — already enabled.
+- **Service account:** `flowstate-calendar@data-collection-399923.iam.gserviceaccount.com`
+
+## 2. Share the calendar  —  DONE
+
+`booms.satya@gmail.com`'s primary calendar ("Satya Gaurav", Toronto time) is
+shared with the service account at **Make changes and see all event details**.
+
+> **The target calendar is named explicitly, and must be.** A service account's
+> `primary` is its *own* empty calendar — writing there succeeds, reports
+> success, and shows nothing on your phone or speaker. `calendarId` in
+> `schedule.json` is set to `booms.satya@gmail.com` for this reason. The
+> `CALENDAR_ID` repo variable overrides it if you ever move calendars.
+
+> **Why the primary calendar and not a separate "FLOWSTATE" one?** Assistant
+> reads primary reliably and secondary calendars inconsistently. A separate
+> calendar is the nicer design but risks the speaker silently ignoring it.
+
+## 3. The key  —  YOURS TO DO
+
+This is the one step that can't be done for you: it produces a private key, and
+handing that around is exactly what you don't want anyone doing on your behalf.
+
+1. [Service accounts](https://console.cloud.google.com/iam-admin/serviceaccounts?project=data-collection-399923)
+   → click **flowstate-calendar** → **Keys** tab.
+2. **Add key → Create new key → JSON → Create.** A file downloads.
+3. GitHub → `satyagaurav7/phone-dashboard` → **Settings → Secrets and variables
    → Actions → New repository secret**.
-   Name: `GOOGLE_CALENDAR_SERVICE_ACCOUNT` · Value: the **entire** JSON file.
-7. Delete the downloaded JSON afterwards.
+   Name it exactly `GOOGLE_CALENDAR_SERVICE_ACCOUNT`, and paste the **entire**
+   contents of that JSON file as the value.
+4. **Delete the downloaded file.** It's a standing key to that service account.
 
-## 2. Share the calendar with that service account
-
-A service account has no calendar of its own — it can only write to one you
-share with it.
-
-1. [Google Calendar](https://calendar.google.com/) as **booms.satya@gmail.com**.
-2. Left sidebar → hover your **primary** calendar → **⋮ → Settings and sharing**.
-3. **Share with specific people or groups → Add people** → paste the service
-   account email from step 1.5.
-4. Permission: **Make changes to events** → **Send**.
-
-> **Why primary and not a separate "FLOWSTATE" calendar?** Assistant reads the
-> primary calendar reliably and secondary calendars inconsistently. A tidy
-> separate calendar is the nicer design but risks the speaker silently ignoring
-> it. Start on primary, confirm the speaker talks, and only then consider
-> moving. To move later: create the calendar, share it the same way, and set a
-> repo **variable** (not secret) `CALENDAR_ID` to its calendar ID.
-
-## 3. Test it
+## 4. Test it
 
 1. GitHub → **Actions → Calendar sync → Run workflow** → days `7`,
    dry run ✅ → **Run**. The log should list 7 days and ~110 blocks without
@@ -62,7 +64,7 @@ share with it.
    **free** (they won't make you look busy) and with **no reminders** — the
    dashboard's own push notifications still do all the nudging.
 
-## 4. Confirm the Home Max actually speaks it
+## 5. Confirm the Home Max actually speaks it
 
 This is the only step I can't verify for you — it needs your ears.
 
