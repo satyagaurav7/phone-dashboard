@@ -2,7 +2,15 @@
   "timezone": "America/Toronto",
   "calendarId": "booms.satya@gmail.com",
   "appUrl": "https://satyagaurav7.github.io/phone-dashboard/",
-  "dayKinds": ["sun", "office", "office", "wfh", "wfh", "wfh", "sat"],
+  "dayKinds": [
+    "sun",
+    "office",
+    "office",
+    "wfh",
+    "wfh",
+    "wfh",
+    "sat"
+  ],
   "kindTitles": {
     "office": "Office Day",
     "wfh": "WFH Day",
@@ -10,7 +18,7 @@
     "sun": "Sunday"
   },
   "glance": {
-    "office": "Office · 6:15 wake · 7:37 bus · gym 6:25 pm",
+    "office": "Office · 6:15 wake · leave 7:30 · gym 6:25 pm",
     "wfh": "WFH · 6:45 wake · gym AM · cook lunch 12:30",
     "sat": "Groceries ~$80 · meal-prep · gym · free evening",
     "sun": "Plan Sunday 5 pm · prep for Monday"
@@ -18,129 +26,626 @@
   "tapPlan": {
     "itemTimes": {
       "office": {
-        "anchor": "06:15", "walk": "06:16", "water": "06:20", "meditate": "06:20",
-        "breakfast": "07:05", "insulin": "07:05", "omega3": "07:05", "bonehealth": "07:05", "vitcd": "07:05",
+        "anchor": "06:15",
+        "walk": "06:16",
+        "water": "06:20",
+        "meditate": "06:20",
+        "breakfast": "07:05",
+        "insulin": "07:05",
+        "omega3": "07:05",
+        "bonehealth": "07:05",
+        "vitcd": "07:05",
         "lunch": "12:30",
-        "gym": "18:25", "cookmeal": "19:40", "dinner": "20:10", "cooked": "20:30",
-        "read5": "20:30", "language": "20:30", "study": "21:00", "money": "21:00",
-        "creatine": "21:45", "smokefree": "22:15", "phonedown": "22:15"
+        "gym": "18:25",
+        "cookmeal": "19:40",
+        "dinner": "20:10",
+        "cooked": "20:30",
+        "read5": "20:30",
+        "language": "20:30",
+        "study": "21:00",
+        "money": "21:00",
+        "creatine": "21:45",
+        "smokefree": "22:15",
+        "phonedown": "22:15"
       },
       "wfh": {
-        "anchor": "06:45", "walk": "06:46", "water": "06:50", "gym": "07:10",
-        "breakfast": "08:50", "insulin": "08:50", "omega3": "08:50", "bonehealth": "08:50", "vitcd": "08:50",
-        "cookmeal": "12:30", "lunch": "12:55",
-        "read5": "17:15", "language": "17:15", "study": "17:45", "money": "17:45",
-        "dinner": "19:15", "cooked": "19:45", "meditate": "21:15",
-        "creatine": "21:45", "smokefree": "21:45", "phonedown": "21:45"
+        "anchor": "06:45",
+        "walk": "06:46",
+        "water": "06:50",
+        "gym": "07:10",
+        "breakfast": "08:50",
+        "insulin": "08:50",
+        "omega3": "08:50",
+        "bonehealth": "08:50",
+        "vitcd": "08:50",
+        "cookmeal": "12:30",
+        "lunch": "12:55",
+        "read5": "17:15",
+        "language": "17:15",
+        "study": "17:45",
+        "money": "17:45",
+        "dinner": "19:15",
+        "cooked": "19:45",
+        "meditate": "21:15",
+        "creatine": "21:45",
+        "smokefree": "21:45",
+        "phonedown": "21:45"
       },
       "sat": {
-        "anchor": "09:00", "walk": "09:02", "water": "09:05", "breakfast": "09:15", "insulin": "09:15",
-        "omega3": "09:15", "bonehealth": "09:15", "vitcd": "09:15",
-        "cookmeal": "13:00", "lunch": "13:30", "study": "14:00", "money": "14:00",
-        "gym": "15:00", "dinner": "19:30", "cooked": "20:00",
-        "read5": "21:00", "language": "21:00", "meditate": "21:40",
-        "creatine": "22:00", "smokefree": "22:30", "phonedown": "22:30"
+        "anchor": "09:00",
+        "walk": "09:02",
+        "water": "09:05",
+        "breakfast": "09:15",
+        "insulin": "09:15",
+        "omega3": "09:15",
+        "bonehealth": "09:15",
+        "vitcd": "09:15",
+        "cookmeal": "13:00",
+        "lunch": "13:30",
+        "study": "14:00",
+        "money": "14:00",
+        "gym": "15:00",
+        "dinner": "19:30",
+        "cooked": "20:00",
+        "read5": "21:00",
+        "language": "21:00",
+        "meditate": "21:40",
+        "creatine": "22:00",
+        "smokefree": "22:30",
+        "phonedown": "22:30"
       },
       "sun": {
-        "anchor": "09:30", "walk": "09:32", "water": "09:35", "breakfast": "10:00", "insulin": "10:00",
-        "omega3": "10:00", "bonehealth": "10:00", "vitcd": "10:00",
-        "gym": "11:00", "lunch": "13:00",
-        "read5": "15:00", "language": "15:00", "study": "16:00", "money": "17:00",
-        "cookmeal": "18:00", "dinner": "18:45", "cooked": "19:30", "meditate": "21:30",
-        "creatine": "21:45", "smokefree": "22:00", "phonedown": "22:00"
+        "anchor": "09:30",
+        "walk": "09:32",
+        "water": "09:35",
+        "breakfast": "10:00",
+        "insulin": "10:00",
+        "omega3": "10:00",
+        "bonehealth": "10:00",
+        "vitcd": "10:00",
+        "gym": "11:00",
+        "lunch": "13:00",
+        "read5": "15:00",
+        "language": "15:00",
+        "study": "16:00",
+        "money": "17:00",
+        "cookmeal": "18:00",
+        "dinner": "18:45",
+        "cooked": "19:30",
+        "meditate": "21:30",
+        "creatine": "21:45",
+        "smokefree": "22:00",
+        "phonedown": "22:00"
       }
     },
     "slots": {
       "office": [
-        { "t": "12:30", "title": "Midday", "keys": ["lunch", "insulin", "water"] },
-        { "t": "17:15", "title": "Gym window", "keys": ["gym"] },
-        { "t": "20:15", "title": "Evening stack", "keys": ["dinner", "cookmeal", "read5", "language", "study", "creatine", "smokefree", "phonedown"] }
+        {
+          "t": "12:30",
+          "title": "Midday",
+          "keys": [
+            "lunch",
+            "insulin",
+            "water"
+          ]
+        },
+        {
+          "t": "17:15",
+          "title": "Gym window",
+          "keys": [
+            "gym"
+          ]
+        },
+        {
+          "t": "20:15",
+          "title": "Evening stack",
+          "keys": [
+            "dinner",
+            "cookmeal",
+            "read5",
+            "language",
+            "study",
+            "creatine",
+            "smokefree",
+            "phonedown"
+          ]
+        }
       ],
       "wfh": [
-        { "t": "12:25", "title": "Cook-lunch hour", "keys": ["cookmeal", "lunch", "water", "insulin"] },
-        { "t": "17:10", "title": "Reading + upskill", "keys": ["read5", "language", "study", "money"] },
-        { "t": "20:15", "title": "Wind-down", "keys": ["dinner", "meditate", "creatine", "smokefree", "phonedown"] }
+        {
+          "t": "12:25",
+          "title": "Cook-lunch hour",
+          "keys": [
+            "cookmeal",
+            "lunch",
+            "water",
+            "insulin"
+          ]
+        },
+        {
+          "t": "17:10",
+          "title": "Reading + upskill",
+          "keys": [
+            "read5",
+            "language",
+            "study",
+            "money"
+          ]
+        },
+        {
+          "t": "20:15",
+          "title": "Wind-down",
+          "keys": [
+            "dinner",
+            "meditate",
+            "creatine",
+            "smokefree",
+            "phonedown"
+          ]
+        }
       ],
       "sat": [
-        { "t": "12:45", "title": "Meal-prep window", "keys": ["cookmeal", "lunch", "water", "insulin"] },
-        { "t": "16:45", "title": "Gym check", "keys": ["gym"] },
-        { "t": "20:15", "title": "Evening", "keys": ["read5", "language", "dinner", "smokefree", "phonedown"] }
+        {
+          "t": "12:45",
+          "title": "Meal-prep window",
+          "keys": [
+            "cookmeal",
+            "lunch",
+            "water",
+            "insulin"
+          ]
+        },
+        {
+          "t": "16:45",
+          "title": "Gym check",
+          "keys": [
+            "gym"
+          ]
+        },
+        {
+          "t": "20:15",
+          "title": "Evening",
+          "keys": [
+            "read5",
+            "language",
+            "dinner",
+            "smokefree",
+            "phonedown"
+          ]
+        }
       ],
       "sun": [
-        { "t": "12:30", "title": "Midday", "keys": ["gym", "lunch", "water"] },
-        { "t": "16:45", "title": "Plan Sunday", "keys": ["read5", "language", "money", "study"] },
-        { "t": "20:15", "title": "Wind-down", "keys": ["dinner", "meditate", "smokefree", "phonedown"] }
+        {
+          "t": "12:30",
+          "title": "Midday",
+          "keys": [
+            "gym",
+            "lunch",
+            "water"
+          ]
+        },
+        {
+          "t": "16:45",
+          "title": "Plan Sunday",
+          "keys": [
+            "read5",
+            "language",
+            "money",
+            "study"
+          ]
+        },
+        {
+          "t": "20:15",
+          "title": "Wind-down",
+          "keys": [
+            "dinner",
+            "meditate",
+            "smokefree",
+            "phonedown"
+          ]
+        }
       ]
     },
     "labels": {
-      "anchor": "Anchor ⚓", "water": "Hydrate", "walk": "Stretch + fill bottles", "read5": "Open the book",
-      "cookmeal": "Cook a meal", "meditate": "Breathe", "phonedown": "Phone down",
-      "gym": "Gym", "language": "CELPIP 20 min", "study": "Upskill hour", "cooked": "Full cooked day",
-      "smokefree": "Smoke-free stamp", "money": "Money move",
-      "breakfast": "Breakfast", "lunch": "Lunch", "dinner": "Dinner", "insulin": "Insulin", "creatine": "Creatine"
+      "anchor": "Anchor ⚓",
+      "water": "Hydrate",
+      "walk": "Stretch + fill bottles",
+      "read5": "Open the book",
+      "cookmeal": "Cook a meal",
+      "meditate": "Breathe",
+      "phonedown": "Phone down",
+      "gym": "Gym",
+      "language": "CELPIP 20 min",
+      "study": "Upskill hour",
+      "cooked": "Full cooked day",
+      "smokefree": "Smoke-free stamp",
+      "money": "Money move",
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "insulin": "Insulin",
+      "creatine": "Creatine"
     }
   },
   "schedules": {
     "office": [
-      ["wake", "06:15", "06:20", "⏰", "Wake · CGM check + basal · water"],
-      ["medit", "06:20", "06:35", "🧘", "Meditate / breathwork"],
-      ["shower", "06:35", "06:50", "🚿", "Shower + brush"],
-      ["mkbfast", "06:50", "07:05", "🍳", "Make breakfast (oats + yogurt + PB)"],
-      ["eatbfast", "07:05", "07:15", "🌅", "Eat breakfast · bolus · supplements"],
-      ["pack", "07:15", "07:30", "🎒", "Pack lunch + gym bag · get dressed"],
-      ["walk", "07:30", "07:37", "🚶", "Walk to bus stop"],
-      ["bus1", "07:37", "08:50", "🚌", "Bus → 100 Kellogg Ln (confirm route once)"],
-      ["workam", "09:00", "12:30", "💼", "Work — morning block"],
-      ["lunch", "12:30", "13:00", "☀️", "Eat packed lunch · bolus"],
-      ["workpm", "13:00", "17:00", "💼", "Work — afternoon block"],
-      ["bus2", "17:00", "18:10", "🚌", "Bus home"],
-      ["gymtrip", "18:10", "18:25", "🚶", "Gym bag → 710 Proudfoot Ln"],
-      ["gym", "18:25", "19:25", "🏋️", "GYM — 45–50 min session"],
-      ["cookdin", "19:40", "20:10", "🍳", "Cook dinner · bolus"],
-      ["eatdin", "20:10", "20:30", "🌙", "Eat dinner"],
-      ["read", "20:30", "20:50", "📚", "CELPIP reading — 20 min"],
-      ["upskill", "21:00", "21:45", "💻", "Cyber upskill / money move"],
-      ["prep", "21:45", "22:15", "🎒", "Prep tomorrow: lunch · clothes · creatine"],
-      ["wind", "22:15", "22:45", "🌒", "Wind down — no screens"],
-      ["sleep", "22:45", "", "😴", "Lights out — 7.5 hrs"]
+      [
+        "wake",
+        "06:15",
+        "06:20",
+        "⏰",
+        "Wake · CGM check + basal · water"
+      ],
+      [
+        "medit",
+        "06:20",
+        "06:35",
+        "🧘",
+        "Meditate / breathwork"
+      ],
+      [
+        "shower",
+        "06:35",
+        "06:50",
+        "🚿",
+        "Shower + brush"
+      ],
+      [
+        "mkbfast",
+        "06:50",
+        "07:05",
+        "🍳",
+        "Make breakfast (oats + yogurt + PB)"
+      ],
+      [
+        "eatbfast",
+        "07:05",
+        "07:15",
+        "🌅",
+        "Eat breakfast · bolus · supplements"
+      ],
+      [
+        "pack",
+        "07:15",
+        "07:30",
+        "🎒",
+        "Pack lunch + gym bag · get dressed"
+      ],
+      [
+        "walk",
+        "07:30",
+        "07:37",
+        "🚪",
+        "Leave the house"
+      ],
+      [
+        "bus1",
+        "07:37",
+        "08:50",
+        "🛣️",
+        "Travel to work"
+      ],
+      [
+        "workam",
+        "09:00",
+        "12:30",
+        "💼",
+        "Work — morning block"
+      ],
+      [
+        "lunch",
+        "12:30",
+        "13:00",
+        "☀️",
+        "Eat packed lunch · bolus"
+      ],
+      [
+        "workpm",
+        "13:00",
+        "17:00",
+        "💼",
+        "Work — afternoon block"
+      ],
+      [
+        "bus2",
+        "17:00",
+        "18:10",
+        "🛣️",
+        "Travel home"
+      ],
+      [
+        "gymtrip",
+        "18:10",
+        "18:25",
+        "🚶",
+        "Gym bag → 710 Proudfoot Ln"
+      ],
+      [
+        "gym",
+        "18:25",
+        "19:25",
+        "🏋️",
+        "GYM — 45–50 min session"
+      ],
+      [
+        "cookdin",
+        "19:40",
+        "20:10",
+        "🍳",
+        "Cook dinner · bolus"
+      ],
+      [
+        "eatdin",
+        "20:10",
+        "20:30",
+        "🌙",
+        "Eat dinner"
+      ],
+      [
+        "read",
+        "20:30",
+        "20:50",
+        "📚",
+        "CELPIP reading — 20 min"
+      ],
+      [
+        "upskill",
+        "21:00",
+        "21:45",
+        "💻",
+        "Cyber upskill / money move"
+      ],
+      [
+        "prep",
+        "21:45",
+        "22:15",
+        "🎒",
+        "Prep tomorrow: lunch · clothes · creatine"
+      ],
+      [
+        "wind",
+        "22:15",
+        "22:45",
+        "🌒",
+        "Wind down — no screens"
+      ],
+      [
+        "sleep",
+        "22:45",
+        "",
+        "😴",
+        "Lights out — 7.5 hrs"
+      ]
     ],
     "wfh": [
-      ["wake", "06:45", "06:55", "⏰", "Wake · CGM + basal · water · change"],
-      ["gymtrip", "06:55", "07:10", "🚶", "Head to gym — 710 Proudfoot Ln"],
-      ["gym", "07:10", "08:15", "🏋️", "GYM — full session 60–70 min"],
-      ["home", "08:15", "08:30", "🚶", "Back home"],
-      ["shower", "08:30", "08:50", "🚿", "Shower + dress"],
-      ["eatbfast", "08:50", "09:00", "🌅", "Quick breakfast · bolus · supplements"],
-      ["workam", "09:00", "12:30", "💼", "Work — morning block (WFH)"],
-      ["cooklunch", "12:30", "12:55", "🍳", "COOK lunch — the delivery-trigger hour"],
-      ["eatlunch", "12:55", "13:15", "☀️", "Eat lunch · bolus"],
-      ["workpm", "13:15", "17:00", "💼", "Work — afternoon block"],
-      ["read", "17:15", "17:35", "📚", "CELPIP reading — 20 min"],
-      ["upskill", "17:45", "18:45", "💻", "Cyber upskill + money move"],
-      ["cookdin", "18:45", "19:15", "🍳", "Cook dinner · bolus"],
-      ["eatdin", "19:15", "19:45", "🌙", "Eat dinner"],
-      ["free", "19:45", "21:15", "🎯", "Free — friends · errands · earned treat"],
-      ["medit", "21:15", "21:30", "🧘", "Meditate / breathwork"],
-      ["prep", "21:45", "22:15", "🎒", "Prep · creatine · wind down"],
-      ["sleep", "22:30", "", "😴", "Lights out"]
+      [
+        "wake",
+        "06:45",
+        "06:55",
+        "⏰",
+        "Wake · CGM + basal · water · change"
+      ],
+      [
+        "gymtrip",
+        "06:55",
+        "07:10",
+        "🚶",
+        "Head to gym — 710 Proudfoot Ln"
+      ],
+      [
+        "gym",
+        "07:10",
+        "08:15",
+        "🏋️",
+        "GYM — full session 60–70 min"
+      ],
+      [
+        "home",
+        "08:15",
+        "08:30",
+        "🚶",
+        "Back home"
+      ],
+      [
+        "shower",
+        "08:30",
+        "08:50",
+        "🚿",
+        "Shower + dress"
+      ],
+      [
+        "eatbfast",
+        "08:50",
+        "09:00",
+        "🌅",
+        "Quick breakfast · bolus · supplements"
+      ],
+      [
+        "workam",
+        "09:00",
+        "12:30",
+        "💼",
+        "Work — morning block (WFH)"
+      ],
+      [
+        "cooklunch",
+        "12:30",
+        "12:55",
+        "🍳",
+        "COOK lunch — the delivery-trigger hour"
+      ],
+      [
+        "eatlunch",
+        "12:55",
+        "13:15",
+        "☀️",
+        "Eat lunch · bolus"
+      ],
+      [
+        "workpm",
+        "13:15",
+        "17:00",
+        "💼",
+        "Work — afternoon block"
+      ],
+      [
+        "read",
+        "17:15",
+        "17:35",
+        "📚",
+        "CELPIP reading — 20 min"
+      ],
+      [
+        "upskill",
+        "17:45",
+        "18:45",
+        "💻",
+        "Cyber upskill + money move"
+      ],
+      [
+        "cookdin",
+        "18:45",
+        "19:15",
+        "🍳",
+        "Cook dinner · bolus"
+      ],
+      [
+        "eatdin",
+        "19:15",
+        "19:45",
+        "🌙",
+        "Eat dinner"
+      ],
+      [
+        "free",
+        "19:45",
+        "21:15",
+        "🎯",
+        "Free — friends · errands · earned treat"
+      ],
+      [
+        "medit",
+        "21:15",
+        "21:30",
+        "🧘",
+        "Meditate / breathwork"
+      ],
+      [
+        "prep",
+        "21:45",
+        "22:15",
+        "🎒",
+        "Prep · creatine · wind down"
+      ],
+      [
+        "sleep",
+        "22:30",
+        "",
+        "😴",
+        "Lights out"
+      ]
     ],
     "sat": [
-      ["wake", "09:00", "09:30", "⏰", "Wake easy · CGM + basal · breakfast"],
-      ["groc", "10:00", "11:30", "🛒", "Groceries — full week, one run (list in repo)"],
-      ["prep5", "13:00", "14:30", "🍳", "Meal-prep: 5 lunches + boiled eggs + dal pot"],
-      ["gym", "15:00", "16:15", "🏋️", "GYM — 710 Proudfoot Ln"],
-      ["free", "16:30", "21:00", "🎉", "Free — friends / trip (use an earned treat)"],
-      ["read", "21:00", "21:20", "📚", "CELPIP reading — 20 min"],
-      ["sleep", "23:00", "", "😴", "Lights out"]
+      [
+        "wake",
+        "09:00",
+        "09:30",
+        "⏰",
+        "Wake easy · CGM + basal · breakfast"
+      ],
+      [
+        "groc",
+        "10:00",
+        "11:30",
+        "🛒",
+        "Groceries — full week, one run (list in repo)"
+      ],
+      [
+        "prep5",
+        "13:00",
+        "14:30",
+        "🍳",
+        "Meal-prep: 5 lunches + boiled eggs + dal pot"
+      ],
+      [
+        "gym",
+        "15:00",
+        "16:15",
+        "🏋️",
+        "GYM — 710 Proudfoot Ln"
+      ],
+      [
+        "free",
+        "16:30",
+        "21:00",
+        "🎉",
+        "Free — friends / trip (use an earned treat)"
+      ],
+      [
+        "read",
+        "21:00",
+        "21:20",
+        "📚",
+        "CELPIP reading — 20 min"
+      ],
+      [
+        "sleep",
+        "23:00",
+        "",
+        "😴",
+        "Lights out"
+      ]
     ],
     "sun": [
-      ["wake", "09:30", "10:00", "⏰", "Slow morning · CGM + basal"],
-      ["gym", "11:00", "12:15", "🏋️", "GYM or long walk"],
-      ["read", "15:00", "15:20", "📚", "CELPIP reading — 20 min"],
-      ["plansun", "17:00", "17:45", "🗺️", "PLAN SUNDAY — budget check · book the week"],
-      ["prepmon", "19:00", "19:45", "🎒", "Prep office Monday: lunch · clothes · bag"],
-      ["wind", "22:00", "22:30", "🌒", "Wind down"],
-      ["sleep", "22:30", "", "😴", "Early night — Monday is 6:15"]
+      [
+        "wake",
+        "09:30",
+        "10:00",
+        "⏰",
+        "Slow morning · CGM + basal"
+      ],
+      [
+        "gym",
+        "11:00",
+        "12:15",
+        "🏋️",
+        "GYM or long walk"
+      ],
+      [
+        "read",
+        "15:00",
+        "15:20",
+        "📚",
+        "CELPIP reading — 20 min"
+      ],
+      [
+        "plansun",
+        "17:00",
+        "17:45",
+        "🗺️",
+        "PLAN SUNDAY — budget check · book the week"
+      ],
+      [
+        "prepmon",
+        "19:00",
+        "19:45",
+        "🎒",
+        "Prep office Monday: lunch · clothes · bag"
+      ],
+      [
+        "wind",
+        "22:00",
+        "22:30",
+        "🌒",
+        "Wind down"
+      ],
+      [
+        "sleep",
+        "22:30",
+        "",
+        "😴",
+        "Early night — Monday is 6:15"
+      ]
     ]
   }
 }

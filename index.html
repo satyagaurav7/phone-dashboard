@@ -1033,7 +1033,12 @@ async function initApp(){
     /* ---------- Actions completed (XP) — derived from real record, never stored ----------
        Renamed from "Visa Points": tying a score label to immigration status
        mixes gamification into a legal outcome it has no bearing on. P0/§0. */
-    const LEVELS=[[0,'Visitor'],[150,'Student'],[400,'Worker'],[800,'Candidate'],[1400,'Nominee'],[2200,'Permanent Resident']];
+    /* Neutral labels. These used to be Visitor -> Student -> Worker ->
+       Candidate -> Nominee -> Permanent Resident, i.e. an immigration status
+       awarded for tapping habits. Legal status has nothing to do with a habit
+       score and must never be simulated by one; the real countdowns live in the
+       PR tab, driven by actual dates. */
+    const LEVELS=[[0,'Starting'],[150,'Building'],[400,'Steady'],[800,'Consistent'],[1400,'Established'],[2200,'Sustained']];
     function calcXP(s){
       // FLOWSTATE: additive only. Nothing you do can subtract this.
       let xp=0;
@@ -1240,6 +1245,29 @@ async function initApp(){
       </div>`;
     }
 
+
+    /* What this app is and is not (brief §C). A tap here is a local activity
+       record. It does not complete a Google task, and nothing in this app can
+       see a task completed by voice or in the Tasks app — so the entry points
+       have to be real links, and the limitation has to be stated rather than
+       implied by silence. */
+    function whereCard(){
+      return `<div class="card card--quiet">
+        ${secTitle('LINKS','Where things live','','var(--text-2)')}
+        <div class="rmRow">
+          <div><div class="rmLbl">Your checklist + personal actions</div>
+               <div class="rmSub">Google Tasks is the source of truth. Voice adds and completes there.</div></div>
+          <a class="chip" href="https://tasks.google.com/" target="_blank" rel="noopener">Open</a>
+        </div>
+        <div class="rmRow">
+          <div><div class="rmLbl">Timed commitments</div>
+               <div class="rmSub">Google Calendar holds appointments and classes.</div></div>
+          <a class="chip" href="https://calendar.google.com/" target="_blank" rel="noopener">Open</a>
+        </div>
+        <div class="ciHint"><b style="color:var(--sub)">Taps in this app are a local log.</b> They do not tick anything off in Google Tasks, and a task you finish by voice will not appear here. The two are separate records on purpose — this one is for momentum, that one is for what actually has to get done.</div>
+      </div>`;
+    }
+
     function todayHTML(s,d){
       const hr=new Date().getHours();
       const greet=hr<5?'Late night':hr<12?'Good morning':hr<17?'Good afternoon':hr<22?'Good evening':'Late night';
@@ -1400,16 +1428,17 @@ async function initApp(){
         ${anchorCard}
         ${checkInCard(s,d)}
         ${reminderCard(s)}
+        ${whereCard()}
         ${pushCard}
         <div class="card">
           ${secTitle('SMALL','Small Wins',`${smallDone}/${SMALL_WINS.length} · +3 each`, smallDone?'var(--customs)':'var(--sub)')}
           ${smallRows}
-          <div style="font-size:12px;color:var(--sub);margin-top:8px">Two-minute moves. There is always one available — no day is ever ruined.</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:8px">Two-minute moves. There is always one available — no day is ever ruined. Local log only.</div>
         </div>
         <div class="card">
           ${secTitle('BIG','Big Wins',`${bigDone}/${BIG_WINS.length} · +8 each`, bigDone?'var(--customs)':'var(--sub)')}
           ${bigRows}
-          <div style="font-size:12px;color:var(--sub);margin-top:4px">All bonus, all gain. Skipping one costs nothing — landing one glows.</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:4px">All bonus, all gain. Skipping one costs nothing — landing one glows. Local log only.</div>
         </div>
         <div class="grid2">
           <div class="card">
@@ -1433,7 +1462,7 @@ async function initApp(){
         </div>
         <div class="card card--quiet">
           ${secTitle('PLAN','Timetable')}
-          <div style="font-size:14px;color:var(--text-1)">Your full minute-by-minute day — bus, meals, gym, everything — lives on the <b>Plan</b> tab. Blocks are tappable; skipping one is allowed.</div>
+          <div style="font-size:14px;color:var(--text-1)">Your full minute-by-minute day — travel, meals, gym, everything — lives on the <b>Plan</b> tab. Blocks are tappable; skipping one is allowed.</div>
         </div>`;
     }
 
@@ -2019,12 +2048,15 @@ async function initApp(){
       const finesWeek=week.reduce((t,ds)=>t+fineSum(days[ds]),0);
       const officeN=week.filter(ds=>kindOf(todow(ds))==='office').length;
       const satN=week.filter(ds=>kindOf(todow(ds))==='sat').length;
-      const planSpend=Math.round(officeN*6.5+satN*80);
+      // Groceries only. This used to add $6.50 per office day of bus fare, which
+      // stopped being real when the commute became a car — the driving cost is
+      // already carried by the gas budget, so counting it here billed it twice.
+      const planSpend=Math.round(satN*80);
       return `
         <div class="card">
           ${secTitle('WEEK','Next 7 Days', finesWeek?`$${finesWeek} leaked`:'no leaks', finesWeek?'var(--sub)':'var(--customs)')}
           ${glance}
-          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">Planned spend, next 7 days: ~$${planSpend}</b> — bus $${(officeN*6.5).toFixed(0)} (${officeN} office day${officeN===1?'':'s'}) + groceries $${satN*80}. Everything else is $0 by design: cooked meals, gym near home, no rentals.</div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:8px"><b style="color:var(--ink)">Planned spend, next 7 days: ~$${planSpend}</b> — groceries $${satN*80}. Driving is covered by the gas budget. Everything else is $0 by design: cooked meals, gym near home, no rentals.</div>
         </div>
         <div class="card">
           ${secTitle('TIMETABLE',`${title}${isToday?' — today':''}`,`${done}/${blocks.length}${missed?' · '+missed+' skipped':''}`, 'var(--customs)')}
@@ -2033,12 +2065,11 @@ async function initApp(){
           <div style="font-size:12px;color:var(--sub);margin-top:6px">${editable?'Tap a block when done · tap again = SKIP · again = clear. Glowing = right now.':'Future day — preview only.'} This is the machine that produces your wins — skipping a block is information, not failure.</div>
         </div>
         <div class="card">
-          ${secTitle('ROUTE','Bus + Costs')}
+          ${secTitle('ROUTE','Getting there')}
           <div style="font-size:13.5px;color:var(--ink);line-height:1.6">
-            🚌 <b>Home → work:</b> 1 Beaufort St → 100 Kellogg Ln ≈ 65 min. <b>Confirm the exact 7:37 bus in the Transit app once</b> — then it's law.<br>
-            💰 Fare $3.25 · ~$52/mo at 2 office days/wk — skip the $95 pass.<br>
-            🏋️ <b>Gym:</b> 710 Proudfoot Ln — near home, walk or short bus.<br>
-            🚕 Cab = $12 = an automatic fine in the Penalty Box. Oversleeping has a price now.
+            🛣️ <b>Home → work:</b> leave around 7:30 on an office day.<br>
+            🏋️ <b>Gym:</b> 710 Proudfoot Ln — near home.<br>
+            ⛽ Driving costs live in the gas budget above, from logged fill-ups.
           </div>
         </div>`;
     }
