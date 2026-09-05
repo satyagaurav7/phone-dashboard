@@ -1,0 +1,50 @@
+name: Calendar sync
+
+# Pushes the next 7 days of FLOWSTATE blocks into the Google Calendar that the
+# Google Home Max reads. One-way: nothing is read back, nothing touches
+# Firestore. Event ids are deterministic, so re-running just refreshes the same
+# blocks instead of duplicating them — a late or repeated run is harmless.
+on:
+  schedule:
+    - cron: '10 9 * * *'   # EDT — lands early morning Toronto, before the brief
+    - cron: '10 10 * * *'  # EST
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'How many days ahead to sync'
+        default: '7'
+      dryRun:
+        description: 'Print the plan without writing to Calendar'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: calendar
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+        working-directory: scripts
+      - name: Sync calendar
+        run: >-
+          node scripts/sync-calendar.mjs
+          --days=${{ inputs.days || '7' }}
+          ${{ inputs.dryRun && '--dry-run' || '' }}
+        env:
+          GOOGLE_CALENDAR_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_CALENDAR_SERVICE_ACCOUNT }}
+          # Unset by default: the script falls back to calendarId in
+          # schedule.json. Set this repo variable only to override.
+          CALENDAR_ID: ${{ vars.CALENDAR_ID }}

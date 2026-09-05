@@ -2,8 +2,9 @@
   "name": "phone-dashboard-notify",
   "private": true,
   "type": "module",
-  "description": "Sends Mission Control push notifications (morning brief + streak saver) via FCM.",
+  "description": "Sends Mission Control push notifications (FCM) and syncs the FLOWSTATE rhythm to Google Calendar.",
   "dependencies": {
-    "firebase-admin": "^13.0.0"
+    "firebase-admin": "^13.0.0",
+    "google-auth-library": "^9.14.0"
   }
 }

@@ -4,3 +4,6 @@ scripts/package-lock.json
 
 # Raw bank statement exports — real transaction detail, never belongs in a public repo
 RAW-TRANSACTIONS*.md
+
+# Backup of the retired ChatGPT-era recurring calendar
+legacy-calendar-backup.json
