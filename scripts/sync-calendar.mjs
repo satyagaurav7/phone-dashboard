@@ -129,33 +129,54 @@ async function main() {
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   const cal = encodeURIComponent(CAL);
 
-  let created = 0, updated = 0, failed = 0;
-  for (const day of days) {
-    for (const ev of day.events) {
-      // No upsert in the Calendar API: insert with our own id, and fall back to
-      // update when the id is already there from a previous run.
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  // Calendar answers 403 for two very different things: no access, and "you're
+  // going too fast". Writing ~110 events back to back reliably trips the rate
+  // limiter, so the reason field decides whether to back off or give up.
+  const rateLimited = body => /rateLimitExceeded|userRateLimitExceeded|quotaExceeded/i.test(body);
+
+  // One write, retried through rate limits with widening backoff.
+  async function writeEvent(ev) {
+    for (let attempt = 0; ; attempt++) {
       let res = await fetch(`${API}/calendars/${cal}/events`, {
         method: 'POST', headers, body: JSON.stringify(ev)
       });
+      if (res.ok) return 'created';
       if (res.status === 409) {
         res = await fetch(`${API}/calendars/${cal}/events/${ev.id}`, {
           method: 'PUT', headers, body: JSON.stringify(ev)
         });
-        if (res.ok) { updated++; continue; }
-      } else if (res.ok) {
-        created++; continue;
+        if (res.ok) return 'updated';
       }
-      failed++;
       const body = await res.text().catch(() => '');
-      console.warn(`  ! ${day.dateStr} ${ev.summary} → HTTP ${res.status} ${body.slice(0, 300)}`);
-      // A bad calendar id or a missing share fails identically for every event.
-      // Bail rather than emit hundreds of copies of the same error.
-      if (res.status === 401 || res.status === 403 || res.status === 404) {
+      if ((res.status === 403 || res.status === 429) && rateLimited(body) && attempt < 5) {
+        const wait = 2000 * 2 ** attempt;
+        console.log(`  … rate limited, retrying in ${wait / 1000}s`);
+        await sleep(wait);
+        continue;
+      }
+      // Access problems fail identically for every event, so bail on the first
+      // one rather than emitting a hundred copies of the same error.
+      if (res.status === 401 || res.status === 404 || (res.status === 403 && !rateLimited(body))) {
         throw new Error(
-          `Calendar API returned ${res.status}. Check that "${CAL}" is shared with ` +
-          `${sa.client_email} with "Make changes to events".`
+          `Calendar API returned ${res.status} and it isn't a rate limit. Check that ` +
+          `"${CAL}" is shared with ${sa.client_email} with "Make changes to events".\n` +
+          body.slice(0, 300)
         );
       }
+      console.warn(`  ! ${ev.summary} → HTTP ${res.status} ${body.slice(0, 200)}`);
+      return 'failed';
+    }
+  }
+
+  let created = 0, updated = 0, failed = 0;
+  for (const day of days) {
+    for (const ev of day.events) {
+      const r = await writeEvent(ev);
+      if (r === 'created') created++; else if (r === 'updated') updated++; else failed++;
+      // Cheap insurance against tripping the limiter in the first place.
+      await sleep(120);
     }
   }
   console.log(`Created ${created}, updated ${updated}, failed ${failed}.`);
