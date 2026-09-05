@@ -231,6 +231,11 @@
   .ciDone{font-size:13px;color:var(--sub);line-height:1.45}
   .ciHint{font-size:12px;color:var(--text-2);margin-top:10px;line-height:1.45}
   .ciClose{border-color:rgba(79,216,235,.6);color:var(--customs);font-weight:700}
+  .rmRow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .rmRow:last-of-type{border-bottom:0}
+  .rmRow>div:first-child{flex:1;min-width:0}
+  .rmLbl{font-size:13px;font-weight:600;color:var(--ink)}
+  .rmSub{font-size:11.5px;color:var(--text-2);line-height:1.4;margin-top:2px}
   .ciFoot{margin-top:12px;font-size:11px;color:var(--text-2)}
   .ciLink{background:none;border:0;padding:0;font:inherit;font-size:11px;color:var(--text-2);text-decoration:underline;cursor:pointer}
   .chip b{color:var(--customs)}
@@ -595,7 +600,16 @@ async function initApp(){
        { capacity, feeling, focus[], firstStep, cue, obstacle, win, tomorrow,
          closed, created } — every field optional, absence means "skipped". */
     S.checkIns = S.checkIns || {};
-    S.prefs = Object.assign({ checkIns:true }, S.prefs||{});
+    /* Reminder controls (brief §4). notifyNudges defaults OFF: the tap-window
+       nudges cover the same actions as the Google Tasks routine and cannot see
+       completions made there or by voice, so they duplicate a system that is
+       already reminding him. The morning brief and evening reminder stay on.
+       These gate DISCRETIONARY app pushes only — they never touch Google Tasks
+       alerts, Home routines, or anything medical. snoozeUntil silences
+       discretionary pushes through the named local date, inclusive. */
+    S.prefs = Object.assign({
+      checkIns:true, notifyBrief:true, notifyNudges:false, notifyEvening:true, snoozeUntil:null
+    }, S.prefs||{});
     S.fcmTokens = Array.isArray(S.fcmTokens) ? S.fcmTokens : [];
     S.gasLog = Array.isArray(S.gasLog) ? S.gasLog : [];
     // Declared in the planned shape so Phase 4 (Cash-Out) fills these in rather
@@ -627,72 +641,154 @@ async function initApp(){
     return c;
   };
 
-  const syncEl = () => document.getElementById('syncStatus');
-  const setSyncUI = (text) => { const el = syncEl(); if (el) el.textContent = text; };
+  /* ---------- sync status ----------
+     Held in a variable, not just in the DOM: every render replaces the status
+     element, so a status written once would silently revert to whatever the
+     template last hardcoded. "Synced" means this document reached Firestore —
+     it says nothing about Google Tasks, Calendar or the speaker. */
+  let syncState = { kind:'idle', n:0 };
+  const SYNC_TEXT = {
+    idle:      () => 'Ready',
+    loading:   () => 'Loading…',
+    saving:    () => 'Saving…',
+    synced:    () => 'Synced to cloud',
+    offline:   n  => `On this device · ${n} to sync`,
+    rejected:  n  => `Sync refused · ${n} not saved`,
+    localfail: () => 'Not saved on this device',
+    nocloud:   () => 'On this device only'
+  };
+  const paintSync = () => {
+    const el = document.getElementById('syncStatus');
+    if (el) el.textContent = (SYNC_TEXT[syncState.kind] || SYNC_TEXT.idle)(syncState.n);
+  };
+  const setSync = (kind, n=0) => { syncState = { kind, n }; paintSync(); };
+  const setSyncUI = (text) => { const el = document.getElementById('syncStatus'); if (el) el.textContent = text; };
 
-  try {
-    setSyncUI('Loading…');
-    const snap = await getDoc(userDocRef);
-    if (snap.exists()) { S = snap.data(); }
-    normalize();
-    setSyncUI('Synced');
-  } catch (e) {
-    setSyncUI('On this device');
-  }
-
-  const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify(Dash.state)); } catch(e) {} };
-
-  /* ---------- cloud writes (P0.2) ----------
+  /* ---------- cloud writes (P0.2, hardened) ----------
      This used to be setDoc(ref, Dash.state, {merge:false}) — every tap replaced
-     the entire document from whatever this tab happened to hold in memory. Open
-     the app on the phone and the laptop, tap on each, and the slower save wiped
-     the other's work with no error and no sign anything had gone. Reward grants
-     and check-in records cannot be built on that.
+     the entire document from whatever this tab happened to hold in memory, so
+     two devices silently wiped each other. Each mutation now writes only the
+     field paths it touched.
 
-     Now each mutation writes only the field paths it actually touched, so two
-     devices editing different things merge instead of racing. A failed write
-     stays queued and the status line says so rather than claiming "Synced".
-     See CHECKINS-IMPLEMENTATION-PLAN.md P0.2. */
+     The queue is persisted. It used to live only in memory, and the load path
+     below replaces local state with the remote snapshot, so anything queued
+     when the tab closed was lost for good. It now survives a reload and is
+     replayed over the fresh snapshot before anything else happens. */
   const REMOVE = Symbol('remove-field');
+  const QKEY = KEY + ':pending';
+  const RM = { __rm: true };                       // JSON-safe stand-in for REMOVE
   let pendingPatches = [];
   let flushing = false;
 
+  const encodePatch = p => { const o={}; for (const k in p) o[k] = (p[k]===REMOVE) ? RM : p[k]; return o; };
+  const decodePatch = p => { const o={}; for (const k in p) o[k] = (p[k] && p[k].__rm===true) ? REMOVE : p[k]; return o; };
+  const savePending = () => {
+    try { localStorage.setItem(QKEY, JSON.stringify(pendingPatches.map(encodePatch))); }
+    catch(e) { setSync('localfail'); }
+  };
+  const loadPending = () => {
+    try { const raw = localStorage.getItem(QKEY); pendingPatches = raw ? JSON.parse(raw).map(decodePatch) : []; }
+    catch(e) { pendingPatches = []; }
+  };
+
+  const applyPatchLocal = (target, patch) => {
+    for (const path in patch) {
+      const parts = String(path).split('.'); let o = target;
+      for (let i=0; i<parts.length-1; i++){ if (o[parts[i]] == null) o[parts[i]] = {}; o = o[parts[i]]; }
+      const leaf = parts[parts.length-1];
+      if (patch[path] === REMOVE) delete o[leaf]; else o[leaf] = patch[path];
+    }
+  };
+
+  let lastError = null;
+  let droppedCount = 0;          // writes the server refused and we gave up on
   const syncLabel = () => {
-    if (pendingPatches.length) setSyncUI(`On this device · ${pendingPatches.length} to sync`);
-    else setSyncUI('Synced');
+    if (pendingPatches.length) setSync(lastError === 'rejected' ? 'rejected' : 'offline', pendingPatches.length);
+    // A refused write is dropped, so the queue empties — but the data never
+    // landed. Saying "Synced" here would be exactly the lie this status exists
+    // to prevent, so the refusal stays visible until a later write succeeds.
+    else if (droppedCount) setSync('rejected', droppedCount);
+    else setSync('synced');
   };
 
   const flushCloud = async () => {
     if (flushing || !pendingPatches.length) return;
     flushing = true;
-    setSyncUI('Saving…');
+    setSync('saving');
+    // Serial and in order: a later patch may depend on an earlier one, and two
+    // parallel writers would race each other as badly as the old whole-document
+    // save did.
     while (pendingPatches.length) {
       const patch = pendingPatches[0];
       const remote = {};
       for (const k in patch) remote[k] = (patch[k] === REMOVE) ? deleteField() : patch[k];
       try {
         await updateDoc(userDocRef, remote);
+        lastError = null; droppedCount = 0;
       } catch (e) {
-        // First run on a fresh account: there is no document to update yet, so
-        // seed it. Writing the whole state is safe here precisely because
-        // nothing exists to overwrite.
-        if (e && e.code === 'not-found') {
-          try { await setDoc(userDocRef, Dash.state, { merge:true }); }
-          catch (e2) { flushing = false; syncLabel(); return; }
+        const code = e && e.code;
+        if (code === 'not-found') {
+          // Fresh account with no document. setDoc with merge:true creates it
+          // without clobbering a document another client may have just made.
+          try { await setDoc(userDocRef, Dash.state, { merge:true }); lastError = null; }
+          catch (e2) { lastError = 'offline'; flushing = false; savePending(); syncLabel(); return; }
+        } else if (code === 'permission-denied' || code === 'invalid-argument') {
+          // The server refused this write. Retrying forever would block every
+          // later edit behind it, so drop it and say so rather than looping.
+          console.warn('sync refused, dropping patch', code, patch);
+          pendingPatches.shift(); lastError = 'rejected'; droppedCount++; savePending();
+          continue;
         } else {
-          // Offline or rejected: keep the queue and stay honest about it. The
-          // next set(), or coming back online, retries from the front.
-          flushing = false; syncLabel(); return;
+          lastError = 'offline'; flushing = false; savePending(); syncLabel(); return;
         }
       }
       pendingPatches.shift();
+      savePending();
     }
     flushing = false;
     syncLabel();
   };
 
-  const queuePatch = (patch) => { pendingPatches.push(patch); flushCloud(); };
+  const queuePatch = (patch) => { pendingPatches.push(patch); savePending(); flushCloud(); };
   window.addEventListener('online', flushCloud);
+
+  /* ---------- day boundary ----------
+     Dash.today was fixed when the tab loaded. A tab left open overnight would
+     keep writing into yesterday — taps, check-in answers, everything — and the
+     user would see today's date in the header while the data went elsewhere.
+     Re-check on focus and on a timer; when the local date has moved, reload so
+     every derived value (schedule kind, blankDay, action days) is rebuilt from
+     the new date rather than patched in place. Unsaved text is flushed by the
+     blur handler that focus loss triggers first. */
+  const guardDayBoundary = () => {
+    if (todayStr() === Dash.today) return;
+    if (pendingPatches.length) { flushCloud(); }   // don't strand queued edits
+    location.reload();
+  };
+  setInterval(guardDayBoundary, 60000);
+  window.addEventListener('focus', guardDayBoundary);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) guardDayBoundary(); });
+
+
+
+  loadPending();
+  try {
+    setSync('loading');
+    const snap = await getDoc(userDocRef);
+    if (snap.exists()) { S = snap.data(); }
+    // Replay anything that never reached the server ON TOP of the fresh
+    // snapshot, so unsynced edits win over the stale values they were made
+    // against, and untouched remote fields are left exactly as they are.
+    for (const patch of pendingPatches) applyPatchLocal(S, patch);
+    normalize();
+    if (pendingPatches.length) { syncLabel(); flushCloud(); } else setSync('synced');
+  } catch (e) {
+    normalize();
+    setSync('nocloud');
+  }
+
+  const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify(Dash.state)); } catch(e) { setSync('localfail'); } };
+
 
   const getPath = (o,p) => String(p).split('.').reduce((a,k)=>a==null?a:a[k], o);
 
@@ -718,14 +814,10 @@ async function initApp(){
        half-applied. Values may be Dash.REMOVE to delete a field. */
     setMany(patch){
       let lastOn = null;
-      for (const path in patch){
-        const value = patch[path];
-        const parts = String(path).split('.'); let o = this.state;
-        for (let i=0; i<parts.length-1; i++){ if (o[parts[i]] == null) o[parts[i]] = {}; o = o[parts[i]]; }
-        const leaf = parts[parts.length-1];
-        if (value === REMOVE) delete o[leaf]; else o[leaf] = value;
-        if (value === true) lastOn = path;
-      }
+      for (const path in patch) if (patch[path] === true) lastOn = path;
+      // One implementation, shared with the reload replay, so a local write and
+      // a replayed write can never disagree about what a path means.
+      applyPatchLocal(this.state, patch);
       // Remember what was just switched ON so the next render can celebrate
       // only that one element (see .justDone). Without this, every re-render
       // replays the completion animation on everything already done at once.
@@ -1030,6 +1122,14 @@ async function initApp(){
 
        Storage is S.checkIns[date]; nothing here writes to S.days, so deleting
        every check-in leaves the record of what was actually done intact (A21). */
+    /* Stored answers are free text the user typed. They are rendered back into
+       innerHTML, so every interpolation of them must be escaped — otherwise a
+       note containing markup executes as markup. escAttr also escapes & so an
+       entity typed literally survives a round trip instead of decoding. */
+    const escHtml = v => String(v==null?'':v)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const escAttr = v => escHtml(v).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
     const CAPACITY=[['low','Low'],['usual','Usual'],['plenty','Plenty']];
     const FEELINGS=[['calm','Calm'],['tense','Tense'],['flat','Flat'],['distracted','Distracted']];
     const OBSTACLES=[['toomuch','Too much planned'],['unclear','Unclear next step'],['tired','Tired'],['interrupted','Interrupted'],['waiting','Waiting on someone']];
@@ -1051,13 +1151,13 @@ async function initApp(){
       // discretionary prompt; it does not lock the record (A16).
       if(c.closed){
         const bits=[];
-        if(c.capacity) bits.push(`Capacity ${c.capacity}`);
+        if(c.capacity) bits.push(`Capacity ${escHtml(c.capacity)}`);
         if(c.focus){
           const hit=[...SMALL_WINS,...BIG_WINS].find(x=>x[0]===c.focus);
-          bits.push(`Focus: ${c.focus==='rest'?'Rest':(hit?hit[2]:c.focus)}`);
+          bits.push(`Focus: ${escHtml(c.focus==='rest'?'Rest':(hit?hit[2]:c.focus))}`);
         }
-        if(c.obstacle) bits.push(`In the way: ${(OBSTACLES.find(o=>o[0]===c.obstacle)||[,c.obstacle])[1]}`);
-        if(c.tomorrow) bits.push(`Tomorrow: ${c.tomorrow}`);
+        if(c.obstacle) bits.push(`In the way: ${escHtml((OBSTACLES.find(o=>o[0]===c.obstacle)||[,c.obstacle])[1])}`);
+        if(c.tomorrow) bits.push(`Tomorrow: ${escHtml(c.tomorrow)}`);
         return `<div class="card card--quiet">
           ${secTitle('CHECK','Today is closed','','var(--text-2)')}
           <div class="ciDone">${bits.length?bits.join(' · '):'Closed without notes. That is a complete answer.'}</div>
@@ -1082,7 +1182,7 @@ async function initApp(){
             <div class="ciRow">${menu.map(([k,l])=>ciChip('focus',k,l,c.focus===k)).join('')}
               ${low?ciChip('focus','rest','Rest today',c.focus==='rest'):''}</div>
             <div class="ciQ">First small step, and what will cue it?</div>
-            <input class="ciText" data-ci-text="firstStep" value="${(c.firstStep||'').replace(/"/g,'&quot;')}"
+            <input class="ciText" data-ci-text="firstStep" value="${escAttr(c.firstStep)}"
               placeholder="After I put the kettle on, I will open the book" aria-label="First small step and its cue">
           `:`<div class="ciHint">Answer one thing or none. Skipping costs nothing.</div>`}
           ${off}</div>`;
@@ -1097,12 +1197,12 @@ async function initApp(){
         <div class="ciQ">What moved forward today?</div>
         <div class="ciDone">${logged?`${logged} thing${logged===1?'':'s'} recorded in the app today.`
           :'Nothing recorded in the app today. Anything done by voice or elsewhere would not show here.'}</div>
-        <input class="ciText" data-ci-text="win" value="${(c.win||'').replace(/"/g,'&quot;')}"
+        <input class="ciText" data-ci-text="win" value="${escAttr(c.win)}"
           placeholder="Something real that never got tapped (optional)" aria-label="An unlogged win">
         <div class="ciQ">What got in the way, if anything?</div>
         <div class="ciRow">${OBSTACLES.map(([v,l])=>ciChip('obstacle',v,l,c.obstacle===v)).join('')}</div>
         <div class="ciQ">Tomorrow's first small step?</div>
-        <input class="ciText" data-ci-text="tomorrow" value="${(c.tomorrow||'').replace(/"/g,'&quot;')}"
+        <input class="ciText" data-ci-text="tomorrow" value="${escAttr(c.tomorrow)}"
           placeholder="One small thing (optional)" aria-label="Tomorrow's first small step">
         <div class="ciRow" style="margin-top:12px">
           <button class="chip ciClose" data-ci-act="close">Close the day</button>
@@ -1112,6 +1212,32 @@ async function initApp(){
           ? 'Today was difficult. You don’t need to make it look better in the log — leave one manageable step, or skip the review.'
           : 'You can stop here. Nothing is owed.'}</div>
         ${off}</div>`;
+    }
+
+
+    /* Reminder controls. Deliberately shows what each switch does NOT cover —
+       turning an app push off must never read as turning off a medication
+       reminder or a Google Tasks alert. */
+    function reminderCard(s){
+      const pf = s.prefs || {};
+      const snoozed = pf.snoozeUntil === Dash.today;
+      const sw = (key,label,sub)=>`
+        <div class="rmRow">
+          <div><div class="rmLbl">${label}</div><div class="rmSub">${sub}</div></div>
+          <button class="chip${pf[key]?' on':''}" data-pref="${key}" role="switch"
+            aria-checked="${pf[key]?'true':'false'}" aria-label="${label}">${pf[key]?'On':'Off'}</button>
+        </div>`;
+      return `<div class="card card--quiet">
+        ${secTitle('PUSH','App reminders','FLOWSTATE only','var(--text-2)')}
+        ${sw('notifyBrief','Morning brief','Day shape plus any real deadline inside 3 days')}
+        ${sw('notifyNudges','Tap-window nudges','Off by default — these repeat what Google Tasks already tracks')}
+        ${sw('notifyEvening','Evening reminder','Silent once the day is anchored')}
+        <div class="rmRow">
+          <div><div class="rmLbl">Quiet for today</div><div class="rmSub">${snoozed?'Discretionary pushes are off until tomorrow':'Pause discretionary pushes until tomorrow'}</div></div>
+          <button class="chip${snoozed?' on':''}" data-pref-snooze="1">${snoozed?'Quiet':'Snooze'}</button>
+        </div>
+        <div class="ciHint">These control FLOWSTATE pushes only. Google Tasks notifications, Home routines and anything medical are separate and unaffected.</div>
+      </div>`;
     }
 
     function todayHTML(s,d){
@@ -1273,6 +1399,7 @@ async function initApp(){
         ${rightNow}
         ${anchorCard}
         ${checkInCard(s,d)}
+        ${reminderCard(s)}
         ${pushCard}
         <div class="card">
           ${secTitle('SMALL','Small Wins',`${smallDone}/${SMALL_WINS.length} · +3 each`, smallDone?'var(--customs)':'var(--sub)')}
@@ -2009,6 +2136,9 @@ async function initApp(){
 
       applyMood();
       const tabChanged = tab!==lastTab;
+      // The status element is recreated by every redraw, so the live state has
+      // to be repainted onto it or it reverts to whatever the template said.
+      queueMicrotask(paintSync);
 
       root.innerHTML =
         (tab==='today'?todayHTML(s,d)
@@ -2106,6 +2236,18 @@ async function initApp(){
             if(confirm('Delete all check-in answers? Your logged actions, momentum and milestones are not affected.'))
               Dash.set('checkIns', {});
           }
+        });
+      });
+      root.querySelectorAll('[data-pref]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const k=el.dataset.pref;
+          Dash.set(`prefs.${k}`, !(Dash.state.prefs&&Dash.state.prefs[k]));
+        });
+      });
+      root.querySelectorAll('[data-pref-snooze]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const on=(Dash.state.prefs||{}).snoozeUntil===Dash.today;
+          Dash.set('prefs.snoozeUntil', on ? Dash.REMOVE : Dash.today);
         });
       });
       root.querySelectorAll('[data-hydro]').forEach(el=>{
