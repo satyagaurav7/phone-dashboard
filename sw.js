@@ -1,6 +1,12 @@
 /* Mission Control service worker: app-shell cache + FCM background push.
    One SW handles both because a scope can only have one active worker. */
 
+/* Push and caching are independent jobs that share one worker because a scope
+   can only have one. If the messaging SDK cannot load — blocked, offline, CDN
+   down — the cache handlers below must still install and work, so every part of
+   the push setup is wrapped and failure is recorded rather than thrown. */
+let messagingReady = false;
+try {
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
@@ -14,6 +20,7 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+messagingReady = true;
 
 // Pushes sent with a `notification` payload are displayed by the browser
 // automatically; this handler covers data-only messages so nothing is silent.
@@ -27,6 +34,11 @@ messaging.onBackgroundMessage((payload) => {
     data: { url: d.url || './' }
   });
 });
+
+} catch (e) {
+  // Cache handlers below are registered regardless.
+  console.warn('FLOWSTATE SW: messaging unavailable, caching still active', e);
+}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
@@ -42,7 +54,8 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 /* ---------------- app-shell cache ---------------- */
-const CACHE = 'flowstate-v3';
+const CACHE_PREFIX = 'flowstate-';
+const CACHE = CACHE_PREFIX + 'v4';
 const SHELL = [
   './',
   'index.html',
@@ -91,7 +104,12 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      // Only this app's own caches. github.io is a shared origin: every project
+      // published under the same account lives here, and deleting every key
+      // would wipe a neighbouring app's cache as a side effect of our upgrade.
+      .then((keys) => Promise.all(
+        keys.filter((k) => k.startsWith(CACHE_PREFIX) && k !== CACHE).map((k) => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   );
 });
@@ -99,28 +117,46 @@ self.addEventListener('activate', (event) => {
 // Network-first for same-origin GETs (the app is one file that changes often);
 // fall back to cache when offline. Pinned cross-origin modules are cache-first.
 // Everything else cross-origin (Firebase, fonts) passes straight through.
+// Only this app's own URLs are intercepted: same-origin requests under the
+// registration scope, plus the explicitly pinned cross-origin modules.
+// github.io is a shared origin, so a bare same-origin test would put this
+// worker in front of a neighbouring project's requests.
+const SCOPE_PATH = new URL(self.registration.scope).pathname;
+
+// A 404 or a 502 is a valid HTTP response, so a naive cache.put stores it and
+// the next offline open serves the error instead of the app. Only successful,
+// non-partial, basic/cors responses are worth keeping.
+const cacheable = (res) =>
+  res && res.ok && res.status === 200 && (res.type === 'basic' || res.type === 'cors');
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  if (new URL(req.url).origin !== self.location.origin) {
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) {
     if (!RUNTIME_PINNED.includes(req.url.split('?')[0])) return;
     event.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
+        if (cacheable(res)) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
         return res;
       }))
     );
     return;
   }
+  if (!url.pathname.startsWith(SCOPE_PATH)) return;
 
   event.respondWith(
     fetch(req)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
-        return res;
+        if (cacheable(res)) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+          return res;
+        }
+        // Server answered, but with an error. Prefer a known-good cached copy
+        // over showing the failure — and never overwrite that copy with it.
+        return caches.match(req, { ignoreSearch: true }).then((hit) => hit || res);
       })
       .catch(() => caches.match(req, { ignoreSearch: true }))
   );
