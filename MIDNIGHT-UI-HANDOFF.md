@@ -1,6 +1,8 @@
 # FLOWSTATE — Midnight UI implementation
 
-Prepared 2026-09-05. **Release approved by the user; publication and live verification in progress.**
+Prepared 2026-09-05. **Published to `main` as `8f0e224`; GitHub Pages deployment succeeded.**
+Deployment: https://github.com/satyagaurav7/phone-dashboard/actions/runs/33985044268
+Live app: https://satyagaurav7.github.io/phone-dashboard/
 Base: `764a18b` on `origin/main`. Branch: `design/midnight-editorial`.
 
 ## What changed
@@ -94,10 +96,10 @@ Check at 320, 375 and 430 px, plus desktop:
 
 ## Release status and publication restriction
 
-The implementation is reviewable locally. Confirm the remote and deployment before calling it live. Prior automatic approval review rejected public publication of app payloads containing existing personal account, health and financial details. The user has now explicitly approved publishing those existing details to the public repository. This redesign preserves those existing source records; it does not sanitize them or add new private data. That rejection has not been bypassed or retried via another publishing route.
+The complete implementation is published and GitHub Pages reports a successful deployment. The phone and signed-in interaction checks above remain outstanding. Prior automatic approval review rejected public publication of app payloads containing existing personal account, health and financial details. The user has now explicitly approved publishing those existing details to the public repository. This redesign preserves those existing source records; it does not sanitize them or add new private data. That rejection has not been bypassed or retried via another publishing route.
 
 Explicit authorization to republish the existing details is now recorded in the conversation. Do not publish only half the UI: the HTML, presentation module, CSS, font, SVG and cache revision must ship together.
 
-Once publication is allowed, confirm the latest remote base, publish the complete candidate, verify Pages deployment and run the phone checks above. A local commit, a remote push and a live deployment are distinct milestones.
+Publication was authorized and completed through the authenticated GitHub connector. Run the phone checks above on the live app. A local commit, a remote push and a live deployment are distinct milestones.
 
 Rollback is a normal revert of the UI commit. No database migration is required; previous clients ignore `morningSkipped`. Retain the font license whenever the font is distributed.

@@ -1,6 +1,6 @@
 # FLOWSTATE handoff — 2026-09-05
 
-> Local Midnight UI candidate: see [MIDNIGHT-UI-HANDOFF.md](MIDNIGHT-UI-HANDOFF.md). It supersedes the presentation described below, but is not pushed or deployed. Existing integration limits still apply.
+> Midnight UI published on `main` as `8f0e224`; GitHub Pages deployment succeeded. See [MIDNIGHT-UI-HANDOFF.md](MIDNIGHT-UI-HANDOFF.md) for the current presentation and verification limits. The historical status below predates that release.
 
 Status of the dashboard after the P1 hardening pass. Written for the next
 session. Nothing sensitive here: no account addresses, tokens, keys, task
