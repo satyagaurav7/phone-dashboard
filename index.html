@@ -480,6 +480,7 @@
 <script type="module">
 import * as midnight from "./ui/midnight.mjs";
 import * as flowstateRules from "./rules.mjs";
+import * as flowstateChores from "./chores.mjs";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
@@ -495,6 +496,7 @@ import {
 // Cloud Messaging → Web configuration. Empty = push UI stays hidden.
 const VAPID_KEY = 'BGuB7tmolQ5QSqAERQjBe8yp_SBXHWY7WScV2ZdK-ULsiID4_4rSEznIGkDpIFfpePIyhpK2rkQjudcgf7WXSLM';
 globalThis.FLOWSTATE_RULES = flowstateRules;
+globalThis.FLOWSTATE_CHORES = flowstateChores;
 
 // One service worker handles both offline caching and background push.
 const swReady = ('serviceWorker' in navigator)
@@ -580,6 +582,7 @@ async function initApp(){
   // notification sender (scripts/notify.mjs). SW caches it for offline.
   let SCHED_DATA = null;
   const RULES = globalThis.FLOWSTATE_RULES || null;
+  const CHORES = globalThis.FLOWSTATE_CHORES || null;
   try { SCHED_DATA = await (await fetch('schedule.json', { cache: 'no-cache' })).json(); }
   catch (e) { try { const c = await caches.match('schedule.json'); if (c) SCHED_DATA = await c.json(); } catch (e2) {} }
   if (RULES && SCHED_DATA) RULES.assertSchedule(SCHED_DATA);
@@ -637,6 +640,16 @@ async function initApp(){
     }, S.prefs||{});
     S.fcmTokens = Array.isArray(S.fcmTokens) ? S.fcmTokens : [];
     S.gasLog = Array.isArray(S.gasLog) ? S.gasLog : [];
+    /* Home upkeep. Shape per template id:
+       { last:'YYYY-MM-DD', moved:'YYYY-MM-DD', steps:{i:true}, stage:{id,startedAt} }
+       Held outside S.days because a chore is not a property of one day —
+       it has a cadence, and its last completion is the thing that matters.
+       Nothing in here is read by the scoring engine. See chores.mjs. */
+    S.chores = S.chores || {};
+    // The day upkeep tracking began. Occurrences that fell due before it are
+    // shown as due now rather than overdue: the app cannot know what was done
+    // before it started looking, and must not claim otherwise.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(S.config.choresStart))) S.config.choresStart = T;
     // Declared in the planned shape so Phase 4 (Cash-Out) fills these in rather
     // than migrating them. Phase 1 only reads `mood` — the six moods/*.svg exist
     // now; nothing grants one yet. Additive: no existing field changes meaning.
@@ -1258,7 +1271,7 @@ async function initApp(){
           const checked=d[i.key]===true;
           const label=KEY_LABELS[i.key]||SCHED_DATA.tapPlan.labels?.[i.key]||i.key;
           const detail=i.key==='water'?`${hydroTotal(d)} / ${s.config.waterGoal||2500} ml`:checked?(i.state==='late'?'Logged late':'Logged'):b.state==='failed'?'Not logged · late credit available':'Not logged';
-          return `<button type="button" class="boardItem${checked?' checked':''}" ${i.key==='water'?'data-hydro="1"':`data-toggle="days.${Dash.today}.${i.key}" aria-pressed="${checked}"`} aria-label="${escAttr(label)}: ${checked?'logged':'not logged'}"><span class="boardCheck">${checked?icon('check'):''}</span><span><b>${escHtml(label)}</b><small>${escHtml(detail)}</small></span>${i.key==='water'?icon('drop'):''}</button>`;
+          return `<button type="button" class="boardItem${checked?' checked':''}" ${i.key==='water'?'data-hydro="1"':`data-toggle="days.${Dash.today}.${i.key}" aria-pressed="${checked}"`} aria-label="${escAttr(label)}: ${checked?'logged':'not logged'}"><span class="boardCheck">${checked?icon('check'):''}</span><span><b>${escHtml(label)}</b><small>${escHtml(detail)}</small></span>${i.key==='water'?icon('drop'):''}</button>`+itemStepsHTML(i.key,d);
         }).join('');
         return `<details class="boardBlock ${b.state}" data-disclosure="block-${b.id}" ${b.id===focus?.id?'open':''}><summary><span class="boardBlockName">${escHtml(b.title)}<small>${fmt(b.startMin)}–${fmt(b.endMin)}</small></span><span class="boardProgress">${done}/${b.items.length}<small>${b.state==='failed'?'Failed · -8':b.state==='passed'?'Passed · +5':b.state==='open'?'Open':'Upcoming'}</small></span><span class="boardChevron">⌄</span><span class="windowPips">${b.items.map(i=>`<i class="windowPip ${i.state}"></i>`).join('')}</span></summary>${b.state==='open'?`<div class="windowCount" data-countdown data-end-min="${b.endMin}"></div>`:''}${b.state==='failed'?'<p class="boardNote">Late logs earn credit. This window stays failed.</p>':''}<div class="boardItems">${items}</div></details>`;
       }).join('');
@@ -1269,6 +1282,58 @@ async function initApp(){
         ${ledger.tier==='blackout'?'<div class="stakeLine emergency">Blackout clears when the balance returns above zero. Logging stays available.</div>':''}
         ${rows}
       </section>`;
+    }
+
+    /* Named sub-steps under a single scored item. Satya chose one 'Get ready'
+       tick with a checklist over separate brush/shower/dress items, so these
+       steps are guidance and local progress only — ticking them all completes
+       the ONE parent item through the ordinary tap path, and scoring never sees
+       the steps themselves. */
+    function itemStepsHTML(key,d){
+      const steps=SCHED_DATA?.tapPlan?.steps?.[key];
+      if(!steps||!steps.length) return '';
+      const done=(d.steps&&d.steps[key])||{};
+      const n=steps.filter((_,i)=>done[i]===true).length;
+      return `<details class="stepWrap" data-disclosure="steps-${key}"><summary>${n}/${steps.length} steps</summary>`+
+        steps.map((label,i)=>`<button type="button" class="stepItem${done[i]===true?' checked':''}" data-step="${escAttr(key)}:${i}" aria-pressed="${done[i]===true}"><span class="boardCheck">${done[i]===true?icon('check'):''}</span><span>${escHtml(label)}</span></button>`).join('')+
+        `</details>`;
+    }
+
+    /* Home upkeep. Kept in its own section, out of the scored blocks, because a
+       chore must not be able to fail a window, move the balance, or reach the
+       money stake — see the plan, section 8.10, and the test that asserts it. */
+    const CHORE_CHIP={overdue:'OVERDUE',due:'DUE',upcoming:'LATER',anytime:'WHEN NEEDED',done:'DONE'};
+    function upkeepHTML(s){
+      if(!CHORES||!SCHED_DATA||!(SCHED_DATA.chores||[]).length) return '';
+      let board;
+      try{ board=CHORES.upkeepBoard({sched:SCHED_DATA,state:s,today:Dash.today}); }
+      catch(e){ return ''; }
+      const now=Date.now();
+      const fmtClock=ts=>new Date(ts).toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit',hour12:false});
+      const rows=board.rows.map(r=>{
+        const chip=CHORE_CHIP[r.status]||r.status.toUpperCase();
+        const late=r.status==='overdue'?` · ${r.overdueDays}d late`:'';
+        const cost=r.activeMin?`${r.activeMin} min`:'';
+        const wait=r.waitMin?` · ${Math.round(r.waitMin/60*10)/10}h waiting`:'';
+        let body='';
+        if(r.stages&&r.stages.length){
+          const plan=CHORES.stagePlan({chore:r,record:(s.chores||{})[r.id]||{},nowTs:now});
+          body=`<div class="choreStages">`+plan.stages.map(st=>{
+            const running=st.state==='running';
+            const ready=running&&plan.readyAt?`<small>${plan.overdueEstimate?'Estimate passed — go and check':`Ready about ${escHtml(fmtClock(plan.readyAt))}`}</small>`:'';
+            const cd=st.waitMin?`${st.waitMin} min wait`:`${st.activeMin||0} min`;
+            return `<div class="choreStage ${st.state}"><span><b>${escHtml(st.label)}</b><small>${cd}</small>${ready}</span><button type="button" class="chip" data-chorestage="${escAttr(r.id)}:${escAttr(st.id)}">${running?'Restart':'Start'}</button></div>`;
+          }).join('')+`</div><p class="boardNote">A finished estimate is not a finished load. Nothing here ticks itself off.</p>`;
+        } else if(r.steps&&r.steps.length){
+          const done=r.stepsDone||{};
+          body=`<div class="choreSteps">`+r.steps.map((label,i)=>`<button type="button" class="stepItem${done[i]===true?' checked':''}" data-chorestep="${escAttr(r.id)}:${i}" aria-pressed="${done[i]===true}"><span class="boardCheck">${done[i]===true?icon('check'):''}</span><span>${escHtml(label)}</span></button>`).join('')+`</div>`;
+        }
+        const actions=`<div class="choreActions"><button type="button" class="chip" data-chore-done="${escAttr(r.id)}">${r.status==='done'?'Done today':'Mark done'}</button>`+
+          (r.status==='done'||r.status==='anytime'?'':`<button type="button" class="quiet-link" data-chore-move="${escAttr(r.id)}">Move to tomorrow</button>`)+`</div>`;
+        return `<details class="choreRow ${r.status}" data-disclosure="chore-${escAttr(r.id)}"><summary><span class="choreName">${escHtml(r.title)}<small>${escHtml(cost)}${escHtml(wait)}${r.window?` · from ${escHtml(r.window)}`:''}</small></span><span class="choreChip">${chip}${late}</span><span class="boardChevron">⌄</span></summary>${body}${actions}</details>`;
+      }).join('');
+      return `<section id="upkeep"><div class="boardHeading"><h2>Home upkeep</h2><span>${board.outstanding} open · ${board.activeMinDue} min</span></div>`+
+        `<p class="boardNote">Chores are tracked, never scored. Missing one cannot fail a block, move the balance, or cost money.</p>${rows}</section>`;
     }
 
     function dayOffSettings(s){
@@ -1995,7 +2060,7 @@ async function initApp(){
       return VAPID_KEY && 'Notification' in window && Notification.permission!=='granted'
         ? `<section class="connections"><h2>Device notifications</h2><p>Register this device for your selected app reminders. Delivery still needs a real test.</p><button id="pushEnable" class="outline-button">Enable notifications</button><p id="pushMsg" role="status"></p></section>` : '';
     }
-    function todayHTML(s,d){ return stakeHTML(s)+dayBoardHTML(s,d)+midnight.today({state:s,date:Dash.today,checkIn:checkInCard(s,d),activity:activityHTML(s,d)}); }
+    function todayHTML(s,d){ return stakeHTML(s)+dayBoardHTML(s,d)+upkeepHTML(s)+midnight.today({state:s,date:Dash.today,checkIn:checkInCard(s,d),activity:activityHTML(s,d)}); }
     function schedHTML(){ return midnight.plan(); }
     function moreHTML(s){ return dayOffSettings(s)+midnight.more({reminders:reminderCard(s),push:pushSetupHTML()}); }
 
@@ -2138,6 +2203,71 @@ async function initApp(){
         if(el) el.classList.add('justDone');
         Dash._lastSet=null;
       }
+
+      /* Sub-steps on a scored item. Ticking the last one completes the parent
+         in the SAME write, with the timestamp Dash.set would have added, so a
+         step-completed item and a directly-tapped one are indistinguishable to
+         the scoring engine. */
+      root.querySelectorAll('[data-step]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const [key,idx]=el.dataset.step.split(':');
+          const steps=SCHED_DATA?.tapPlan?.steps?.[key]||[];
+          const day=Dash.state.days[Dash.today]||{};
+          const done=Object.assign({},(day.steps&&day.steps[key])||{});
+          const next=done[idx]===true?false:true;
+          done[idx]=next;
+          const patch={[`days.${Dash.today}.steps.${key}.${idx}`]:next};
+          const all=steps.every((_,i)=>done[i]===true);
+          if(all&&day[key]!==true){
+            patch[`days.${Dash.today}.${key}`]=true;
+            patch[`days.${Dash.today}.log.${key}`]=Date.now();
+          }
+          Dash.setMany(patch);
+        });
+      });
+
+      /* Home upkeep. Every write here lands under state.chores, which the
+         scoring engine never reads. */
+      const choreRec=id=>((Dash.state.chores||{})[id]||{});
+      root.querySelectorAll('[data-chorestep]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const [id,idx]=el.dataset.chorestep.split(':');
+          const chore=(SCHED_DATA.chores||[]).find(c=>c.id===id); if(!chore) return;
+          const done=Object.assign({},choreRec(id).steps||{});
+          done[idx]=done[idx]===true?false:true;
+          if((chore.steps||[]).every((_,i)=>done[i]===true)){
+            Dash.setMany({[`chores.${id}`]:CHORES.completePatch(Dash.today)});
+            flowToast(`${chore.title} done`);
+          } else {
+            Dash.set(`chores.${id}.steps.${idx}`,done[idx]);
+          }
+        });
+      });
+      root.querySelectorAll('[data-chore-done]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const id=el.dataset.choreDone;
+          const chore=(SCHED_DATA.chores||[]).find(c=>c.id===id); if(!chore) return;
+          Dash.setMany({[`chores.${id}`]:CHORES.completePatch(Dash.today)});
+          flowToast(`${chore.title} done`);
+        });
+      });
+      root.querySelectorAll('[data-chore-move]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const id=el.dataset.choreMove;
+          // Moves the preferred slot only. It cannot reach an external deadline,
+          // and it does not count as doing the chore.
+          Dash.set(`chores.${id}.moved`,CHORES.addDays(Dash.today,1));
+          flowToast('Moved to tomorrow');
+        });
+      });
+      root.querySelectorAll('[data-chorestage]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const [id,stage]=el.dataset.chorestage.split(':');
+          // Records that a stage started. It never completes the stage: only
+          // the user can say the load is actually done.
+          Dash.set(`chores.${id}.stage`,{id:stage,startedAt:Date.now()});
+        });
+      });
 
       root.querySelectorAll('[data-toggle]').forEach(el=>{
         const fire=()=>{

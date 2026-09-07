@@ -4,6 +4,25 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Household task planning handoff (2026-09-07)
+
+- User redirected Codex to planning while Claude may own UI implementation. No further UI edits or deployment for this request.
+- Plan: `docs/superpowers/plans/2026-09-07-home-maintenance-and-task-sync.md`. Covers room reset, recurring household catalogue, active/waiting durations, proposed time allocations, separate Day board upkeep group, and staged Google Tasks feasibility/sync rollout.
+- Google Tasks API timing limits checked against official documentation. Plan keeps source tasks/completion in Google and timing metadata in FLOWSTATE; no live writes or recurrence automation enabled.
+- Pending confirmation: laundry setup/load count, shared chore ownership, collection schedule, live commitments and selected task list. Next implementation step is a read-only mapping audit after access approval.
+- Plan is local/uncommitted. Existing UI changes remain in the shared working tree; the prior fetch/publish attempt was blocked by approval-review usage limits and was not retried. Coordinate ownership before editing those files.
+
+### Home upkeep and get-ready (2026-09-07)
+
+- Claude, `main`, from `1906862`. Implements steps 3 and 4 of the household plan (`docs/superpowers/plans/2026-09-07-home-maintenance-and-task-sync.md`): pure functions with fixture tests, and a synthetic Home upkeep board. Steps 5-8 need Google access approval and were not started; no adapter, no OAuth, no writes.
+- Confirmed with the user: hygiene is ONE scored `getready` item with a four-step sub-checklist (not separate scored items); laundry is in-unit washer plus dryer; cleaning ownership is room only, so the bathroom deep clean and shared kitchen zones were dropped from the catalogue. Kitchen close was kept because the routine already cooks daily.
+- `chores.mjs` is a separate module from `rules.mjs` by design. Plan section 8.10 keeps chores out of `evaluateDay`, the balance, blackout and Beeminder; a test asserts a full set of overdue chores moves neither the verdict, the delta, nor the balance.
+- One outstanding occurrence per template falls out of computing the current occurrence from cadence plus last completion, rather than generating and accumulating rows. A weekly chore skipped for a month is one overdue job.
+- Added `config.choresStart`. Found in preview that a fresh install opened claiming 13 open chores with several days of lateness on work it had never observed. Occurrences due before adoption now read as due, not late; verified zero overdue on a clean state.
+- Staged laundry separates active effort from machine waiting and never self-completes: starting a stage records `startedAt` and an estimated ready time, and a passed estimate reads "go and check".
+- Verification: 38/38 `tests/*.test.mjs` (15 new chore tests), 16/16 `tests/midnight.test.cjs` (4 new controller tests), `build-site` succeeded with `chores.mjs` published, service worker bumped to `midnight-v4`. Browser-driven checks in the synthetic harness covered stage start, step-completion, chore completion, and get-ready sub-steps completing the single scored parent with its timestamp.
+- Not verified: real cloud writes, the signed-in app, and physical-device behaviour. Sub-step and chore state are local/Firestore only and reach no Google service.
+
 ### Day board usability update (2026-09-07)
 
 - Codex, same checkout on `main`, starting at `a5d7291`; scope: board rendering/styles, countdowns, legacy timestamp guard, regression tests, preview harness, service-worker cache.

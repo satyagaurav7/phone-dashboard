@@ -2,7 +2,11 @@
   "timezone": "America/Toronto",
   "calendarId": "booms.satya@gmail.com",
   "appUrl": "https://satyagaurav7.github.io/phone-dashboard/",
-  "stakes": { "enabled": false, "user": "", "goal": "" },
+  "stakes": {
+    "enabled": false,
+    "user": "",
+    "goal": ""
+  },
   "dayKinds": [
     "sun",
     "office",
@@ -47,7 +51,8 @@
         "money": "21:00",
         "creatine": "21:45",
         "smokefree": "22:15",
-        "phonedown": "22:15"
+        "phonedown": "22:15",
+        "getready": "06:35"
       },
       "wfh": {
         "anchor": "06:45",
@@ -70,7 +75,8 @@
         "meditate": "21:15",
         "creatine": "21:45",
         "smokefree": "21:45",
-        "phonedown": "21:45"
+        "phonedown": "21:45",
+        "getready": "06:55"
       },
       "sat": {
         "anchor": "09:00",
@@ -93,7 +99,8 @@
         "meditate": "21:40",
         "creatine": "22:00",
         "smokefree": "22:30",
-        "phonedown": "22:30"
+        "phonedown": "22:30",
+        "getready": "09:20"
       },
       "sun": {
         "anchor": "09:30",
@@ -116,45 +123,330 @@
         "meditate": "21:30",
         "creatine": "21:45",
         "smokefree": "22:00",
-        "phonedown": "22:00"
+        "phonedown": "22:00",
+        "getready": "09:50"
       }
     },
     "blocks": {
       "office": [
-        { "id": "morning", "title": "Morning", "start": "06:15", "end": "07:00", "keys": ["anchor", "walk", "water", "meditate"] },
-        { "id": "fuel", "title": "Fuel + meds", "start": "07:00", "end": "07:30", "keys": ["breakfast", "insulin", "omega3", "bonehealth", "vitcd"] },
-        { "id": "midday", "title": "Midday", "start": "12:15", "end": "13:15", "keys": ["lunch"] },
-        { "id": "gym", "title": "Gym", "start": "17:30", "end": "20:30", "keys": ["gym"] },
-        { "id": "evening", "title": "Evening", "start": "20:30", "end": "21:45", "keys": ["cookmeal", "dinner", "cooked", "read5", "language"] },
-        { "id": "deep-work", "title": "Deep work", "start": "21:45", "end": "22:30", "keys": ["study", "money"] },
-        { "id": "wind-down", "title": "Wind-down", "start": "22:30", "end": "23:15", "keys": ["creatine", "smokefree", "phonedown"] }
+        {
+          "id": "morning",
+          "title": "Morning",
+          "start": "06:15",
+          "end": "07:00",
+          "keys": [
+            "anchor",
+            "walk",
+            "water",
+            "meditate",
+            "getready"
+          ]
+        },
+        {
+          "id": "fuel",
+          "title": "Fuel + meds",
+          "start": "07:00",
+          "end": "07:30",
+          "keys": [
+            "breakfast",
+            "insulin",
+            "omega3",
+            "bonehealth",
+            "vitcd"
+          ]
+        },
+        {
+          "id": "midday",
+          "title": "Midday",
+          "start": "12:15",
+          "end": "13:15",
+          "keys": [
+            "lunch"
+          ]
+        },
+        {
+          "id": "gym",
+          "title": "Gym",
+          "start": "17:30",
+          "end": "20:30",
+          "keys": [
+            "gym"
+          ]
+        },
+        {
+          "id": "evening",
+          "title": "Evening",
+          "start": "20:30",
+          "end": "21:45",
+          "keys": [
+            "cookmeal",
+            "dinner",
+            "cooked",
+            "read5",
+            "language"
+          ]
+        },
+        {
+          "id": "deep-work",
+          "title": "Deep work",
+          "start": "21:45",
+          "end": "22:30",
+          "keys": [
+            "study",
+            "money"
+          ]
+        },
+        {
+          "id": "wind-down",
+          "title": "Wind-down",
+          "start": "22:30",
+          "end": "23:15",
+          "keys": [
+            "creatine",
+            "smokefree",
+            "phonedown"
+          ]
+        }
       ],
       "wfh": [
-        { "id": "morning", "title": "Morning", "start": "06:45", "end": "07:15", "keys": ["anchor", "walk", "water"] },
-        { "id": "gym", "title": "Gym", "start": "07:00", "end": "10:00", "keys": ["gym"] },
-        { "id": "fuel", "title": "Fuel + meds", "start": "08:30", "end": "09:30", "keys": ["breakfast", "insulin", "omega3", "bonehealth", "vitcd"] },
-        { "id": "midday", "title": "Midday", "start": "12:15", "end": "13:30", "keys": ["cookmeal", "lunch"] },
-        { "id": "afternoon", "title": "Afternoon", "start": "17:00", "end": "18:30", "keys": ["read5", "language", "study", "money"] },
-        { "id": "evening", "title": "Evening", "start": "19:00", "end": "20:15", "keys": ["dinner", "cooked"] },
-        { "id": "wind-down", "title": "Wind-down", "start": "21:00", "end": "22:15", "keys": ["meditate", "creatine", "smokefree", "phonedown"] }
+        {
+          "id": "morning",
+          "title": "Morning",
+          "start": "06:45",
+          "end": "07:15",
+          "keys": [
+            "anchor",
+            "walk",
+            "water",
+            "getready"
+          ]
+        },
+        {
+          "id": "gym",
+          "title": "Gym",
+          "start": "07:00",
+          "end": "10:00",
+          "keys": [
+            "gym"
+          ]
+        },
+        {
+          "id": "fuel",
+          "title": "Fuel + meds",
+          "start": "08:30",
+          "end": "09:30",
+          "keys": [
+            "breakfast",
+            "insulin",
+            "omega3",
+            "bonehealth",
+            "vitcd"
+          ]
+        },
+        {
+          "id": "midday",
+          "title": "Midday",
+          "start": "12:15",
+          "end": "13:30",
+          "keys": [
+            "cookmeal",
+            "lunch"
+          ]
+        },
+        {
+          "id": "afternoon",
+          "title": "Afternoon",
+          "start": "17:00",
+          "end": "18:30",
+          "keys": [
+            "read5",
+            "language",
+            "study",
+            "money"
+          ]
+        },
+        {
+          "id": "evening",
+          "title": "Evening",
+          "start": "19:00",
+          "end": "20:15",
+          "keys": [
+            "dinner",
+            "cooked"
+          ]
+        },
+        {
+          "id": "wind-down",
+          "title": "Wind-down",
+          "start": "21:00",
+          "end": "22:15",
+          "keys": [
+            "meditate",
+            "creatine",
+            "smokefree",
+            "phonedown"
+          ]
+        }
       ],
       "sat": [
-        { "id": "morning", "title": "Morning", "start": "09:00", "end": "09:45", "keys": ["anchor", "walk", "water"] },
-        { "id": "fuel", "title": "Fuel + meds", "start": "09:15", "end": "10:00", "keys": ["breakfast", "insulin", "omega3", "bonehealth", "vitcd"] },
-        { "id": "midday", "title": "Midday", "start": "12:45", "end": "14:00", "keys": ["cookmeal", "lunch"] },
-        { "id": "deep-work", "title": "Deep work", "start": "14:00", "end": "15:00", "keys": ["study", "money"] },
-        { "id": "gym", "title": "Gym", "start": "14:00", "end": "17:00", "keys": ["gym"] },
-        { "id": "evening", "title": "Evening", "start": "19:15", "end": "20:30", "keys": ["dinner", "cooked"] },
-        { "id": "wind-down", "title": "Wind-down", "start": "20:45", "end": "22:45", "keys": ["read5", "language", "meditate", "creatine", "smokefree", "phonedown"] }
+        {
+          "id": "morning",
+          "title": "Morning",
+          "start": "09:00",
+          "end": "09:45",
+          "keys": [
+            "anchor",
+            "walk",
+            "water",
+            "getready"
+          ]
+        },
+        {
+          "id": "fuel",
+          "title": "Fuel + meds",
+          "start": "09:15",
+          "end": "10:00",
+          "keys": [
+            "breakfast",
+            "insulin",
+            "omega3",
+            "bonehealth",
+            "vitcd"
+          ]
+        },
+        {
+          "id": "midday",
+          "title": "Midday",
+          "start": "12:45",
+          "end": "14:00",
+          "keys": [
+            "cookmeal",
+            "lunch"
+          ]
+        },
+        {
+          "id": "deep-work",
+          "title": "Deep work",
+          "start": "14:00",
+          "end": "15:00",
+          "keys": [
+            "study",
+            "money"
+          ]
+        },
+        {
+          "id": "gym",
+          "title": "Gym",
+          "start": "14:00",
+          "end": "17:00",
+          "keys": [
+            "gym"
+          ]
+        },
+        {
+          "id": "evening",
+          "title": "Evening",
+          "start": "19:15",
+          "end": "20:30",
+          "keys": [
+            "dinner",
+            "cooked"
+          ]
+        },
+        {
+          "id": "wind-down",
+          "title": "Wind-down",
+          "start": "20:45",
+          "end": "22:45",
+          "keys": [
+            "read5",
+            "language",
+            "meditate",
+            "creatine",
+            "smokefree",
+            "phonedown"
+          ]
+        }
       ],
       "sun": [
-        { "id": "morning", "title": "Morning", "start": "09:30", "end": "10:15", "keys": ["anchor", "walk", "water"] },
-        { "id": "fuel", "title": "Fuel + meds", "start": "09:45", "end": "10:45", "keys": ["breakfast", "insulin", "omega3", "bonehealth", "vitcd"] },
-        { "id": "gym", "title": "Gym", "start": "10:30", "end": "13:30", "keys": ["gym"] },
-        { "id": "midday", "title": "Midday", "start": "12:45", "end": "13:45", "keys": ["lunch"] },
-        { "id": "afternoon", "title": "Afternoon", "start": "14:45", "end": "17:30", "keys": ["read5", "language", "study", "money"] },
-        { "id": "evening", "title": "Evening", "start": "17:45", "end": "19:45", "keys": ["cookmeal", "dinner", "cooked"] },
-        { "id": "wind-down", "title": "Wind-down", "start": "21:00", "end": "22:30", "keys": ["meditate", "creatine", "smokefree", "phonedown"] }
+        {
+          "id": "morning",
+          "title": "Morning",
+          "start": "09:30",
+          "end": "10:15",
+          "keys": [
+            "anchor",
+            "walk",
+            "water",
+            "getready"
+          ]
+        },
+        {
+          "id": "fuel",
+          "title": "Fuel + meds",
+          "start": "09:45",
+          "end": "10:45",
+          "keys": [
+            "breakfast",
+            "insulin",
+            "omega3",
+            "bonehealth",
+            "vitcd"
+          ]
+        },
+        {
+          "id": "gym",
+          "title": "Gym",
+          "start": "10:30",
+          "end": "13:30",
+          "keys": [
+            "gym"
+          ]
+        },
+        {
+          "id": "midday",
+          "title": "Midday",
+          "start": "12:45",
+          "end": "13:45",
+          "keys": [
+            "lunch"
+          ]
+        },
+        {
+          "id": "afternoon",
+          "title": "Afternoon",
+          "start": "14:45",
+          "end": "17:30",
+          "keys": [
+            "read5",
+            "language",
+            "study",
+            "money"
+          ]
+        },
+        {
+          "id": "evening",
+          "title": "Evening",
+          "start": "17:45",
+          "end": "19:45",
+          "keys": [
+            "cookmeal",
+            "dinner",
+            "cooked"
+          ]
+        },
+        {
+          "id": "wind-down",
+          "title": "Wind-down",
+          "start": "21:00",
+          "end": "22:30",
+          "keys": [
+            "meditate",
+            "creatine",
+            "smokefree",
+            "phonedown"
+          ]
+        }
       ]
     },
     "slots": {
@@ -303,7 +595,16 @@
       "lunch": "Lunch",
       "dinner": "Dinner",
       "insulin": "Insulin",
-      "creatine": "Creatine"
+      "creatine": "Creatine",
+      "getready": "Get ready"
+    },
+    "steps": {
+      "getready": [
+        "Brush teeth",
+        "Shower",
+        "Dress",
+        "Skincare"
+      ]
     }
   },
   "schedules": {
@@ -686,5 +987,254 @@
         "Early night — Monday is 6:15"
       ]
     ]
-  }
+  },
+  "chores": [
+    {
+      "id": "roomreset",
+      "title": "Reset room",
+      "cadence": {
+        "mode": "daily"
+      },
+      "activeMin": 8,
+      "window": "20:30",
+      "steps": [
+        "Rubbish in bin",
+        "Dishes returned",
+        "Clothes hung or in hamper",
+        "Floor path and desk clear"
+      ]
+    },
+    {
+      "id": "kitchenclose",
+      "title": "Kitchen close",
+      "cadence": {
+        "mode": "daily"
+      },
+      "activeMin": 12,
+      "window": "20:45",
+      "steps": [
+        "Food put away",
+        "Dishes washed or loaded",
+        "Sink, counter, stove wiped",
+        "Supplies returned"
+      ]
+    },
+    {
+      "id": "tomorrowready",
+      "title": "Tomorrow ready",
+      "cadence": {
+        "mode": "daily"
+      },
+      "activeMin": 7,
+      "window": "22:00",
+      "steps": [
+        "Bag packed",
+        "Clothes chosen",
+        "Clean bottle ready",
+        "Devices charging"
+      ]
+    },
+    {
+      "id": "gymbag",
+      "title": "Gym bag reset",
+      "cadence": {
+        "mode": "daily"
+      },
+      "activeMin": 4,
+      "window": "21:00",
+      "steps": [
+        "Used kit out",
+        "Containers out",
+        "Clean kit in"
+      ]
+    },
+    {
+      "id": "roomclean",
+      "title": "Room clean",
+      "cadence": {
+        "mode": "weekly",
+        "dow": 4
+      },
+      "activeMin": 35,
+      "window": "19:55",
+      "steps": [
+        "Items put away",
+        "Dust reachable surfaces",
+        "Vacuum or sweep",
+        "Spot-mop"
+      ]
+    },
+    {
+      "id": "laundry",
+      "title": "Clothes laundry",
+      "cadence": {
+        "mode": "weekly",
+        "dow": 0
+      },
+      "window": "13:45",
+      "stages": [
+        {
+          "id": "sort",
+          "label": "Sort, pockets, load",
+          "activeMin": 10
+        },
+        {
+          "id": "wash",
+          "label": "Wash cycle",
+          "waitMin": 60
+        },
+        {
+          "id": "transfer",
+          "label": "Transfer to dryer",
+          "activeMin": 5
+        },
+        {
+          "id": "dry",
+          "label": "Dry cycle",
+          "waitMin": 60
+        },
+        {
+          "id": "fold",
+          "label": "Fold, hang, put away",
+          "activeMin": 25
+        }
+      ]
+    },
+    {
+      "id": "linen",
+      "title": "Linen laundry",
+      "cadence": {
+        "mode": "weekly",
+        "dow": 5
+      },
+      "window": "18:30",
+      "stages": [
+        {
+          "id": "strip",
+          "label": "Strip bed, load",
+          "activeMin": 8
+        },
+        {
+          "id": "wash",
+          "label": "Wash cycle",
+          "waitMin": 60
+        },
+        {
+          "id": "transfer",
+          "label": "Transfer to dryer",
+          "activeMin": 5
+        },
+        {
+          "id": "dry",
+          "label": "Dry cycle",
+          "waitMin": 60
+        },
+        {
+          "id": "remake",
+          "label": "Remake bed, linen away",
+          "activeMin": 17
+        }
+      ]
+    },
+    {
+      "id": "stock",
+      "title": "Stock check",
+      "cadence": {
+        "mode": "weekly",
+        "dow": 5
+      },
+      "activeMin": 18,
+      "window": "19:50",
+      "steps": [
+        "Fridge and pantry",
+        "Detergent, soap, paper",
+        "Bin bags",
+        "One list made"
+      ]
+    },
+    {
+      "id": "deskreset",
+      "title": "Desk and digital reset",
+      "cadence": {
+        "mode": "weekly",
+        "dow": 4
+      },
+      "activeMin": 12,
+      "window": "20:40",
+      "steps": [
+        "Clear the desk",
+        "File loose papers",
+        "Process downloads",
+        "Clear actionable mail"
+      ]
+    },
+    {
+      "id": "weeklyadmin",
+      "title": "Weekly admin",
+      "cadence": {
+        "mode": "weekly",
+        "dow": 0
+      },
+      "activeMin": 18,
+      "window": "17:00",
+      "steps": [
+        "Real deadlines",
+        "Appointments",
+        "Bills due",
+        "Returns and unanswered messages"
+      ]
+    },
+    {
+      "id": "waste",
+      "title": "Waste and recycling",
+      "cadence": {
+        "mode": "asneeded"
+      },
+      "activeMin": 8,
+      "steps": [
+        "Empty bins",
+        "Sort recycling",
+        "Put out"
+      ]
+    },
+    {
+      "id": "carreset",
+      "title": "Car reset",
+      "cadence": {
+        "mode": "monthly"
+      },
+      "activeMin": 25,
+      "steps": [
+        "Remove rubbish",
+        "Tidy boot",
+        "Replenish supplies"
+      ]
+    },
+    {
+      "id": "wardrobe",
+      "title": "Wardrobe reset",
+      "cadence": {
+        "mode": "monthly"
+      },
+      "activeMin": 25,
+      "steps": [
+        "Put away overflow",
+        "Repairs and donations",
+        "Note anything needed"
+      ]
+    },
+    {
+      "id": "personaladmin",
+      "title": "Personal admin",
+      "cadence": {
+        "mode": "monthly"
+      },
+      "activeMin": 18,
+      "steps": [
+        "Appointments to book",
+        "Document renewals",
+        "Subscriptions"
+      ]
+    }
+  ]
 }

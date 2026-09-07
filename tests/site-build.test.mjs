@@ -45,6 +45,7 @@ async function makeSourceTree({ omit = [] } = {}) {
     'manifest.json': '{"name":"FLOWSTATE"}',
     'schedule.json': '{"days":[]}',
     'rules.mjs': 'export const ok = true;',
+    'chores.mjs': 'export const ok = true;',
     'ui/midnight.css': 'body{}',
     'ui/midnight.mjs': 'export const ok = true;',
     'assets/filament.svg': '<svg/>',

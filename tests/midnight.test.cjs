@@ -24,12 +24,63 @@ test('day board expands into working checklist and keeps the block open after lo
   a.click('[data-tab="more"]');
   assert.ok(a.$('#dayOffDate'));
 });
+test('get ready is one scored tick whose sub-steps complete it',async t=>{
+  const a=await app(t,{windows:true});
+  const block=a.$('[data-disclosure="block-morning"]');
+  block.open=true; block.dispatchEvent(new a.w.Event('toggle'));
+  assert.ok(a.$('#dayBoard [data-toggle$=".getready"]'),'getready is a scored item');
+  assert.equal(a.w.document.querySelectorAll('#dayBoard [data-step^="getready:"]').length,4);
+  // Ticking all but the last must NOT complete the parent.
+  for(let i=0;i<3;i++) a.click(`#dayBoard [data-step="getready:${i}"]`);
+  assert.notEqual(a.dash.state.days[a.dash.today].getready,true);
+  a.click('#dayBoard [data-step="getready:3"]');
+  const day=a.dash.state.days[a.dash.today];
+  assert.equal(day.getready,true,'the last step completes the parent');
+  assert.equal(typeof day.log.getready,'number','and writes the timestamp scoring needs');
+});
+
+test('home upkeep renders outside the scored board and never scores',async t=>{
+  const a=await app(t,{windows:true});
+  assert.ok(a.$('#upkeep'),'upkeep section exists');
+  assert.equal(a.$('#dayBoard #upkeep'),null,'upkeep is not inside the scored board');
+  const row=a.$('#upkeep [data-disclosure="chore-roomreset"]');
+  assert.ok(row,'the daily room reset is listed');
+  row.open=true; row.dispatchEvent(new a.w.Event('toggle'));
+  a.click('#upkeep [data-chore-done="roomreset"]');
+  assert.equal(a.dash.state.chores.roomreset.last,a.dash.today);
+  // The scored day is untouched by completing a chore.
+  const day=a.dash.state.days[a.dash.today]||{};
+  assert.equal(day.roomreset,undefined);
+  assert.equal(Object.keys(day.log||{}).includes('roomreset'),false);
+});
+
+test('a chore moved to tomorrow is deferred, not completed',async t=>{
+  const a=await app(t,{windows:true});
+  const row=a.$('#upkeep [data-disclosure="chore-kitchenclose"]');
+  row.open=true; row.dispatchEvent(new a.w.Event('toggle'));
+  a.click('#upkeep [data-chore-move="kitchenclose"]');
+  const rec=a.dash.state.chores.kitchenclose;
+  assert.ok(rec.moved>a.dash.today,'moved to a future date');
+  assert.equal(rec.last,undefined,'moving is not doing');
+});
+
+test('starting a laundry stage records a start and completes nothing',async t=>{
+  const a=await app(t,{windows:true});
+  const row=a.$('#upkeep [data-disclosure="chore-laundry"]');
+  row.open=true; row.dispatchEvent(new a.w.Event('toggle'));
+  a.click('#upkeep [data-chorestage="laundry:wash"]');
+  const rec=a.dash.state.chores.laundry;
+  assert.equal(rec.stage.id,'wash');
+  assert.equal(typeof rec.stage.startedAt,'number');
+  assert.equal(rec.last,undefined,'a running machine is not a finished chore');
+});
+
 async function app(t,{remote={},storage={},offline=false,windows=false}={}) {
   const midnight = await import('../ui/midnight.mjs');
   const dom = new JSDOM('<!doctype html><html><body><div id="moodLayer"></div><div id="appRoot"></div></body></html>',{url:'https://fixture.invalid/',runScripts:'outside-only'});
   t.after(async()=>{await settle();await settle();dom.window.close();});
   const w=dom.window, requests=[]; let failure=offline;
-  if(windows) w.FLOWSTATE_RULES=await import('../rules.mjs');
+  if(windows){ w.FLOWSTATE_RULES=await import('../rules.mjs'); w.FLOWSTATE_CHORES=await import('../chores.mjs'); }
   for(const [k,v] of Object.entries(storage)) w.localStorage.setItem(k,v);
   class ClockDate extends Date { constructor(...args){super(...(args.length?args:['2026-09-05T08:00:00']));} }
   Object.assign(w,{midnight,Date:ClockDate,db:{},doc:()=>({}),VAPID_KEY:'',swReady:Promise.resolve(null),motionReady:Promise.resolve(null),
