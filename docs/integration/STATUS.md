@@ -20,6 +20,17 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 - Pending confirmation: laundry setup/load count, shared chore ownership, collection schedule, live commitments and selected task list. Next implementation step is a read-only mapping audit after access approval.
 - Plan is local/uncommitted. Existing UI changes remain in the shared working tree; the prior fetch/publish attempt was blocked by approval-review usage limits and was not retried. Coordinate ownership before editing those files.
 
+### Day board execution-surface design written, awaiting approval (2026-09-08)
+
+- Claude, `main`, verified at `39bd500` (= `origin/main` via `git ls-remote`, deploy success, clean tree, 85/85 + 17/17). No newer agent changes found.
+- Design: `docs/superpowers/plans/2026-09-08-day-board-execution-surface-design.md`. **Nothing implemented.**
+- Decisions taken with the user: Now/Next controller with Timeline and Checklist as peer views; outcome from standing projects with a next-step ladder and a mandatory done condition; week confirmed Mon/Tue office, 09:00-17:00, under-20-min drive, asleep 23:00, no fixed weekly commitments; chore scoring rebalanced to +8 on time with a -20/day floor; planner may move everything except the fixed set; **scored windows never move, so auto-fail stays real**; gym window 2.5h on office days.
+- Two computed findings drove the schedule change. The office evening was arithmetically impossible: 345 min of blocks against 340 min between arriving home and a 23:00 sleep target, with wind-down ending 23:15. And the morning holds 65 min of dead buffer, because the saved 07:30 departure serves a 09:00 start with an under-20-minute drive. A 2.5h gym window yields 315 against 340 — 25 min of real slack.
+- Chore constants solved rather than guessed. Under current settings a *good* week (dailies 5/7, all weeklies done) scored **-31**; only near-perfection was non-negative. At +8 with a -20/day floor: perfect +350, good +108, dailies-only +39, total neglect -140 (blackout in ~2.5 days). The floor equals exactly the four daily chores, so one day of complete neglect cannot be compounded further by weeklies.
+- Proposal held for approval, not implemented: moving Deep work from 21:15-22:00 to the unused 07:35-08:20 morning slot. It changes a scored window's times, so it is a schedule decision rather than a planner action.
+- Boundaries reaffirmed in the design: Beeminder unarmed; Google writes disabled and explicitly *not* unblocked by consent alone (`tasks-sync.mjs` still lacks authenticated state, Toronto dates, completion timestamps, persisted inbound completions, runtime retry and reopen/deletion reconciliation); chores reach the balance only, never `evaluateDay`; medication timing never moved for scoring.
+- Next: user approval of the design, then phase 1 (canonical schedule, conflict validation, chore rebalance) tests-first.
+
 ### Second review pass: remaining P2 findings fixed (2026-09-07)
 
 Four more items from Codex's review, all correctness rather than policy. The chosen penalties are unchanged.
