@@ -4,6 +4,15 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Day board usability update (2026-09-07)
+
+- Codex, same checkout on `main`, starting at `a5d7291`; scope: board rendering/styles, countdowns, legacy timestamp guard, regression tests, preview harness, service-worker cache.
+- Blocks expand into named, directly actionable checklists with progress counts. Today highlights the current or next block and a live countdown. Day-off controls moved to More. Scoring and stake configuration are unchanged; Beeminder remains unarmed.
+- Verification: `node --test tests/*.test.mjs` passed 21/21; `node --test tests/midnight.test.cjs` passed 12/12; `node scripts/build-site.mjs --out _site` succeeded; `git diff --check` passed.
+- Synthetic browser QA: inspected 320, 375, 430 and 1280 pixel layouts; expanded Morning, logged an item without collapsing the block, and opened hydration from its row. This does not verify real cloud writes or physical-device behavior.
+- Publishing under the user's existing push/live authorization. Deployment outcome is recorded in the task response and GitHub Actions; phone feedback remains the next step.
+- Claude finished the interrupted run (Codex stopped before `git fetch origin`). Added focus restoration to the per-minute board redraw: `draw()` replaces `root.innerHTML`, which blurs the active element to `<body>` — measured in the synthetic harness — so a keyboard or screen-reader user lost their place in the checklist every minute without acting. Scroll is carried across the same redraw as cheap insurance; measurement showed the viewport does not currently clamp, because the replacement is synchronous. Not covered by a regression test: the jsdom harness pins the clock, so the minute-boundary redraw never fires there. Verified by hand in the preview instead.
+
 T1 is implemented and verified locally but not committed or pushed, so nothing has changed on the deployed site yet. Cloud publication, scheduling, Graphify regeneration, and deployment have not started.
 
 Phone Dashboard was clean before documentation changes (`git -C phone-dashboard status --short`, with a temporary safe-directory override). Recheck before execution. Root is not a Git repository. Existing source documents were inspected; live Firebase permissions, hosted source URLs, Google state, and physical devices were not verified.

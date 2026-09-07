@@ -10,10 +10,12 @@ os.chdir(ROOT)
 class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/preview.html'):
-            html=(ROOT/'index.html').read_text()
+            html=(ROOT/'index.html').read_text(encoding='utf-8')
             start=html.index('<script type="module">'); end=html.index('</script>',start)
             controller=html[html.index('async function initApp(){'):end]
             stub='''import * as midnight from './ui/midnight.mjs';
+import * as rules from './rules.mjs';
+globalThis.FLOWSTATE_RULES=rules;
 const db={}, doc=()=>({}), VAPID_KEY='', swReady=Promise.resolve(null), motionReady=Promise.resolve(null);
 const deleteField=()=>({__delete:true});
 const saved=()=>JSON.parse(localStorage.getItem('qa-cloud')||'{"config":{"score":0},"days":{},"checkIns":{}}');

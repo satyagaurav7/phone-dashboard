@@ -1248,26 +1248,32 @@ async function initApp(){
       const result=RULES.evaluateDay({sched:SCHED_DATA,dayKind:kind,day:d,dateStr:Dash.today,nowMin,isDayOff:!!s.dayOff?.[Dash.today]});
       const ledger=RULES.balance({sched:SCHED_DATA,state:s,today:Dash.today});
       const open=result.blocks.filter(b=>b.state==='open').sort((a,b)=>a.endMin-b.endMin);
-      const primary=open[0]?.id;
       const fmt=m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
-      const stateText=b=>b.state==='failed'?'-8':b.state==='passed'?'+5':b.state==='upcoming'?`opens ${fmt(b.startMin)}`:b.state.toUpperCase();
-      const rows=result.blocks.map(b=>`<div class="windowBlock ${b.state}${b.state==='open'&&b.id!==primary?' parallel':''}">
-        <div><span class="windowTitle">${b.title}</span> <span class="windowTime">${fmt(b.startMin)}-${fmt(b.endMin)}</span></div>
-        <div class="windowState">${stateText(b)}</div>
-        <div class="windowPips" aria-label="${b.items.filter(i=>i.state==='inWindow').length} of ${b.items.length} in window">${b.items.map(i=>`<i class="windowPip ${i.state}" title="${KEY_LABELS[i.key]||i.key}: ${i.state}"></i>`).join('')}</div>
-        ${b.state==='open'?`<div class="windowCount" data-countdown data-end-min="${b.endMin}"></div>`:''}
-      </div>`).join('');
+      const next=result.blocks.filter(b=>b.startMin>nowMin).sort((a,b)=>a.startMin-b.startMin)[0];
+      const focus=open[0]||next;
+      const nextLine=next?`<div class="boardNext">Next: <b>${escHtml(next.title)}</b> at ${fmt(next.startMin)} <span data-countdown data-start-min="${next.startMin}"></span></div>`:'';
+      const rows=result.blocks.map(b=>{
+        const done=b.items.filter(i=>d[i.key]===true).length;
+        const items=b.items.map(i=>{
+          const checked=d[i.key]===true;
+          const label=KEY_LABELS[i.key]||SCHED_DATA.tapPlan.labels?.[i.key]||i.key;
+          const detail=i.key==='water'?`${hydroTotal(d)} / ${s.config.waterGoal||2500} ml`:checked?(i.state==='late'?'Logged late':'Logged'):b.state==='failed'?'Not logged · late credit available':'Not logged';
+          return `<button type="button" class="boardItem${checked?' checked':''}" ${i.key==='water'?'data-hydro="1"':`data-toggle="days.${Dash.today}.${i.key}" aria-pressed="${checked}"`} aria-label="${escAttr(label)}: ${checked?'logged':'not logged'}"><span class="boardCheck">${checked?icon('check'):''}</span><span><b>${escHtml(label)}</b><small>${escHtml(detail)}</small></span>${i.key==='water'?icon('drop'):''}</button>`;
+        }).join('');
+        return `<details class="boardBlock ${b.state}" data-disclosure="block-${b.id}" ${b.id===focus?.id?'open':''}><summary><span class="boardBlockName">${escHtml(b.title)}<small>${fmt(b.startMin)}–${fmt(b.endMin)}</small></span><span class="boardProgress">${done}/${b.items.length}<small>${b.state==='failed'?'Failed · -8':b.state==='passed'?'Passed · +5':b.state==='open'?'Open':'Upcoming'}</small></span><span class="boardChevron">⌄</span><span class="windowPips">${b.items.map(i=>`<i class="windowPip ${i.state}"></i>`).join('')}</span></summary>${b.state==='open'?`<div class="windowCount" data-countdown data-end-min="${b.endMin}"></div>`:''}${b.state==='failed'?'<p class="boardNote">Late logs earn credit. This window stays failed.</p>':''}<div class="boardItems">${items}</div></details>`;
+      }).join('');
       const sign=n=>n>0?`+${n}`:String(n);
-      const futureOff=Object.keys(s.dayOff||{}).filter(date=>date>Dash.today).sort();
-      const futureRows=futureOff.map(date=>`<div class="rmRow"><span>${date}</span><button class="chip" data-dayoff-withdraw="${date}">Withdraw</button></div>`).join('');
-      const controls=result.off
-        ? `<span class="chip on">Day off declared</span>`
-        : `<label class="rmLbl" for="dayOffDate">Declare day off</label><div style="display:flex;gap:8px;margin-top:6px"><input id="dayOffDate" type="date" min="${Dash.today}" value="${Dash.today}" class="ciText" style="margin:0"><button class="chip" data-dayoff>Declare</button></div>`;
-      return `<div class="card card--hero" id="dayBoard">${secTitle('DAY','Day board')}
+      return `<section id="dayBoard"><div class="boardHeading"><h1>Your day</h1><span>${result.blocks.reduce((n,b)=>n+b.items.filter(i=>d[i.key]===true).length,0)} / ${result.blocks.reduce((n,b)=>n+b.items.length,0)} logged</span></div>
+        ${focus?`<div class="boardFocus"><span>${open.length?'RIGHT NOW':'UP NEXT'}</span><strong>${escHtml(focus.title)}</strong><div class="windowCount" data-countdown ${open.length?`data-end-min="${focus.endMin}"`:`data-start-min="${focus.startMin}"`}></div>${open.length?nextLine:`<small>Starts at ${fmt(focus.startMin)}</small>`}</div>`:result.off?'<p>Day off. No windows today.</p>':'<p>All windows closed for today.</p>'}
         <div class="windowHead"><span class="verdict ${result.verdict}">${result.verdict.toUpperCase()}</span><span>${sign(result.delta)} today</span><span class="windowBalance ${ledger.total<0?'balanceNeg':''}">Balance ${sign(ledger.total)}</span></div>
         ${ledger.tier==='blackout'?'<div class="stakeLine emergency">Blackout clears when the balance returns above zero. Logging stays available.</div>':''}
-        ${rows||'<div class="rmSub">Day off. No blocks score today.</div>'}<div style="margin-top:12px">${controls}${futureRows}</div>
-      </div>`;
+        ${rows}
+      </section>`;
+    }
+
+    function dayOffSettings(s){
+      if(!RULES||!SCHED_DATA)return '';
+      return `<section class="connections"><h2>Days off</h2><label for="dayOffDate">Date</label><div class="boardOff"><input id="dayOffDate" type="date" min="${Dash.today}" value="${Dash.today}"><button type="button" class="outline-button" data-dayoff>Declare day off</button></div>${Object.keys(s.dayOff||{}).filter(date=>date>=Dash.today).sort().map(date=>`<div class="rmRow"><span>${escHtml(date)}</span>${date>Dash.today?`<button type="button" class="quiet-link" data-dayoff-withdraw="${date}">Withdraw</button>`:'<span>Declared</span>'}</div>`).join('')}</section>`;
     }
 
     function activityHTML(s,d){
@@ -1991,7 +1997,7 @@ async function initApp(){
     }
     function todayHTML(s,d){ return stakeHTML(s)+dayBoardHTML(s,d)+midnight.today({state:s,date:Dash.today,checkIn:checkInCard(s,d),activity:activityHTML(s,d)}); }
     function schedHTML(){ return midnight.plan(); }
-    function moreHTML(s){ return midnight.more({reminders:reminderCard(s),push:pushSetupHTML()}); }
+    function moreHTML(s){ return dayOffSettings(s)+midnight.more({reminders:reminderCard(s),push:pushSetupHTML()}); }
 
     const EDITS={
       permit:{title:'Work Permit Expiry',fields:[{path:'config.permit',label:'Expiry date',type:'date'}]},
@@ -2311,13 +2317,34 @@ async function initApp(){
       updateCountdowns();
     }
 
+    let lastBoardMinute=null;
     function updateCountdowns(){
       const now=new Date(), nowSec=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
+      const minute=Math.floor(nowSec/60);
+      const changed=lastBoardMinute!==null&&lastBoardMinute!==minute;
+      lastBoardMinute=minute;
+      // Block states change on the minute (upcoming -> open -> passed/failed),
+      // so the board has to be rebuilt. draw() replaces root.innerHTML wholesale,
+      // which blurs whatever was focused — measured: the active element becomes
+      // <body>. On a checklist that is a keyboard or screen-reader user losing
+      // their place once a minute, through no action of their own, so the focused
+      // item is restored by its toggle path. Scroll is carried across too; the
+      // replacement is synchronous so the viewport does not actually clamp today,
+      // but it costs nothing and holds if the rebuilt board is ever shorter.
+      // Tab switches still scroll to top on purpose — that path is untouched.
+      if(changed&&tab==='today'&&!document.querySelector('#dashModal')&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){
+        const y=window.scrollY, focused=document.activeElement?.dataset?.toggle;
+        draw(Dash.state);
+        window.scrollTo({top:y});
+        if(focused) document.querySelector(`[data-toggle="${CSS.escape(focused)}"]`)?.focus({preventScroll:true});
+        return;
+      }
       document.querySelectorAll('[data-countdown]').forEach(el=>{
-        const left=Math.max(0,Number(el.dataset.endMin)*60-nowSec);
+        const starts=el.dataset.startMin!==undefined;
+        const left=Math.max(0,Number(starts?el.dataset.startMin:el.dataset.endMin)*60-nowSec);
         const m=Math.floor(left/60), sec=left%60;
-        el.textContent=`closes in ${m}:${String(sec).padStart(2,'0')}`;
-        el.classList.toggle('warn',left<=900); el.classList.toggle('urgent',left<=300);
+        el.textContent=`${starts?'Starts':'Closes'} in ${m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m}:${String(sec).padStart(2,'0')}`}`;
+        el.classList.toggle('warn',!starts&&left<=900); el.classList.toggle('urgent',!starts&&left<=300);
       });
     }
     setInterval(updateCountdowns,1000);

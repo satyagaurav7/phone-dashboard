@@ -46,6 +46,12 @@ test('an incomplete open block contributes nothing', async () => {
   assert.equal(result.delta, 0);
 });
 
+test('legacy wall-clock strings remain readable as late logs', async () => {
+  const { evaluateDay } = await import(RULES_URL);
+  const result=evaluateDay({sched,dayKind:'office',day:{a:true,log:{a:'09:30'}},dateStr:'2026-09-07',nowMin:null,isDayOff:false});
+  assert.equal(result.blocks[0].items[0].state,'late');
+});
+
 test('a clean day applies item, block, and day-clean points', async () => {
   const { evaluateDay } = await import(RULES_URL);
   const day = { a: true, b: true, log: { a: at('2026-09-07', '09:30'), b: at('2026-09-07', '10:30') } };

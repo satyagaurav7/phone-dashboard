@@ -8,16 +8,33 @@ const root = path.resolve(__dirname,'..');
 const html = readFileSync(path.join(root,'index.html'),'utf8');
 const script = html.slice(html.indexOf('async function initApp(){'),html.indexOf('</script>',html.indexOf('async function initApp(){')));
 const settle = () => new Promise(r => setImmediate(r));
-async function app(t,{remote={},storage={},offline=false}={}) {
+test('day board expands into working checklist and keeps the block open after logging',async t=>{
+  const a=await app(t,{windows:true});
+  assert.match(a.$('.boardFocus').textContent,/Morning/);
+  assert.match(a.$('.boardFocus').textContent,/Starts in/);
+  const block=a.$('[data-disclosure="block-morning"]');
+  block.open=true;
+  block.dispatchEvent(new a.w.Event('toggle'));
+  a.click('#dayBoard [data-toggle$=".anchor"]');
+  assert.equal(a.dash.state.days[a.dash.today].anchor,true);
+  assert.equal(a.$('[data-disclosure="block-morning"]').open,true);
+  assert.ok(a.$('#dayBoard [data-toggle$=".anchor"].checked'));
+  assert.ok(a.$('#dayBoard [data-hydro]'));
+  assert.equal(a.$('#dayOffDate'),null);
+  a.click('[data-tab="more"]');
+  assert.ok(a.$('#dayOffDate'));
+});
+async function app(t,{remote={},storage={},offline=false,windows=false}={}) {
   const midnight = await import('../ui/midnight.mjs');
   const dom = new JSDOM('<!doctype html><html><body><div id="moodLayer"></div><div id="appRoot"></div></body></html>',{url:'https://fixture.invalid/',runScripts:'outside-only'});
   t.after(async()=>{await settle();await settle();dom.window.close();});
   const w=dom.window, requests=[]; let failure=offline;
+  if(windows) w.FLOWSTATE_RULES=await import('../rules.mjs');
   for(const [k,v] of Object.entries(storage)) w.localStorage.setItem(k,v);
   class ClockDate extends Date { constructor(...args){super(...(args.length?args:['2026-09-05T08:00:00']));} }
   Object.assign(w,{midnight,Date:ClockDate,db:{},doc:()=>({}),VAPID_KEY:'',swReady:Promise.resolve(null),motionReady:Promise.resolve(null),
     matchMedia:()=>({matches:true}),scrollTo:()=>{},confirm:()=>true,
-    fetch:async()=>({json:async()=>({})}),caches:{match:async()=>null},
+    fetch:async()=>({json:async()=>windows?JSON.parse(readFileSync(path.join(root,'schedule.json'),'utf8')):{}}),caches:{match:async()=>null},
     getDoc:async()=>({exists:()=>true,data:()=>structuredClone(remote)}),
     deleteField:()=>({__delete:true}),
     updateDoc:async(ref,patch)=>{requests.push(structuredClone(patch));if(failure)throw Error('simulated offline');for(const [p,v]of Object.entries(patch)){const keys=p.split('.');let o=remote;for(const k of keys.slice(0,-1))o=o[k]??={};if(v?.__delete)delete o[keys.at(-1)];else o[keys.at(-1)]=structuredClone(v);}},

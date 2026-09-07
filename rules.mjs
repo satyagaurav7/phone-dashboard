@@ -87,7 +87,7 @@ export function evaluateDay({ sched, dayKind, day = {}, dateStr, nowMin, isDayOf
     const items = block.keys.map(key => {
       const timestamp = day.log?.[key];
       let state;
-      if (timestamp != null) {
+      if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
         const wall = wallParts(timestamp, sched.timezone || 'America/Toronto');
         state = wall.date === dateStr && wall.minute >= block.startMin && wall.minute <= block.endMin
           ? 'inWindow' : 'late';
