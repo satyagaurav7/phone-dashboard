@@ -4,6 +4,16 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Phases 2-3 complete: planner and unified Day board deployed (2026-09-07)
+
+- Release `1d90cf8` is pushed to `main` and deployed by GitHub Pages run `34166855845` (success). Live checks returned HTTP 200 for `index.html` and `day-plan.mjs` and confirmed the execution board, next-action countdown, and planner export are present.
+- Added pure `day-plan.mjs`: stable routine/chore/outcome occurrence IDs, Now/Next/Background selection, active-time totals that exclude machine waiting, ready laundry handoffs, capacity/conflict reporting, and a read-only adjustment preview. Fixed windows remain fixed; work that cannot fit is listed with a reason rather than compressed or silently dropped.
+- Today now starts with one execution surface: chosen meaningful outcome, current action, named next action with clock time and live countdown, background machine work, upkeep load, schedule status, read-only Adjust day, and one expandable routine/upkeep checklist. Starting chosen work is separate from marking it done. The duplicate Today hero and activity presentation were removed.
+- Canonical schedule cleanup completed across all four day kinds. WFH gym, get-ready, breakfast, and work no longer overlap; all routine blocks are sequential with at least ten minutes of transition time. Saturday/Sunday overlaps were removed. The Plan timetable now reflects driving and morning deep work instead of the retired bus commute and evening duplicate.
+- Household rollout was smoothed: weekly chores first appear on their actual weekday after adoption, and the three monthly resets are staggered by 7/14/21 days instead of landing together. This changes first-occurrence scheduling only; the approved chore scoring policy is unchanged.
+- Verification: 111/111 module tests, 20/20 controller tests, `node --check` for the planner/rules, reviewed public build with 16 entries, and `git diff --check`. Synthetic rendered QA at 375px confirmed the first-viewport hierarchy and live countdown. This is not signed-in Firebase, physical-phone, notification, Google Tasks, Google Home, or speaker verification.
+- Safety boundaries remain: Beeminder is unarmed; Google Tasks writes remain disabled. Phase D still requires the authenticated state/completion round trip and separate explicit approval. Next product evidence is the user's phone feedback on the deployed Day board.
+
 ### Day board optimization review (2026-09-07)
 
 - Codex reviewed clean `main` at `42f32a2`, latest board/upkeep/sync code, schedules, tests and prior plans. Deliverable: `docs/superpowers/plans/2026-09-07-day-board-optimization-review.md`; documentation only, no runtime changes or live writes.
