@@ -17,8 +17,25 @@ import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { writeFileSync, chmodSync } from 'node:fs';
 
-const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
-const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+/* Environment first, but fall back to asking. Putting a client secret on a
+ * command line writes it into shell history, where it outlives its usefulness;
+ * typing it at a prompt does not. */
+async function ask(question) {
+  const { createInterface } = await import('node:readline/promises');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = (await rl.question(question)).trim();
+  rl.close();
+  return answer;
+}
+
+let CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
+let CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+if ((!CLIENT_ID || !CLIENT_SECRET) && process.stdin.isTTY) {
+  console.log('\nFrom console.cloud.google.com → APIs & Services → Credentials.');
+  console.log('Nothing typed here is written to the repository or printed back.\n');
+  CLIENT_ID = CLIENT_ID || await ask('Client ID: ');
+  CLIENT_SECRET = CLIENT_SECRET || await ask('Client secret: ');
+}
 const PORT = 8765;
 const REDIRECT = `http://localhost:${PORT}/callback`;
 /* Scope is chosen per run. The Phase A audit only reads, so mint it with

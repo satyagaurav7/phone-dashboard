@@ -12,6 +12,17 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 - Pending confirmation: laundry setup/load count, shared chore ownership, collection schedule, live commitments and selected task list. Next implementation step is a read-only mapping audit after access approval.
 - Plan is local/uncommitted. Existing UI changes remain in the shared working tree; the prior fetch/publish attempt was blocked by approval-review usage limits and was not retried. Coordinate ownership before editing those files.
 
+### Task-sync engine built and tested against stubs (2026-09-07)
+
+- `scripts/tasks-sync.mjs` implements plan phases B and C as far as they can go without a Google credential: reconciliation planning, idempotency, inbound completions, and a gated apply. 18 tests, all against stubbed task lists; nothing has run against a real account.
+- **Identity is a marker, never a title.** Created tasks carry `flowstate:<choreId>@<occurrenceDate>` in their notes and reconciliation reads that, so renaming a task in the Google app does not orphan it and two tasks sharing a title are never conflated.
+- Enforced and tested: one open occurrence per template (a stale open task blocks a new one); a completion made in Google wins and is reported back as an inbound completion rather than recreated; unmarked tasks are recognised as the user's own and never touched; `plan.deletes` is always empty and no DELETE path exists in the file; a second run proposes nothing.
+- An ambiguous creation (timeout) reconciles by re-fetching rather than retrying blind — `retryDecision` returns already-created / retry / pause-for-review. The API is not assumed to insert exactly once.
+- Writing is gated three times: `--live`, `tasksSync.enabled === true` in schedule.json, and a credential whose scope is writable. A `--readonly` token is refused up front rather than failing halfway. Dry run is the default.
+- `oauth-setup.mjs` now prompts for client ID and secret when they are absent from the environment, so a client secret need not be written into shell history.
+- Still blocked, and only on a human: the Google consent itself. No credential exists (`.google-oauth.json` absent, no `GOOGLE_OAUTH_*` secret). `tasksSync.listId` is also unset — it comes from the audit. Phase B additionally needs explicit write approval under CLAUDE.md rule 1.
+- Verification: 75/75 `tests/*.test.mjs`, 17/17 `tests/midnight.test.cjs`, build clean, `scripts/` correctly absent from the published artifact.
+
 ### OAuth prepared for a read-only audit (2026-09-07)
 
 - `oauth-setup.mjs` gained `--readonly` (requests `auth/tasks.readonly`, so the minted token physically cannot modify a task) and `--save` (writes `.google-oauth.json`, gitignored, chmod 600). `tasks-audit.mjs` reads that file, so the refresh token never has to pass through a terminal transcript, a chat window or a clipboard.
