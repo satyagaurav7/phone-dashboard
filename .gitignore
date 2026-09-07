@@ -2,6 +2,13 @@ node_modules/
 scripts/package-lock.json
 .claude/
 
+# Built Pages artifact and local integration runtime output (T1/T4).
+# Runtime snapshots default to a directory outside this repository.
+_site/
+.integration-local/
+integration-config.json
+integration-config.local.json
+
 # Raw bank statement exports — real transaction detail, never belongs in a public repo
 RAW-TRANSACTIONS*.md
 

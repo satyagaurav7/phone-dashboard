@@ -3,6 +3,14 @@
 Read this file before changing the application, schedules, Google integrations,
 or GitHub Actions.
 
+## Shared Claude / Codex integration plan
+
+For integration of the workspace apps into FLOWSTATE, read
+[docs/integration/START-HERE.md](docs/integration/START-HERE.md).
+Both agents use its linked specification, implementation plan, and status file.
+Keep this file's existing rules in force; record progress in that shared status
+file rather than making separate Claude and Codex backlogs.
+
 ## Daily check-ins and rewards research
 
 Read [DAILY-CHECKINS-AND-REWARDS.md](DAILY-CHECKINS-AND-REWARDS.md) for the

@@ -23,12 +23,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run local contract tests
+        run: node --test tests/*.test.mjs
+      - name: Build the site artifact
+        run: node scripts/build-site.mjs --out _site
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          # Only the reviewed manifest in scripts/build-site.mjs is published.
+          # Never restore `path: .` — that published every tracked file,
+          # including the personal planning documents in the repository root.
+          path: _site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

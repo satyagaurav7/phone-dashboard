@@ -161,6 +161,24 @@
   .xpBar{height:8px;background:rgba(255,255,255,.14);border-radius:4px;overflow:hidden}
   .xpFill{height:100%;background:var(--foil)}
   .xpSub{font-family:var(--mono);font-size:11px;color:#B9C6DE;margin-top:4px}
+  .windowHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .verdict{font:700 11px var(--mono);padding:4px 7px;border:1px solid var(--hairline-hi);border-radius:4px}
+  .verdict.passed,.windowBlock.passed .windowState{color:var(--customs)}
+  .verdict.failed,.windowBlock.failed .windowState,.balanceNeg{color:#FF6B6B}
+  .windowBalance{margin-left:auto;font:700 13px var(--mono)}
+  .windowBlock{padding:10px 0;border-top:1px solid var(--hairline);display:grid;grid-template-columns:minmax(86px,1fr) auto;gap:4px 10px}
+  .windowBlock:first-of-type{border-top:0}.windowBlock.failed .windowTitle{text-decoration:line-through}
+  .windowTitle{font-weight:700}.windowTime,.windowState,.windowCount{font:11px var(--mono);color:var(--text-2)}
+  .windowState{text-align:right}.windowCount{grid-column:1/-1;color:var(--text-1)}
+  .windowPips{display:flex;gap:4px;align-items:center}.windowPip{width:7px;height:7px;border-radius:50%;background:#394258}
+  .windowPip.inWindow{background:var(--customs)}.windowPip.late{background:var(--accent-warn)}.windowPip.missed{background:#FF6B6B}
+  .windowBlock.open{margin:0 -8px;padding:10px 8px;background:rgba(79,216,235,.06);border-left:3px solid var(--customs)}
+  .windowBlock.parallel{padding-top:6px;padding-bottom:6px}.windowCount.warn{color:var(--accent-warn)}.windowCount.urgent{color:#FF6B6B}
+  .stakeLine{font:700 12px var(--mono);margin-top:8px;color:var(--text-3)}
+  .stakeLine.emergency,.stakeLine.stale{padding:9px;border:1px solid #FF6B6B;background:rgba(255,64,64,.12);color:#FFD6D6}
+  body.tier-debt{--mood-c1:232,91,91;--mood-c2:139,124,246}
+  body.tier-blackout #moodLayer{display:none}body.tier-blackout{background:#08090c}
+  body.tier-blackout .bottomNav .navBtn:not([data-tab="today"]){display:none}
 
   /* ============ cards — three elevation levels ============
      Every card used to be var(--card) + a 1.5px hairline, so Supplements carried
@@ -461,6 +479,7 @@
 
 <script type="module">
 import * as midnight from "./ui/midnight.mjs";
+import * as flowstateRules from "./rules.mjs";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
@@ -475,6 +494,7 @@ import {
 // Web Push certificate key pair from Firebase console → Project settings →
 // Cloud Messaging → Web configuration. Empty = push UI stays hidden.
 const VAPID_KEY = 'BGuB7tmolQ5QSqAERQjBe8yp_SBXHWY7WScV2ZdK-ULsiID4_4rSEznIGkDpIFfpePIyhpK2rkQjudcgf7WXSLM';
+globalThis.FLOWSTATE_RULES = flowstateRules;
 
 // One service worker handles both offline caching and background push.
 const swReady = ('serviceWorker' in navigator)
@@ -559,8 +579,10 @@ async function initApp(){
   // Timetable lives in schedule.json — one source of truth shared with the
   // notification sender (scripts/notify.mjs). SW caches it for offline.
   let SCHED_DATA = null;
+  const RULES = globalThis.FLOWSTATE_RULES || null;
   try { SCHED_DATA = await (await fetch('schedule.json', { cache: 'no-cache' })).json(); }
   catch (e) { try { const c = await caches.match('schedule.json'); if (c) SCHED_DATA = await c.json(); } catch (e2) {} }
+  if (RULES && SCHED_DATA) RULES.assertSchedule(SCHED_DATA);
 
   const blankDay = () => ({anchor:false,water:false,walk:false,read5:false,cookmeal:false,phonedown:false,smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],sched:{},hydro:[],log:{},completed:false});
 
@@ -594,7 +616,7 @@ async function initApp(){
   try { const raw = localStorage.getItem(KEY); S = raw ? JSON.parse(raw) : {}; } catch(e) { S = {}; }
 
   function normalize(){
-    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0,treatsClaimed:0,waterGoal:2500,gasBudget:250}, S.config||{});
+    S.config = Object.assign({permit:"2027-01-31",celpipExam:"2026-08-15",cecDate:"2026-10-01",celpipL:10,celpipR:6,celpipW:11,celpipS:11,rentDay:1,ccDay:14,score:0,cardBal:0,cardLimit:0,efund:0,budgetLeft:0,treatsClaimed:0,waterGoal:2500,gasBudget:250,windowsEnabled:true,windowsStart:T}, S.config||{});
     S.actions = Object.assign({oinp:false,wfg:false,carfax:false,pcc:false,celpip:false,innobox:false,resume:false,permitdoc:false}, S.actions||{});
     S.days = S.days || {};
     /* Check-ins (P1) live outside S.days on purpose: they are private
@@ -611,7 +633,7 @@ async function initApp(){
        alerts, Home routines, or anything medical. snoozeUntil silences
        discretionary pushes through the named local date, inclusive. */
     S.prefs = Object.assign({
-      checkIns:true, notifyBrief:true, notifyNudges:false, notifyEvening:true, snoozeUntil:null
+      checkIns:true, notifyBrief:true, notifyNudges:false, notifyEvening:true, notifyWindows:true, snoozeUntil:null
     }, S.prefs||{});
     S.fcmTokens = Array.isArray(S.fcmTokens) ? S.fcmTokens : [];
     S.gasLog = Array.isArray(S.gasLog) ? S.gasLog : [];
@@ -619,6 +641,8 @@ async function initApp(){
     // than migrating them. Phase 1 only reads `mood` — the six moods/*.svg exist
     // now; nothing grants one yet. Additive: no existing field changes meaning.
     S.rewards = Object.assign({ tokens:[], unlocks:[], skin:'filament', mood:'default' }, S.rewards||{});
+    S.dayOff = S.dayOff || {};
+    S.stakes = S.stakes || null;
     S.streak = S.streak || 0; S.best = S.best || 0; S.lastComplete = S.lastComplete || null;
     // Migrate the old streak into starting momentum, once. streak/best stay as legacy stats.
     if (!S.flow || typeof S.flow.m !== 'number' || !/^\d{4}-\d{2}-\d{2}$/.test(String(S.flow.asOf))) S.flow = { m: clampM((S.streak||0)*8 + 20), asOf: T };
@@ -805,10 +829,9 @@ async function initApp(){
       // effects. Momentum is derived from what was actually logged.
       const patch = { [path]: value };
       const parts = String(path).split('.');
-      // Rhythm tracking: every day-level stamp records WHEN it happened
-      // (days.<date>.log.<key> = "HH:MM"); clearing a stamp clears its time.
+      // Window scoring needs an absolute timestamp so browser and server agree.
       if (parts[0]==='days' && parts.length===3){
-        if (value===true) patch[`days.${parts[1]}.log.${parts[2]}`] = new Date().toTimeString().slice(0,5);
+        if (value===true) patch[`days.${parts[1]}.log.${parts[2]}`] = Date.now();
         else if (value===false) patch[`days.${parts[1]}.log.${parts[2]}`] = REMOVE;
       }
       this.setMany(patch, options);
@@ -927,7 +950,11 @@ async function initApp(){
       { key:'meridian', at:200, label:'Meridian', k:1.10, c1:'201,162,39',  c2:'232,161,60'  }
     ];
     const MOOD_BY_KEY = new Map(MOODS.map(x => [x.key, x]));
-    const moodOf = () => MOOD_BY_KEY.get(S.rewards && S.rewards.mood) || MOOD_BY_KEY.get('default');
+    const windowLedger = () => RULES&&SCHED_DATA&&S.config?.windowsEnabled!==false
+      ? RULES.balance({sched:SCHED_DATA,state:S,today:Dash.today}) : {total:0,states:{},tier:'normal'};
+    const moodOf = () => windowLedger().tier==='normal'
+      ? (MOOD_BY_KEY.get(S.rewards && S.rewards.mood) || MOOD_BY_KEY.get('default'))
+      : MOOD_BY_KEY.get('default');
 
     let moodApplied = null;
     function applyMood(){
@@ -951,6 +978,8 @@ async function initApp(){
       r.setProperty('--mood-c2',        mood.c2);
       r.setProperty('--mood-art-k',     (mood.k || 1).toFixed(2));
       r.setProperty('--mood-img',       'url("moods/' + mood.key + '.svg")');
+      if(windowLedger().tier==='debt') { r.setProperty('--mood-c1','232,91,91'); r.setProperty('--mood-c2','139,124,246'); }
+      if(windowLedger().tier==='blackout') r.setProperty('--mood-img','none');
     }
 
     const icon = (name, cls) => `<svg class="ic ${cls||''}" aria-hidden="true" focusable="false"><use href="#i-${name}"/></svg>`;
@@ -1087,7 +1116,8 @@ async function initApp(){
 
     function rowHTML(path, emo, lbl, sub, state, inkClass, extra, doneAt){
       const cls = state===true?'done':'';
-      const stamp = state===true?(doneAt?`✓ ${doneAt}`:'DONE ✓'):'TAP';
+      const shownAt = typeof doneAt==='number' ? new Date(doneAt).toTimeString().slice(0,5) : doneAt;
+      const stamp = state===true?(shownAt?`✓ ${shownAt}`:'DONE ✓'):'TAP';
       return `<div class="row ${cls} ${inkClass||''}" role="button" tabindex="0" aria-pressed="${state===true}" aria-label="${lbl}: ${state===true?'done':'not yet'}" data-toggle="${path}">
         <span class="emo" aria-hidden="true">${emo}</span>
         <span><span class="lbl">${lbl}</span>${sub?`<div class="subt">${sub}</div>`:''}</span>
@@ -1197,6 +1227,46 @@ async function initApp(){
           <a class="chip" href="https://calendar.google.com/" target="_blank" rel="noopener">Open</a>
         </div>
         <div class="ciHint"><b style="color:var(--sub)">Taps in this app are a local log.</b> They do not tick anything off in Google Tasks, and a task you finish by voice will not appear here. The two are separate records on purpose — this one is for momentum, that one is for what actually has to get done.</div>
+      </div>`;
+    }
+
+    function stakeHTML(s){
+      const stake=s.stakes;
+      if(!stake) return '';
+      const stale=!stake.fetchedAt||Date.now()-stake.fetchedAt>86400000||stake.lastPostOk===false;
+      const emergency=Number(stake.safebuf)===0;
+      const url=SCHED_DATA&&SCHED_DATA.stakes?`https://www.beeminder.com/${encodeURIComponent(SCHED_DATA.stakes.user)}/${encodeURIComponent(SCHED_DATA.stakes.goal)}`:'';
+      if(stale) return `<div class="stakeLine stale">Reporter stale — a day may be un-posted.${url?` <a href="${url}" target="_blank" rel="noopener">Check goal</a>`:''}</div>`;
+      const until=stake.losedate?new Date(stake.losedate*1000).toLocaleString(undefined,{weekday:'short',hour:'2-digit',minute:'2-digit'}):'deadline';
+      return `<div class="stakeLine${emergency?' emergency':''}">${emergency?'BEEMERGENCY · ':''}$${Number(stake.pledge||0)} at stake · safe until ${until}</div>`;
+    }
+
+    function dayBoardHTML(s,d){
+      if(!RULES||!SCHED_DATA||s.config?.windowsEnabled===false) return '';
+      const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
+      const kind=kindOf(todow(Dash.today));
+      const result=RULES.evaluateDay({sched:SCHED_DATA,dayKind:kind,day:d,dateStr:Dash.today,nowMin,isDayOff:!!s.dayOff?.[Dash.today]});
+      const ledger=RULES.balance({sched:SCHED_DATA,state:s,today:Dash.today});
+      const open=result.blocks.filter(b=>b.state==='open').sort((a,b)=>a.endMin-b.endMin);
+      const primary=open[0]?.id;
+      const fmt=m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+      const stateText=b=>b.state==='failed'?'-8':b.state==='passed'?'+5':b.state==='upcoming'?`opens ${fmt(b.startMin)}`:b.state.toUpperCase();
+      const rows=result.blocks.map(b=>`<div class="windowBlock ${b.state}${b.state==='open'&&b.id!==primary?' parallel':''}">
+        <div><span class="windowTitle">${b.title}</span> <span class="windowTime">${fmt(b.startMin)}-${fmt(b.endMin)}</span></div>
+        <div class="windowState">${stateText(b)}</div>
+        <div class="windowPips" aria-label="${b.items.filter(i=>i.state==='inWindow').length} of ${b.items.length} in window">${b.items.map(i=>`<i class="windowPip ${i.state}" title="${KEY_LABELS[i.key]||i.key}: ${i.state}"></i>`).join('')}</div>
+        ${b.state==='open'?`<div class="windowCount" data-countdown data-end-min="${b.endMin}"></div>`:''}
+      </div>`).join('');
+      const sign=n=>n>0?`+${n}`:String(n);
+      const futureOff=Object.keys(s.dayOff||{}).filter(date=>date>Dash.today).sort();
+      const futureRows=futureOff.map(date=>`<div class="rmRow"><span>${date}</span><button class="chip" data-dayoff-withdraw="${date}">Withdraw</button></div>`).join('');
+      const controls=result.off
+        ? `<span class="chip on">Day off declared</span>`
+        : `<label class="rmLbl" for="dayOffDate">Declare day off</label><div style="display:flex;gap:8px;margin-top:6px"><input id="dayOffDate" type="date" min="${Dash.today}" value="${Dash.today}" class="ciText" style="margin:0"><button class="chip" data-dayoff>Declare</button></div>`;
+      return `<div class="card card--hero" id="dayBoard">${secTitle('DAY','Day board')}
+        <div class="windowHead"><span class="verdict ${result.verdict}">${result.verdict.toUpperCase()}</span><span>${sign(result.delta)} today</span><span class="windowBalance ${ledger.total<0?'balanceNeg':''}">Balance ${sign(ledger.total)}</span></div>
+        ${ledger.tier==='blackout'?'<div class="stakeLine emergency">Blackout clears when the balance returns above zero. Logging stays available.</div>':''}
+        ${rows||'<div class="rmSub">Day off. No blocks score today.</div>'}<div style="margin-top:12px">${controls}${futureRows}</div>
       </div>`;
     }
 
@@ -1665,7 +1735,7 @@ async function initApp(){
         const hit=total>=goal; // Hydrate win is derived from real ml, never hand-toggled
         const base=`days.${Dash.today}`;
         const patch={ [`${base}.hydro`]:arr, [`${base}.water`]:hit };
-        patch[`${base}.log.water`] = hit ? (was ? (day.log&&day.log.water)||hhmm() : hhmm()) : Dash.REMOVE;
+        patch[`${base}.log.water`] = hit ? (was ? (day.log&&day.log.water)||Date.now() : Date.now()) : Dash.REMOVE;
         if(hit&&!was) flowToast('💧 Goal hit — Hydrate stamped');
         Dash.setMany(patch);
         render();
@@ -1786,6 +1856,9 @@ async function initApp(){
       ];
       const render=()=>{
         const d=Dash.state.days[dstr]||{};
+        const scored=RULES&&SCHED_DATA&&dstr>=(Dash.state.config?.windowsStart||'9999-12-31')
+          ? RULES.evaluateDay({sched:SCHED_DATA,dayKind:kindOf(todow(dstr)),day:d,dateStr:dstr,nowMin:dstr<Dash.today?null:(new Date().getHours()*60+new Date().getMinutes()),isDayOff:!!Dash.state.dayOff?.[dstr]}) : null;
+        const verdict=scored?`<span class="verdict ${scored.verdict}">${scored.verdict.toUpperCase()} · ${scored.delta>0?'+':''}${scored.delta}</span>`:'<span class="verdict">—</span>';
         const rowsHtml=groups.map(([g,items])=>
           `<div style="font-family:var(--disp);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:10px 0 6px">${g}</div>`+
           items.map(([k,e,l])=>{
@@ -1797,7 +1870,7 @@ async function initApp(){
           }).join('')
         ).join('');
         ov.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Entry ${niceDate}">
-          <header>Entry — ${niceDate}</header>
+          <header>Entry — ${niceDate} ${verdict}</header>
           <div class="body" style="max-height:62vh;overflow-y:auto">
             ${rowsHtml}
             <div class="mBtns" style="margin-top:12px"><button class="cancel" data-mclose>Close</button></div>
@@ -1916,7 +1989,7 @@ async function initApp(){
       return VAPID_KEY && 'Notification' in window && Notification.permission!=='granted'
         ? `<section class="connections"><h2>Device notifications</h2><p>Register this device for your selected app reminders. Delivery still needs a real test.</p><button id="pushEnable" class="outline-button">Enable notifications</button><p id="pushMsg" role="status"></p></section>` : '';
     }
-    function todayHTML(s,d){ return midnight.today({state:s,date:Dash.today,checkIn:checkInCard(s,d),activity:activityHTML(s,d)}); }
+    function todayHTML(s,d){ return stakeHTML(s)+dayBoardHTML(s,d)+midnight.today({state:s,date:Dash.today,checkIn:checkInCard(s,d),activity:activityHTML(s,d)}); }
     function schedHTML(){ return midnight.plan(); }
     function moreHTML(s){ return midnight.more({reminders:reminderCard(s),push:pushSetupHTML()}); }
 
@@ -1992,6 +2065,10 @@ async function initApp(){
       const mNow=momentumNow(s);
 
       applyMood();
+      const tier=windowLedger().tier;
+      document.body.classList.toggle('tier-debt',tier==='debt');
+      document.body.classList.toggle('tier-blackout',tier==='blackout');
+      if(tier==='blackout'&&tab!=='today') tab='today';
       const tabChanged = tab!==lastTab;
       // The status element is recreated by every redraw, so the live state has
       // to be repainted onto it or it reverts to whatever the template said.
@@ -2067,6 +2144,12 @@ async function initApp(){
             ? (cur===true ? 'fail' : cur==='fail' ? false : true)
             : cur===true ? false : true;
           Dash.set(path,next);
+          if(next===true&&RULES&&SCHED_DATA&&path.startsWith(`days.${Dash.today}.`)&&!path.includes('.sched.')){
+            const key=path.split('.').pop();
+            const nowMin=new Date().getHours()*60+new Date().getMinutes();
+            const block=RULES.blocksFor(SCHED_DATA,kindOf(todow(Dash.today))).find(b=>b.keys.includes(key));
+            if(block&&nowMin>block.endMin) flowToast(`Logged late · +1 · ${block.title} already failed`);
+          }
         };
         el.addEventListener('click',fire);
         el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fire(); } });
@@ -2129,6 +2212,22 @@ async function initApp(){
           Dash.set('prefs.snoozeUntil', on ? Dash.REMOVE : Dash.today);
         });
       });
+      const dayOffButton=root.querySelector('[data-dayoff]');
+      if(dayOffButton) dayOffButton.addEventListener('click',()=>{
+        const input=root.querySelector('#dayOffDate'), date=input&&input.value;
+        if(!date||date<Dash.today) return flowToast('Choose today or a future date.');
+        const kind=kindOf(todow(date)), first=Math.min(...RULES.blocksFor(SCHED_DATA,kind).map(b=>b.startMin));
+        const nowMin=new Date().getHours()*60+new Date().getMinutes();
+        if(date===Dash.today&&nowMin>=first) return flowToast('Today already opened. A day off must be declared before the first window.');
+        const allowed=RULES.canDeclareDayOff({dayOff:Dash.state.dayOff,dateStr:date});
+        if(!allowed.allowed) return flowToast(`Day-off limit reached. Next available ${allowed.nextAvailableDate}.`);
+        Dash.set(`dayOff.${date}`,{declaredAt:Date.now()});
+      });
+      root.querySelectorAll('[data-dayoff-withdraw]').forEach(el=>el.addEventListener('click',()=>{
+        const date=el.dataset.dayoffWithdraw;
+        if(date<=Dash.today) return flowToast('A day off can only be withdrawn while it is still in the future.');
+        Dash.set(`dayOff.${date}`,Dash.REMOVE);
+      }));
       root.querySelectorAll('[data-hydro]').forEach(el=>{
         const fire=()=>openHydroModal();
         el.addEventListener('click',fire);
@@ -2209,7 +2308,19 @@ async function initApp(){
       }
       prevAnchor=anchoredNow;
       prevBig=bigNow;
+      updateCountdowns();
     }
+
+    function updateCountdowns(){
+      const now=new Date(), nowSec=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
+      document.querySelectorAll('[data-countdown]').forEach(el=>{
+        const left=Math.max(0,Number(el.dataset.endMin)*60-nowSec);
+        const m=Math.floor(left/60), sec=left%60;
+        el.textContent=`closes in ${m}:${String(sec).padStart(2,'0')}`;
+        el.classList.toggle('warn',left<=900); el.classList.toggle('urgent',left<=300);
+      });
+    }
+    setInterval(updateCountdowns,1000);
 
     /* Hold the very first paint for Motion — but never for long. The opening
        ring sweep from 0 is the signature moment; losing it to a cold CDN import

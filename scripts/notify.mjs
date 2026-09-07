@@ -12,6 +12,7 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { readFileSync } from 'node:fs';
+import { balance, blocksFor, dueEdges, evaluateDay, momentumDayGains } from '../rules.mjs';
 
 const MODE = (process.argv.find(a => a.startsWith('--mode=')) || '--mode=brief').split('=')[1];
 const FORCE = process.argv.includes('--force');
@@ -19,16 +20,6 @@ const FORCE = process.argv.includes('--force');
 // FLOWSTATE scoring model — keep in sync with the constants in index.html.
 // Momentum itself is no longer read here: notifications report action days, a
 // count of real days, rather than a score. P0.1.
-const SMALL_KEYS = ['water', 'walk', 'read5', 'cookmeal', 'meditate', 'phonedown'];
-const BIG_KEYS = ['gym', 'language', 'study', 'cooked', 'smokefree', 'money'];
-const dayGains = d => {
-  if (!d) return 0;
-  let g = (d.anchor === true || d.completed === true) ? 10 : 0;
-  g += Math.min(4, SMALL_KEYS.filter(k => d[k] === true).length) * 3;
-  g += BIG_KEYS.filter(k => d[k] === true).length * 8;
-  return g;
-};
-
 // Mirrors actionDays() in index.html. The live "lately" signal is a count of
 // real days, not a score — a quiet day isn't counted rather than penalised, and
 // one action tomorrow moves it straight back up. P0.1.
@@ -40,7 +31,7 @@ const shiftDate = (s, n) => {
 };
 const actionDays = (data, today, n = ACTION_WINDOW) => {
   let c = 0, d = today;
-  for (let i = 0; i < n; i++) { if (dayGains((data.days || {})[d]) > 0) c++; d = shiftDate(d, -1); }
+  for (let i = 0; i < n; i++) { if (momentumDayGains((data.days || {})[d]) > 0) c++; d = shiftDate(d, -1); }
   return c;
 };
 
@@ -159,13 +150,23 @@ function composeStreak(data, now) {
     console.log('Day is anchored — staying silent.');
     return null;
   }
-  const g = dayGains(d);
+  const g = momentumDayGains(d);
   return {
     title: '⚓ Would a quick review help?',
     body: g > 0
       ? `You banked +${g} momentum here today. If the anchor still fits, it's two minutes — otherwise I'll stay quiet.`
       : `Nothing recorded in the app today — anything done by voice or elsewhere wouldn't show here. Two minutes if you want it.`
   };
+}
+
+function windowMessage(edge, data, now) {
+  const labels = sched.tapPlan?.labels || {};
+  const block = blocksFor(sched, sched.dayKinds[now.dow] || 'sun').find(item => item.id === edge.blockId);
+  if (edge.kind === 'close' && edge.state === 'passed') return null;
+  if (edge.kind === 'open') return { title: 'FLOWSTATE', body: `${edge.title} open until ${String(Math.floor(block.endMin / 60)).padStart(2, '0')}:${String(block.endMin % 60).padStart(2, '0')} · ${block.keys.length} items` };
+  if (edge.kind === 'warn') return { title: 'FLOWSTATE', body: `${edge.title} closes in 15 min · ${edge.remaining.length} left` };
+  const names = edge.remaining.map(key => labels[key] || key).join(', ');
+  return { title: 'FLOWSTATE', body: `${edge.title} failed · ${names} not logged · -8` };
 }
 
 async function main() {
@@ -207,39 +208,66 @@ async function main() {
   const snoozed = pf.snoozeUntil === now.date;
   if (snoozed) console.log(`Snoozed for ${now.date} — discretionary pushes suppressed.`);
 
-  let msg = null, logField = null;
+  let messages = [], logFields = [];
   if (MODE === 'auto') {
-    if (!snoozed && wants('notifyBrief') && now.hour >= 7 && now.hour <= 9 && data.notifyLog?.brief !== now.date) {
-      msg = composeBrief(data, now); logField = 'brief';
+    if (!snoozed && wants('notifyWindows')) {
+      const kind = sched.dayKinds[now.dow] || 'sun';
+      const first = Math.min(...blocksFor(sched, kind).map(block => block.startMin));
+      const prevMin = data.notifyLog?.lastEdgeDate === now.date ? Number(data.notifyLog.lastEdgeMin) : first - 1;
+      const edges = dueEdges({ sched, dayKind: kind, day: data.days?.[now.date] || {}, dateStr: now.date, prevMin, nowMin: now.minutes, isDayOff: Boolean(data.dayOff?.[now.date]) })
+        .filter(edge => !data.notifyLog?.[`edge:${now.date}:${edge.blockId}:${edge.kind}`]);
+      if (edges.length > 3) {
+        messages.push({ title: 'FLOWSTATE', body: `${edges.length} window updates since the last check. Open FLOWSTATE for the current day.` });
+        logFields.push(...edges.map(edge => `edge:${now.date}:${edge.blockId}:${edge.kind}`));
+      } else {
+        for (const edge of edges) {
+          const msg = windowMessage(edge, data, now);
+          if (msg) { messages.push(msg); logFields.push(`edge:${now.date}:${edge.blockId}:${edge.kind}`); }
+        }
+        const blocks = blocksFor(sched, kind);
+        const last = blocks.reduce((a, b) => a.endMin > b.endMin ? a : b);
+        if (edges.some(edge => edge.kind === 'close' && edge.blockId === last.id) && !data.notifyLog?.[`day:${now.date}`]) {
+          const result = evaluateDay({ sched, dayKind: kind, day: data.days?.[now.date] || {}, dateStr: now.date, nowMin: null, isDayOff: false });
+          const ledger = balance({ sched, state: data, today: now.date });
+          const failed = result.blocks.filter(block => block.state === 'failed').length;
+          messages.push({ title: 'FLOWSTATE', body: result.verdict === 'passed'
+            ? `Day passed · +${result.delta} · balance ${ledger.total}`
+            : `Day failed · ${failed} blocks · balance ${ledger.total}` });
+          logFields.push(`day:${now.date}`);
+        }
+      }
+      logFields.push('lastEdgeMin', 'lastEdgeDate');
     }
-    // notifyNudges defaults OFF: absent is not "on" for this one, because the
-    // tap windows duplicate the Google Tasks routine.
-    if (!msg && !snoozed && pf.notifyNudges === true) {
-      const n = composeNudge(data, now); if (n) { msg = n; logField = n.logField; }
+    if (!messages.length && !snoozed && wants('notifyBrief') && now.hour >= 7 && now.hour <= 9 && data.notifyLog?.brief !== now.date) {
+      messages.push(composeBrief(data, now)); logFields.push('brief');
     }
-    if (!msg && !snoozed && wants('notifyEvening') && now.hour >= 21 && now.hour <= 23 && data.notifyLog?.streak !== now.date) {
-      msg = composeStreak(data, now); logField = 'streak';
+    if (!messages.length && !snoozed && wants('notifyEvening') && now.hour >= 21 && now.hour <= 23 && data.notifyLog?.streak !== now.date) {
+      const msg = composeStreak(data, now); if (msg) { messages.push(msg); logFields.push('streak'); }
     }
-    if (!msg) { console.log(`auto: nothing due at ${now.hour}:${String(now.minute).padStart(2,'0')} ${TZ} — staying silent.`); return; }
+    if (!messages.length) {
+      if (logFields.includes('lastEdgeMin')) await ref.update({ 'notifyLog.lastEdgeMin': now.minutes, 'notifyLog.lastEdgeDate': now.date });
+      console.log(`auto: nothing due at ${now.hour}:${String(now.minute).padStart(2,'0')} ${TZ} — staying silent.`); return;
+    }
   } else {
     if (!FORCE && data.notifyLog?.[MODE] === now.date) {
       console.log(`[${MODE}] already sent today (${now.date}) — the other cron got there first. Exiting.`);
       return;
     }
-    msg = MODE === 'streak' ? composeStreak(data, now) : composeBrief(data, now);
-    logField = MODE;
+    const msg = MODE === 'streak' ? composeStreak(data, now) : composeBrief(data, now);
     if (!msg) return;
+    messages.push(msg); logFields.push(MODE);
   }
 
-  console.log(`Sending [${logField}] to ${tokens.length} device(s):\n${msg.title}\n${msg.body}`);
-  const res = await getMessaging().sendEachForMulticast({
-    tokens,
-    notification: { title: msg.title, body: msg.body },
-    webpush: {
-      notification: { icon: ICON, badge: ICON, tag: `flowstate-${logField}` },
-      fcmOptions: { link: APP_URL }
-    }
-  });
+  const responses = [];
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i], logField = logFields[i] || 'windows';
+    console.log(`Sending [${logField}] to ${tokens.length} device(s):\n${msg.title}\n${msg.body}`);
+    responses.push(await getMessaging().sendEachForMulticast({
+      tokens, notification: { title: msg.title, body: msg.body },
+      webpush: { notification: { icon: ICON, badge: ICON, tag: `flowstate-${logField}` }, fcmOptions: { link: APP_URL } }
+    }));
+  }
+  const res = { successCount: responses.reduce((n, item) => n + item.successCount, 0), failureCount: responses.reduce((n, item) => n + item.failureCount, 0), responses: responses.flatMap(item => item.responses) };
   console.log(`Success: ${res.successCount}, failed: ${res.failureCount}`);
 
   // Prune tokens FCM says are dead so the list never rots.
@@ -260,7 +288,13 @@ async function main() {
   }
 
   if (res.successCount > 0) {
-    await ref.update({ [`notifyLog.${logField}`]: now.date });
+    const patch = {};
+    for (const field of logFields) {
+      if (field === 'lastEdgeMin') patch['notifyLog.lastEdgeMin'] = now.minutes;
+      else if (field === 'lastEdgeDate') patch['notifyLog.lastEdgeDate'] = now.date;
+      else patch[`notifyLog.${field}`] = now.date;
+    }
+    await ref.update(patch);
   }
 }
 

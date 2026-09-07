@@ -3,20 +3,11 @@ name: Notifications
 # Every scheduled run calls notify.mjs --mode=auto: the script reads the
 # Toronto wall clock + Firestore notifyLog and decides what (if anything) is
 # due — morning brief, a tap-window nudge, or the 9 PM anchor reminder.
-# Cron entries come in DST pairs, off the top of the hour, scheduled BEFORE
-# the target window because GitHub cron lands 0-90+ minutes late.
+# GitHub cron can still land late. A 10-minute cadence bounds ordinary delay
+# far more tightly than the old DST-paired hourly jobs.
 on:
   schedule:
-    - cron: '45 10 * * *'  # brief, EDT (lands ~7-8 AM Toronto)
-    - cron: '45 11 * * *'  # brief, EST
-    - cron: '15 16 * * *'  # midday nudge, EDT (lands ~12:15-1:45 PM)
-    - cron: '15 17 * * *'  # midday nudge, EST
-    - cron: '45 20 * * *'  # afternoon nudge, EDT (lands ~4:45-6:15 PM)
-    - cron: '45 21 * * *'  # afternoon nudge, EST
-    - cron: '15 0 * * *'   # evening nudge, EDT (lands ~8:15-9:45 PM)
-    - cron: '15 1 * * *'   # evening nudge, EST
-    - cron: '45 0 * * *'   # anchor reminder, EDT (lands ~9-10:15 PM)
-    - cron: '45 1 * * *'   # anchor reminder, EST
+    - cron: '*/10 * * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -62,5 +53,9 @@ jobs:
           fi
       - name: Send notification
         run: node scripts/notify.mjs --mode=${{ steps.mode.outputs.mode }} ${{ steps.mode.outputs.flags }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Preview Beeminder datapoints
+        run: node scripts/stakes.mjs
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

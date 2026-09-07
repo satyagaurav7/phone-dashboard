@@ -55,7 +55,7 @@ self.addEventListener('notificationclick', (event) => {
 
 /* ---------------- app-shell cache ---------------- */
 const CACHE_PREFIX = 'flowstate-';
-const CACHE = CACHE_PREFIX + 'midnight-v1';
+const CACHE = CACHE_PREFIX + 'midnight-v2';
 const SHELL = [
   './',
   'index.html',
@@ -64,6 +64,7 @@ const SHELL = [
   'assets/filament.svg',
   'fonts/newsreader.woff2',
   'schedule.json',
+  'rules.mjs',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png'
