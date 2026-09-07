@@ -430,3 +430,213 @@ If it proves demoralising rather than motivating, the cheapest correction is a
 threshold inside `evaluateDay` — pass the day at N-1 blocks, or mark a subset of
 blocks mandatory — a small, contained change to one function. Do not pre-build
 that flexibility now.
+
+---
+---
+
+# Part B — external stakes (real money)
+
+Decided by Satya on 2026-09-07, after Part A. Build Part A first; Part B is
+worthless without a trustworthy verdict to report.
+
+**Lever:** money, through Beeminder.
+**Trigger:** two failed days in a row.
+**Veto:** possible, but only with a 7-day delay.
+
+## 11. Why Beeminder, and what we are and are not building
+
+FLOWSTATE is a static page plus a GitHub Actions cron. It cannot take money,
+lock a phone, or block an app. It can only report. Beeminder already holds a
+card, already charges on failure, and — critically — already enforces the delay
+Satya asked for.
+
+**We are building one thing: a reporter.** Each day, the cron posts one
+datapoint to a Beeminder goal saying whether the day passed. Beeminder owns the
+road, the derailment, the card, and the charge. We never touch payment details.
+
+> **Hard rule for the implementer:** never handle, store, request, or transmit
+> card or payment details. Satya sets up billing on Beeminder's own site, in his
+> own browser. This repository holds one API token and nothing else financial.
+
+### The mechanics that make this work
+
+- **Akrasia horizon.** Beeminder refuses to make a goal easier sooner than 7
+  days out. Lowering the pledge, flattening the rate, adding a break, and
+  quitting the goal all take a week. This *is* the 7-day veto, and it lives on
+  Beeminder's servers where Satya cannot reach it by editing this repo. **Do
+  not implement a delay of our own.** A delay we enforce is a delay he can
+  bypass with a text editor. Ours would be theatre; theirs is real.
+- **Pledge escalation.** `$0 → $5 → $10 → $30 → $90 → $270 → $810 → …`, one
+  step per derailment, stopping at a cap the user sets.
+- **Idempotency.** The datapoint endpoint takes a `requestid` scoped to the
+  goal. Reposting with the same `requestid` updates rather than duplicates.
+  This is what makes a 10-minute cron safe.
+
+Sources: [datapoint API](https://api.beeminder.com/#datapoints) ·
+[akrasia horizon](https://help.beeminder.com/article/45-what-is-the-akrasia-horizon) ·
+[pledge caps](https://help.beeminder.com/article/22-can-i-limit-how-high-my-pledge-gets)
+
+## 12. Mapping "two failed days in a row" onto a goal
+
+Do **not** compute the two-day trigger in our code and then try to make
+Beeminder charge. Beeminder's own road already expresses it exactly.
+
+Set up a **Do More** goal:
+
+| Setting | Value | Why |
+|---|---|---|
+| Rate | **1 per day** | One passed day per day |
+| Initial safety buffer | **1 day** | One fail eats the buffer; the second derails |
+| Goal timezone | `America/Toronto` | Must match `schedule.json` |
+| Deadline | **06:00** (next morning) | Gives the cron all night to land the previous day's datapoint |
+| Starting pledge | **$0** | Rises to $5 automatically after 7 days — the first week is a shakedown with nothing at risk |
+| Pledge cap | **$30** | Recommended start. Satya's call; raising it later is instant, lowering it takes a week |
+
+With a 1-day buffer at rate 1/day: pass every day and the buffer holds. Fail
+once and `safebuf` hits 0 — a beemergency, and Beeminder emails about it. Fail
+the second consecutive day and it derails and charges. That is the requested
+trigger, with none of the logic in our code.
+
+**Set the goal up before writing any code.** The shape of the road is the
+feature; the integration is plumbing.
+
+## 13. The reporter
+
+New `scripts/stakes.mjs`, called from the existing notify workflow (do not add a
+second cron — one scheduled workflow, two jobs' worth of work).
+
+### 13.1 What it posts
+
+Once per day, after the day's last window has closed:
+
+```
+POST https://www.beeminder.com/api/v1/users/<user>/goals/<goal>/datapoints.json
+  auth_token = <BEEMINDER_TOKEN>
+  daystamp   = YYYYMMDD          (the day being reported, Toronto)
+  value      = 1 if the day passed or was a declared day off, else 0
+  comment    = "FLOWSTATE: passed" | "FLOWSTATE: failed — Gym, Deep work"
+  requestid  = "flowstate-YYYY-MM-DD"
+```
+
+`requestid` is mandatory, not optional. It is what lets the job run every ten
+minutes, retry after a failure, and back-fill history without ever creating a
+duplicate.
+
+The verdict comes from `rules.mjs` `evaluateDay(...)` with `nowMin: null` — the
+same function the phone uses. There is no second scoring path.
+
+### 13.2 Back-fill, because a missed post costs real money
+
+Every run, walk the last **7 days**. For each day that is complete and has no
+successfully-recorded post, post it. Because `requestid` is deterministic, this
+is safe to repeat forever.
+
+This is the single most important reliability property in Part B. If GitHub
+Actions is down for two days, the next successful run repairs the record before
+the road catches up — provided it lands before `losedate`.
+
+### 13.3 Reading the stake back
+
+The same run fetches the goal and writes a `stakes` object into the existing
+Firestore document:
+
+```js
+S.stakes = {
+  goal, pledge, safebuf, losedate, lastPostedDate, lastPostOk, fetchedAt
+}
+```
+
+The browser reads it from Firestore. **The Beeminder token must never reach the
+client** — `index.html` is published publicly by `build-site.mjs`. The client
+never calls Beeminder directly; it only reads what the server wrote.
+
+### 13.4 Secrets
+
+`BEEMINDER_TOKEN` as a GitHub Actions secret, alongside the existing
+`FIREBASE_SERVICE_ACCOUNT`. The username and goal slug go in `schedule.json`
+under `stakes: { user, goal }` — a goal slug is not a secret, and having it in
+the public config makes the setup legible. The token never appears in the repo,
+in `schedule.json`, in a log line, or in a commit message.
+
+## 14. UI
+
+In the header, beside the balance: **`$10 at stake · safe until Tue 06:00`**,
+read from `S.stakes`.
+
+Three states that must be visually distinct:
+
+- **Safe** (`safebuf >= 1`): quiet, one line.
+- **Beemergency** (`safebuf === 0`): loud and persistent. Today's blocks *must*
+  all pass or money moves. This is the state the whole feature exists to create
+  — do not make it subtle.
+- **Stale** (`fetchedAt` older than 24h, or `lastPostOk === false`): a warning
+  that the reporter is not running. Says plainly that the record may be
+  un-posted and links to the goal so Satya can post by hand. A silent
+  integration failure is the one way this feature costs money for nothing, so
+  it must be impossible to miss.
+
+## 15. Closing the day-off loophole
+
+**This amends §1 and §5.5.** A declared day off posts `value: 1` and cannot
+derail. Unlimited days off would therefore be a free, self-serve way to defuse
+the stake entirely.
+
+Cap them: **4 declared days off per rolling 28 days**, enforced in `rules.mjs`
+so the phone and the reporter agree. Past the cap, a "day off" is refused at the
+point of declaring, with the reason and the date the next one becomes available.
+
+This cap is deliberately *not* subject to a 7-day delay — it is a rule in our
+code, and Satya can change it by editing the repo. That is fine and honest: the
+loophole is closed against absent-minded use, not against a determined decision.
+The money stake is the part that has to be tamper-proof, and it is, because
+Beeminder holds it.
+
+## 16. Phases (continue from §8)
+
+7. **Goal setup, by hand.** Satya creates the Beeminder goal with the §12
+   settings and a **$0** pledge, and confirms it appears with `safebuf: 1`. No
+   code. Nothing is at stake for the first seven days.
+8. **Reporter, dry-run.** `stakes.mjs` computes verdicts and logs the exact
+   payload it *would* post, posting nothing. Run it for several days and check
+   its verdicts against the app by eye. Follow the precedent already set by the
+   paused Calendar publisher: preview before write.
+9. **Reporter, live.** Posting enabled, back-fill on, `S.stakes` written and
+   displayed. The pledge reaches $5 on its own. Verify a real charge only when
+   one legitimately happens — never trigger one to test.
+
+## 17. Acceptance (Part B)
+
+- [ ] `requestid` is deterministic: running `stakes.mjs` three times in a row
+      creates exactly one datapoint, verified in the Beeminder UI.
+- [ ] A simulated 3-day outage back-fills all three days on the next run.
+- [ ] A failed day posts `value: 0` with the failing block names in the comment.
+- [ ] A declared day off posts `value: 1`.
+- [ ] The fifth day off in 28 days is refused, with a reason and a date.
+- [ ] `safebuf: 0` renders the beemergency state, and it is genuinely hard to
+      ignore on the phone.
+- [ ] Killing the reporter for 25 hours raises the stale warning in the app.
+- [ ] `grep -ri beeminder` over the published `_site` finds no token.
+- [ ] The token is absent from the repository, from `schedule.json`, and from
+      every workflow log.
+- [ ] `stakes.mjs` sends no card or payment data of any kind, and requests none.
+
+## 18. Honest risks
+
+- **Infrastructure failure costs real money.** If the cron dies, the record goes
+  un-posted, and Beeminder derails on schedule regardless of how good the actual
+  week was. §13.2 back-fill and §14's stale warning are the mitigations, and
+  Beeminder's own beemergency email is the backstop. The risk is reduced, not
+  eliminated. Start at $0 and cap at $30 until the reporter has run clean for a
+  month.
+- **A wrong verdict costs real money.** Part A must be correct before Part B is
+  armed. A bug in `evaluateDay` becomes a charge. This is why §7's tests are not
+  optional and why Phase 8 is a dry run.
+- **Escalation outruns motivation.** At $90 or $270 a stake stops being a
+  motivator and becomes dread. That is what the pledge cap is for. Set it at a
+  number that would sting on a bad week, not one that would ruin it.
+- **Two mandatory failed days is a low bar to hit.** Part A's §10 already warns
+  that a 7-block all-mandatory day is hard. Two of them back to back, early on,
+  is likely. Consider running Part A alone for two or three weeks and reading
+  the real pass rate before arming Part B at all. If the honest pass rate is
+  under about 70%, fix the bar first — a stake attached to a target that is not
+  actually reachable does not produce better days, it produces charges.
