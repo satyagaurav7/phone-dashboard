@@ -226,3 +226,93 @@ test('getready is one scored item per day, not several', async () => {
   }
   assert.equal(schedule.tapPlan.steps.getready.length, 4);
 });
+
+test('a chore done on its due day earns, and late still earns something', async () => {
+  const { choreLedger, CHORE_POINTS } = await import(CHORES_URL);
+  const state = { config: { choresStart: THU }, chores: { thursday: { done: { [THU]: true } } } };
+  const led = choreLedger({ sched: { chores: [fixture.chores[1]] }, state, today: THU });
+  assert.equal(led.total, CHORE_POINTS.onTime);
+
+  const lateState = { config: { choresStart: THU }, chores: { thursday: { done: { '2026-09-11': true } } } };
+  const late = choreLedger({ sched: { chores: [fixture.chores[1]] }, state: lateState, today: '2026-09-11' });
+  // -5 for Thursday spent outstanding, then +1 for finishing it on Friday.
+  assert.equal(late.total, CHORE_POINTS.outstandingPerDay + CHORE_POINTS.late);
+});
+
+test('an outstanding chore is charged every day it stays undone', async () => {
+  const { choreLedger, CHORE_POINTS } = await import(CHORES_URL);
+  const state = { config: { choresStart: THU }, chores: {} };
+  // Thursday due, never done; asked on Sunday. Thu/Fri/Sat are complete days
+  // and charge; Sunday is still in progress and does not.
+  const led = choreLedger({ sched: { chores: [fixture.chores[1]] }, state, today: SUN });
+  assert.equal(led.total, 3 * CHORE_POINTS.outstandingPerDay);
+  assert.equal(led.pendingToday, CHORE_POINTS.outstandingPerDay);
+  assert.deepEqual(led.outstandingToday, ['Weekly job']);
+});
+
+test('today is never charged before it is over', async () => {
+  const { choreLedger } = await import(CHORES_URL);
+  const state = { config: { choresStart: MON }, chores: {} };
+  const led = choreLedger({ sched: { chores: [fixture.chores[0]] }, state, today: MON });
+  assert.equal(led.total, 0, 'a chore due today costs nothing yet');
+  assert.ok(led.pendingToday < 0, 'but the exposure is reported');
+});
+
+test('a daily chore charges for each skipped day', async () => {
+  const { choreLedger, CHORE_POINTS } = await import(CHORES_URL);
+  const state = { config: { choresStart: '2026-09-07' }, chores: {} };
+  const led = choreLedger({ sched: { chores: [fixture.chores[0]] }, state, today: '2026-09-10' });
+  assert.equal(led.total, 3 * CHORE_POINTS.outstandingPerDay); // 07, 08, 09
+});
+
+test('a moved chore is not charged before the day it was moved to', async () => {
+  const { choreLedger } = await import(CHORES_URL);
+  const sched = { chores: [fixture.chores[0]] };
+  const state = { config: { choresStart: MON }, chores: { daily: { moved: '2026-09-10' } } };
+  const led = choreLedger({ sched, state, today: '2026-09-09' });
+  assert.equal(led.total, 0);
+  assert.equal(led.pendingToday, 0);
+});
+
+test('nothing is charged for days before the app was adopted', async () => {
+  const { choreLedger } = await import(CHORES_URL);
+  const state = { config: { choresStart: SUN }, chores: {} };
+  const led = choreLedger({ sched: fixture, state, today: SUN });
+  assert.equal(led.total, 0);
+});
+
+test('an as-needed chore can never be missed', async () => {
+  const { choreLedger } = await import(CHORES_URL);
+  const state = { config: { choresStart: MON }, chores: {} };
+  const led = choreLedger({ sched: { chores: [fixture.chores[3]] }, state, today: SUN });
+  assert.equal(led.total, 0);
+  assert.equal(led.pendingToday, 0);
+});
+
+test('chores move the balance but NEVER the day verdict or the stake', async () => {
+  // The boundary that keeps a missed bin from costing real money: stakes.mjs
+  // posts on evaluateDay's verdict, which must not move when chores are missed.
+  const rules = await import(RULES_URL);
+  const { choreLedger } = await import(CHORES_URL);
+  const day = { anchor: true, log: { anchor: Date.parse('2026-09-07T06:30:00-04:00') } };
+  const args = { sched: schedule, dayKind: 'office', day, dateStr: MON, nowMin: null, isDayOff: false };
+  const verdictBefore = rules.evaluateDay(args);
+
+  const neglected = { config: { choresStart: '2026-08-01' }, chores: {} };
+  const led = choreLedger({ sched: schedule, state: neglected, today: MON });
+  assert.ok(led.total < -100, 'a month of neglect genuinely hurts the balance');
+
+  const verdictAfter = rules.evaluateDay(args);
+  assert.equal(verdictAfter.verdict, verdictBefore.verdict);
+  assert.equal(verdictAfter.delta, verdictBefore.delta);
+  assert.equal(rules.balance({ sched: schedule, state: neglected, today: MON }).total, 0,
+    'the scoring engine cannot see chores at all');
+});
+
+test('completing accumulates history rather than overwriting it', async () => {
+  const { completePatch } = await import(CHORES_URL);
+  const first = completePatch(THU, {});
+  const second = completePatch(SUN, first);
+  assert.deepEqual(second.done, { [THU]: true, [SUN]: true });
+  assert.equal(second.last, SUN);
+});

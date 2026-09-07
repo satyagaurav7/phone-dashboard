@@ -12,6 +12,18 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 - Pending confirmation: laundry setup/load count, shared chore ownership, collection schedule, live commitments and selected task list. Next implementation step is a read-only mapping audit after access approval.
 - Plan is local/uncommitted. Existing UI changes remain in the shared working tree; the prior fetch/publish attempt was blocked by approval-review usage limits and was not retried. Coordinate ownership before editing those files.
 
+### Chores now score; Google sync blocked on credentials (2026-09-07)
+
+- Claude, `main`, from `034aba7`. User reversed plan section 8.10: chores must cost something.
+- **Chosen and implemented:** +3 done on time, +1 late, **-5 per outstanding chore per day**, compounding. Balance only. The day verdict is unchanged, and `stakes.mjs` posts on `evaluateDay`'s verdict rather than the balance, so a missed chore degrades the app but **cannot reach Beeminder or cost money**. A test asserts this rather than assuming it.
+- Nothing is charged for a day still in progress. Today's exposure shows as "-N to the balance at midnight", mirroring an open block scoring nothing until it closes.
+- Chore records now keep a `done` date map, not just `last`: the ledger has to walk history to tell a met occurrence from a missed one, which a single most-recent field cannot express. Existing `last` values are migrated once on load.
+- Fixed during browser verification: the header rendered `RULES.balance` (blocks only) while the tiers and mood layer used the combined ledger, so the number on screen disagreed with the state driving debt and blackout. Header now reads `combinedLedger()`; regression test added.
+- **Step 5 (read-only audit) delivered as a LOCAL-ONLY script**, `scripts/tasks-audit.mjs`, with 7 tests. Lists, tasks (including completed and hidden), pagination, and a candidate-mapping preview against the chore catalogue. Duplicate titles are reported ambiguous and claim nothing — titles alone are not identity. A structural test asserts no PATCH/PUT/DELETE exists and that the single POST is the OAuth token refresh, not a Tasks write.
+- **The audit refuses to run in CI.** This repository is PUBLIC (`gh repo view`: PUBLIC), so Actions logs are public, and printing real task titles into a run would publish a private task list. No workflow was added. Making the repo private is Satya's decision, not an agent's. Report output paths are gitignored.
+- **Steps 6-8 are NOT done and cannot be by an agent.** No `GOOGLE_OAUTH_*` secret exists in any workflow (only `FIREBASE_SERVICE_ACCOUNT`); commit `aa146d9` deliberately removed Google write credentials. Restoring them requires browser consent on Satya's own Google account and pasting a refresh token — account authentication and credential handling, which the agent must not perform. Phase B also requires explicit write approval under CLAUDE.md rule 1, which has not been given after reviewing consequences.
+- Verification: 54/54 `tests/*.test.mjs`, 17/17 `tests/midnight.test.cjs`, build succeeded, `scripts/` correctly absent from the published artifact. Not verified: real Google account state, signed-in app, physical device.
+
 ### Home upkeep and get-ready (2026-09-07)
 
 - Claude, `main`, from `1906862`. Implements steps 3 and 4 of the household plan (`docs/superpowers/plans/2026-09-07-home-maintenance-and-task-sync.md`): pure functions with fixture tests, and a synthetic Home upkeep board. Steps 5-8 need Google access approval and were not started; no adapter, no OAuth, no writes.

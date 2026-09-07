@@ -650,6 +650,12 @@ async function initApp(){
     // shown as due now rather than overdue: the app cannot know what was done
     // before it started looking, and must not claim otherwise.
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(S.config.choresStart))) S.config.choresStart = T;
+    // One-time migration: records written before the ledger existed carry only
+    // `last`. Seed the history from it so those completions still count.
+    for (const id in S.chores) {
+      const rec = S.chores[id];
+      if (rec && rec.last && !rec.done) rec.done = { [rec.last]: true };
+    }
     // Declared in the planned shape so Phase 4 (Cash-Out) fills these in rather
     // than migrating them. Phase 1 only reads `mood` — the six moods/*.svg exist
     // now; nothing grants one yet. Additive: no existing field changes meaning.
@@ -964,7 +970,20 @@ async function initApp(){
     ];
     const MOOD_BY_KEY = new Map(MOODS.map(x => [x.key, x]));
     const windowLedger = () => RULES&&SCHED_DATA&&S.config?.windowsEnabled!==false
-      ? RULES.balance({sched:SCHED_DATA,state:S,today:Dash.today}) : {total:0,states:{},tier:'normal'};
+      ? combinedLedger() : {total:0,states:{},tier:'normal'};
+    /* Routine blocks and home upkeep share ONE balance, so debt and blackout
+       answer to both. The day verdict deliberately does not: evaluateDay is
+       untouched and stakes.mjs reads verdict, never balance, so a missed chore
+       can degrade the app but can never reach the money stake. */
+    function combinedLedger(){
+      const base=RULES.balance({sched:SCHED_DATA,state:S,today:Dash.today});
+      let chores={total:0,pendingToday:0,outstandingToday:[]};
+      try{ if(CHORES) chores=CHORES.choreLedger({sched:SCHED_DATA,state:S,today:Dash.today}); }catch(e){}
+      const total=base.total+chores.total;
+      const tier=total<RULES.BLACKOUT_FLOOR?'blackout':total<RULES.DEBT_FLOOR?'debt':'normal';
+      return {...base,total,tier,blocksTotal:base.total,choresTotal:chores.total,
+              pendingToday:chores.pendingToday,outstandingToday:chores.outstandingToday};
+    }
     const moodOf = () => windowLedger().tier==='normal'
       ? (MOOD_BY_KEY.get(S.rewards && S.rewards.mood) || MOOD_BY_KEY.get('default'))
       : MOOD_BY_KEY.get('default');
@@ -1259,7 +1278,9 @@ async function initApp(){
       const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
       const kind=kindOf(todow(Dash.today));
       const result=RULES.evaluateDay({sched:SCHED_DATA,dayKind:kind,day:d,dateStr:Dash.today,nowMin,isDayOff:!!s.dayOff?.[Dash.today]});
-      const ledger=RULES.balance({sched:SCHED_DATA,state:s,today:Dash.today});
+      // combinedLedger, not RULES.balance: the header must show the same number
+      // the tiers and the mood layer answer to, chores included.
+      const ledger=combinedLedger();
       const open=result.blocks.filter(b=>b.state==='open').sort((a,b)=>a.endMin-b.endMin);
       const fmt=m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
       const next=result.blocks.filter(b=>b.startMin>nowMin).sort((a,b)=>a.startMin-b.startMin)[0];
@@ -1332,8 +1353,13 @@ async function initApp(){
           (r.status==='done'||r.status==='anytime'?'':`<button type="button" class="quiet-link" data-chore-move="${escAttr(r.id)}">Move to tomorrow</button>`)+`</div>`;
         return `<details class="choreRow ${r.status}" data-disclosure="chore-${escAttr(r.id)}"><summary><span class="choreName">${escHtml(r.title)}<small>${escHtml(cost)}${escHtml(wait)}${r.window?` · from ${escHtml(r.window)}`:''}</small></span><span class="choreChip">${chip}${late}</span><span class="boardChevron">⌄</span></summary>${body}${actions}</details>`;
       }).join('');
+      const led=combinedLedger();
+      const pending=led.pendingToday||0;
+      const warn=pending<0
+        ? `<div class="stakeLine${pending<=-25?' emergency':''}">${pending} to the balance at midnight if these stay open · ${led.outstandingToday.length} outstanding</div>`
+        : '';
       return `<section id="upkeep"><div class="boardHeading"><h2>Home upkeep</h2><span>${board.outstanding} open · ${board.activeMinDue} min</span></div>`+
-        `<p class="boardNote">Chores are tracked, never scored. Missing one cannot fail a block, move the balance, or cost money.</p>${rows}</section>`;
+        `<p class="boardNote">+3 done on time · +1 late · ${CHORES.CHORE_POINTS.outstandingPerDay} per chore per day it stays undone. Chores move the balance, never the day verdict — so they cannot reach the money stake.</p>${warn}${rows}</section>`;
     }
 
     function dayOffSettings(s){
@@ -2236,7 +2262,7 @@ async function initApp(){
           const done=Object.assign({},choreRec(id).steps||{});
           done[idx]=done[idx]===true?false:true;
           if((chore.steps||[]).every((_,i)=>done[i]===true)){
-            Dash.setMany({[`chores.${id}`]:CHORES.completePatch(Dash.today)});
+            Dash.setMany({[`chores.${id}`]:CHORES.completePatch(Dash.today,choreRec(id))});
             flowToast(`${chore.title} done`);
           } else {
             Dash.set(`chores.${id}.steps.${idx}`,done[idx]);
@@ -2247,7 +2273,7 @@ async function initApp(){
         el.addEventListener('click',()=>{
           const id=el.dataset.choreDone;
           const chore=(SCHED_DATA.chores||[]).find(c=>c.id===id); if(!chore) return;
-          Dash.setMany({[`chores.${id}`]:CHORES.completePatch(Dash.today)});
+          Dash.setMany({[`chores.${id}`]:CHORES.completePatch(Dash.today,choreRec(id))});
           flowToast(`${chore.title} done`);
         });
       });

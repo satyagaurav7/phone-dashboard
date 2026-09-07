@@ -75,6 +75,26 @@ test('starting a laundry stage records a start and completes nothing',async t=>{
   assert.equal(rec.last,undefined,'a running machine is not a finished chore');
 });
 
+test('the header balance includes chores, and the day verdict never does',async t=>{
+  const a=await app(t,{windows:true});
+  const R=a.w.FLOWSTATE_RULES, C=a.w.FLOWSTATE_CHORES;
+  const S=a.dash.state, today=a.dash.today;
+  const sched=JSON.parse(readFileSync(path.join(root,'schedule.json'),'utf8'));
+  const read=()=>Number((a.$('.windowBalance')?.textContent||'').replace(/[^\-\d]/g,''));
+  const verdict=()=>a.$('.verdict')?.textContent.trim();
+
+  const before=read(), verdictBefore=verdict();
+  const expected=R.balance({sched,state:S,today}).total+C.choreLedger({sched,state:S,today}).total;
+  assert.equal(before,expected,'the header shows blocks plus chores');
+
+  // Completing a chore moves the balance...
+  a.click('#upkeep [data-chore-done="roomreset"]');
+  assert.equal(read(),before+C.CHORE_POINTS.onTime);
+  // ...but cannot touch the verdict, which is what reaches the money stake.
+  assert.equal(verdict(),verdictBefore);
+  assert.equal(a.dash.state.days[today].roomreset,undefined);
+});
+
 async function app(t,{remote={},storage={},offline=false,windows=false}={}) {
   const midnight = await import('../ui/midnight.mjs');
   const dom = new JSDOM('<!doctype html><html><body><div id="moodLayer"></div><div id="appRoot"></div></body></html>',{url:'https://fixture.invalid/',runScripts:'outside-only'});

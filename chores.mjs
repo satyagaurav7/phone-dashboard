@@ -171,6 +171,92 @@ export function stagePlan({ chore, record = {}, nowTs }) {
 
 /* The record patch for completing a chore. Returned rather than written so the
  * caller owns persistence, and so this stays a pure function under test. */
-export function completePatch(today) {
-  return { last: today, steps: {}, stage: null, moved: null };
+export function completePatch(today, record = {}) {
+  // `done` is a set of completion dates, not just the most recent one. The
+  // ledger has to walk history to know which occurrences were met and which
+  // were missed, and a single `last` field cannot answer that: it says a chore
+  // was done on the 8th, but not whether the 6th and 7th were also done or
+  // skipped. `last` is kept alongside it because the board reads it.
+  return { last: today, done: { ...(record.done || {}), [today]: true }, steps: {}, stage: null, moved: null };
+}
+
+/* ---------------------------------------------------------------------------
+ * Scoring. Chores now cost points (Satya, 2026-09-07, reversing plan 8.10).
+ *
+ * Two boundaries hold, and they are the reason this is safe to make harsh:
+ *
+ *   1. It moves the BALANCE only. evaluateDay is untouched, so the day verdict
+ *      still depends solely on the seven routine blocks, and stakes.mjs — which
+ *      reads verdict, never balance — cannot see chores. A missed bin degrades
+ *      the app. It can never cost real money.
+ *   2. Nothing is charged for a day still in progress. Today's exposure is
+ *      reported separately as `pendingToday` so the cliff is visible before you
+ *      fall off it, exactly as an open block scores nothing until it closes.
+ *
+ * The charge compounds: -5 per outstanding chore per day, every day it stays
+ * undone. With this catalogue that is steep by design.
+ */
+export const CHORE_POINTS = Object.freeze({ onTime: 3, late: 1, outstandingPerDay: -5 });
+
+/* Does a fresh occurrence open on `date`, given when it was last completed? */
+function opensOn(chore, date, lastDone, since) {
+  const mode = (chore.cadence || {}).mode;
+  if (mode === 'daily') return true;
+  if (mode === 'weekly') return dayOfWeek(date) === Number(chore.cadence.dow);
+  if (mode === 'monthly') return lastDone === null ? date === since : daysBetween(lastDone, date) >= 30;
+  return false; // asneeded never falls due, so it can never be missed
+}
+
+/* Walks each chore day by day from adoption to today. Returns the running
+ * total, a per-date breakdown, and today's not-yet-charged exposure. */
+export function choreLedger({ sched, state = {}, today }) {
+  const since = state.config?.choresStart || null;
+  const empty = { total: 0, byDate: {}, pendingToday: 0, outstandingToday: [] };
+  if (!since || since > today) return empty;
+
+  const records = state.chores || {};
+  const byDate = {};
+  const outstandingToday = [];
+  let total = 0;
+  let pendingToday = 0;
+
+  const add = (date, points) => {
+    if (!points) return;
+    byDate[date] = (byDate[date] || 0) + points;
+    total += points;
+  };
+
+  for (const chore of choreCatalogue(sched)) {
+    const record = records[chore.id] || {};
+    const done = record.done || {};
+    const moved = record.moved || null;
+    let lastDone = null;
+    let openSince = null;
+
+    for (let date = since; date <= today; date = addDays(date, 1)) {
+      if (opensOn(chore, date, lastDone, since) && openSince === null) openSince = date;
+
+      if (done[date] === true) {
+        // On the day it fell due, or later. Late still earns something: the
+        // record has to stay honest about what was actually done.
+        add(date, openSince === date ? CHORE_POINTS.onTime : CHORE_POINTS.late);
+        openSince = null;
+        lastDone = date;
+        continue;
+      }
+
+      if (openSince === null) continue;
+      // A moved chore is not outstanding until the day it was moved to.
+      if (moved && date < moved) continue;
+
+      if (date < today) add(date, CHORE_POINTS.outstandingPerDay);
+      else {
+        // Today is not over. Report the exposure instead of charging it.
+        pendingToday += CHORE_POINTS.outstandingPerDay;
+        outstandingToday.push(chore.title);
+      }
+    }
+  }
+
+  return { total, byDate, pendingToday, outstandingToday };
 }

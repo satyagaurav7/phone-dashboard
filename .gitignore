@@ -14,3 +14,7 @@ RAW-TRANSACTIONS*.md
 
 # Backup of the retired ChatGPT-era recurring calendar
 legacy-calendar-backup.json
+
+# Local Google Tasks audit output — contains real task titles.
+tasks-audit*.json
+audit-report*.json
