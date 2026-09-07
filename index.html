@@ -481,6 +481,7 @@
 import * as midnight from "./ui/midnight.mjs";
 import * as flowstateRules from "./rules.mjs";
 import * as flowstateChores from "./chores.mjs";
+import * as flowstateDayPlan from "./day-plan.mjs";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
@@ -497,6 +498,7 @@ import {
 const VAPID_KEY = 'BGuB7tmolQ5QSqAERQjBe8yp_SBXHWY7WScV2ZdK-ULsiID4_4rSEznIGkDpIFfpePIyhpK2rkQjudcgf7WXSLM';
 globalThis.FLOWSTATE_RULES = flowstateRules;
 globalThis.FLOWSTATE_CHORES = flowstateChores;
+globalThis.FLOWSTATE_DAY_PLAN = flowstateDayPlan;
 
 // One service worker handles both offline caching and background push.
 const swReady = ('serviceWorker' in navigator)
@@ -583,6 +585,7 @@ async function initApp(){
   let SCHED_DATA = null;
   const RULES = globalThis.FLOWSTATE_RULES || null;
   const CHORES = globalThis.FLOWSTATE_CHORES || null;
+  const DAY_PLAN = globalThis.FLOWSTATE_DAY_PLAN || null;
   try { SCHED_DATA = await (await fetch('schedule.json', { cache: 'no-cache' })).json(); }
   catch (e) { try { const c = await caches.match('schedule.json'); if (c) SCHED_DATA = await c.json(); } catch (e2) {} }
   if (RULES && SCHED_DATA) RULES.assertSchedule(SCHED_DATA);
@@ -1283,9 +1286,7 @@ async function initApp(){
       const ledger=combinedLedger();
       const open=result.blocks.filter(b=>b.state==='open').sort((a,b)=>a.endMin-b.endMin);
       const fmt=m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
-      const next=result.blocks.filter(b=>b.startMin>nowMin).sort((a,b)=>a.startMin-b.startMin)[0];
-      const focus=open[0]||next;
-      const nextLine=next?`<div class="boardNext">Next: <b>${escHtml(next.title)}</b> at ${fmt(next.startMin)} <span data-countdown data-start-min="${next.startMin}"></span></div>`:'';
+      const focus=open[0]||result.blocks.find(b=>b.startMin>nowMin);
       const rows=result.blocks.map(b=>{
         const done=b.items.filter(i=>d[i.key]===true).length;
         const items=b.items.map(i=>{
@@ -1297,11 +1298,46 @@ async function initApp(){
         return `<details class="boardBlock ${b.state}" data-disclosure="block-${b.id}" ${b.id===focus?.id?'open':''}><summary><span class="boardBlockName">${escHtml(b.title)}<small>${fmt(b.startMin)}–${fmt(b.endMin)}</small></span><span class="boardProgress">${done}/${b.items.length}<small>${b.state==='failed'?'Failed · -8':b.state==='passed'?'Passed · +5':b.state==='open'?'Open':'Upcoming'}</small></span><span class="boardChevron">⌄</span><span class="windowPips">${b.items.map(i=>`<i class="windowPip ${i.state}"></i>`).join('')}</span></summary>${b.state==='open'?`<div class="windowCount" data-countdown data-end-min="${b.endMin}"></div>`:''}${b.state==='failed'?'<p class="boardNote">Late logs earn credit. This window stays failed.</p>':''}<div class="boardItems">${items}</div></details>`;
       }).join('');
       const sign=n=>n>0?`+${n}`:String(n);
-      return `<section id="dayBoard"><div class="boardHeading"><h1>Your day</h1><span>${result.blocks.reduce((n,b)=>n+b.items.filter(i=>d[i.key]===true).length,0)} / ${result.blocks.reduce((n,b)=>n+b.items.length,0)} logged</span></div>
-        ${focus?`<div class="boardFocus"><span>${open.length?'RIGHT NOW':'UP NEXT'}</span><strong>${escHtml(focus.title)}</strong><div class="windowCount" data-countdown ${open.length?`data-end-min="${focus.endMin}"`:`data-start-min="${focus.startMin}"`}></div>${open.length?nextLine:`<small>Starts at ${fmt(focus.startMin)}</small>`}</div>`:result.off?'<p>Day off. No windows today.</p>':'<p>All windows closed for today.</p>'}
+      return `<section id="dayBoard"><div class="boardHeading"><h2>Routine blocks</h2><span>${result.blocks.reduce((n,b)=>n+b.items.filter(i=>d[i.key]===true).length,0)} / ${result.blocks.reduce((n,b)=>n+b.items.length,0)} logged</span></div>
+        ${!focus&&result.off?'<p>Day off. No routine windows today.</p>':''}
         <div class="windowHead"><span class="verdict ${result.verdict}">${result.verdict.toUpperCase()}</span><span>${sign(result.delta)} today</span><span class="windowBalance ${ledger.total<0?'balanceNeg':''}">Balance ${sign(ledger.total)}</span></div>
         ${ledger.tier==='blackout'?'<div class="stakeLine emergency">Blackout: the balance is below '+RULES.BLACKOUT_FLOOR+'. Cosmetics are off until it returns above zero. Logging, the schedule, settings and the day-off control all stay available.</div>':''}
         ${rows}
+      </section>`;
+    }
+
+    const clock=m=>m==null?'':`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+    function executionNowBody(action){
+      if(!action) return `<span class="executionLabel">NOW</span><h2>Open space</h2><p>Nothing needs to be squeezed into this gap.</p>`;
+      const target=action.source==='routine'?`block-${action.blockId}`:action.choreId?`chore-${action.choreId}`:'';
+      const controls=action.source==='outcome'
+        ? `<div class="executionActions"><button type="button" class="outline-button" data-focus-start>${action.startedAt?'Started':'Start'}</button><button type="button" class="primary-action" data-focus-done>Done</button></div>`
+        : target?`<button type="button" class="outline-button" data-jump-target="${escAttr(target)}">Open checklist</button>`:'';
+      return `<span class="executionLabel">NOW · ${escHtml(action.source==='routine'?'ROUTINE':action.source==='chore'?'HOME':action.source==='handoff'?'HANDOFF':'CHOSEN WORK')}</span><h2>${escHtml(action.title)}</h2><p>${action.source==='routine'?`${action.remainingKeys.length} item${action.remainingKeys.length===1?'':'s'} left · closes ${clock(action.endMin)}`:action.activeMin?`${action.activeMin} active min`:'Ready now'}</p>${controls}`;
+    }
+    function executionHTML(s,d){
+      const ci=s.checkIns?.[Dash.today]||{};
+      const chosen=ci.firstStep|| (ci.focus==='rest'?'Make room for rest.':'What matters to you today?');
+      if(!DAY_PLAN||!RULES||!CHORES||!SCHED_DATA) return `<section id="executionBoard"><div class="boardHeading"><h1>Today</h1></div><div class="executionOutcome"><span class="eyebrow">WORTH DOING</span><p class="step-title">${escHtml(chosen)}</p><p class="muted">Choose one concrete result in Plan and reflect.</p></div></section>`;
+      const nowDate=new Date(), nowMin=nowDate.getHours()*60+nowDate.getMinutes();
+      const kind=kindOf(todow(Dash.today));
+      const plan=DAY_PLAN.buildDayPlan({sched:SCHED_DATA,state:s,today:Dash.today,dayKind:kind,nowMin,nowTs:Date.now()});
+      const action=plan.now;
+      const next=plan.next;
+      const background=plan.background.map(item=>`<div class="executionBackground"><span><b>${escHtml(item.title)}</b><small>Running in the background · check, never auto-complete</small></span><span data-countdown data-ready-ts="${item.readyAt}"></span></div>`).join('');
+      const capacity=plan.capacity;
+      const capacityText=capacity?`${Math.max(0,capacity.slackMin)} min schedule slack`:'Capacity unavailable';
+      const fitted=plan.adjustment.scheduled.map(item=>`<div class="adjustRow"><time>${clock(item.startMin)}</time><span><b>${escHtml(item.title)}</b><small>${item.activeMin} active min</small></span></div>`).join('');
+      const unfitted=plan.adjustment.unscheduled.map(item=>`<div class="adjustRow unfitted"><span aria-hidden="true">—</span><span><b>${escHtml(item.title)}</b><small>${escHtml(item.reason)}</small></span></div>`).join('');
+      const adjustment=`<details class="adjustPreview" data-disclosure="adjust-day"><summary><span>Adjust day</span><span aria-hidden="true">⌄</span></summary><p class="boardNote">Read-only suggestion. Fixed windows do not move, and opening this writes nothing.</p>${fitted?`<span class="executionLabel">SUGGESTED TIMING</span>${fitted}`:'<p class="boardNote">No flexible work needs placement.</p>'}${unfitted?`<span class="executionLabel adjustMissed">COULD NOT FIT</span>${unfitted}`:''}</details>`;
+      return `<section id="executionBoard"><div class="boardHeading"><h1>Today</h1><span>${escHtml(capacityText)}</span></div>
+        <div class="executionOutcome"><span class="eyebrow">WORTH DOING</span><p class="step-title">${escHtml(chosen)}</p><p class="muted">${ci.firstStep?'Your chosen result. Keep the next action concrete.':'Choose one result in Plan and reflect below.'}</p></div>
+        <div class="executionNow">${executionNowBody(action)}</div>
+        <div class="executionNext"><span class="executionLabel">NEXT</span>${next?`<b>${escHtml(next.title)}</b><small>${next.startMin!=null?`Starts ${clock(next.startMin)} · <span data-countdown data-start-min="${next.startMin}"></span>`:'Upcoming'}</small>`:'<b>No fixed action queued</b>'}</div>
+        ${background?`<div class="executionBackgrounds"><span class="executionLabel">BACKGROUND</span>${background}</div>`:''}
+        <div class="executionLoad"><span>${plan.remainingActiveMin} active upkeep min open</span><span>${plan.conflicts.length?`${plan.conflicts.length} schedule issue${plan.conflicts.length===1?'':'s'}`:'Schedule clear'}</span></div>
+        ${adjustment}
+        <details class="executionList" data-disclosure="full-day" open><summary><span>Full day checklist</span><span aria-hidden="true">⌄</span></summary>${dayBoardHTML(s,d)}${upkeepHTML(s)}</details>
       </section>`;
     }
 
@@ -2099,7 +2135,7 @@ async function initApp(){
       return VAPID_KEY && 'Notification' in window && Notification.permission!=='granted'
         ? `<section class="connections"><h2>Device notifications</h2><p>Register this device for your selected app reminders. Delivery still needs a real test.</p><button id="pushEnable" class="outline-button">Enable notifications</button><p id="pushMsg" role="status"></p></section>` : '';
     }
-    function todayHTML(s,d){ return stakeHTML(s)+dayBoardHTML(s,d)+upkeepHTML(s)+midnight.today({state:s,date:Dash.today,checkIn:checkInCard(s,d),activity:activityHTML(s,d)}); }
+    function todayHTML(s,d){ return executionHTML(s,d)+stakeHTML(s)+midnight.today({state:s,date:Dash.today,checkIn:checkInCard(s,d),activity:activityHTML(s,d)}); }
     function schedHTML(){ return midnight.plan(); }
     function moreHTML(s){ return dayOffSettings(s)+midnight.more({reminders:reminderCard(s),push:pushSetupHTML()}); }
 
@@ -2167,7 +2203,7 @@ async function initApp(){
     function draw(s){
       const root=document.getElementById('appRoot');
       const focused=document.activeElement;
-      const focusAttr=root.contains(focused) ? Array.from(focused.attributes||[]).find(a=>['data-ci','data-ci-act','data-ci-phase','data-pref','data-pref-snooze','data-toggle'].includes(a.name)) : null;
+      const focusAttr=root.contains(focused) ? Array.from(focused.attributes||[]).find(a=>['data-ci','data-ci-act','data-ci-phase','data-pref','data-pref-snooze','data-toggle','data-focus-start','data-focus-done','data-jump-target'].includes(a.name)) : null;
       const focusToken=focusAttr ? {name:focusAttr.name,value:focusAttr.value} : null;
       const d=(s.days&&s.days[Dash.today])||{};
       const anchoredNow=d.anchor===true;
@@ -2370,6 +2406,34 @@ async function initApp(){
           Dash.set(path, getPath(Dash.state,path)===val ? Dash.REMOVE : val);
         });
       });
+      const bindFocusActions=()=>{
+        const focusStart=root.querySelector('[data-focus-start]');
+        if(focusStart&&!focusStart.dataset.bound){
+          focusStart.dataset.bound='1';
+          focusStart.addEventListener('click',()=>{
+            const path=`checkIns.${Dash.today}.focusStartedAt`;
+            if(!getPath(Dash.state,path)) Dash.set(path,Date.now());
+          });
+        }
+        const focusDone=root.querySelector('[data-focus-done]');
+        if(focusDone&&!focusDone.dataset.bound){
+          focusDone.dataset.bound='1';
+          focusDone.addEventListener('click',()=>{
+            Dash.setMany({
+              [`checkIns.${Dash.today}.focusDone`]:true,
+              [`checkIns.${Dash.today}.focusCompletedAt`]:Date.now(),
+            });
+            flowToast('Chosen work completed');
+          });
+        }
+      };
+      bindFocusActions();
+      root.querySelectorAll('[data-jump-target]').forEach(el=>el.addEventListener('click',()=>{
+        const full=root.querySelector('[data-disclosure="full-day"]');
+        if(full) full.open=true;
+        const target=root.querySelector(`[data-disclosure="${el.dataset.jumpTarget}"]`);
+        if(target){ target.open=true; target.scrollIntoView?.({behavior:REDUCED?'auto':'smooth',block:'start'}); target.querySelector('summary')?.focus({preventScroll:true}); }
+      }));
       root.querySelectorAll('[data-ci-text]').forEach(inp=>{
         const save=()=>{
           const v=inp.value.trim();
@@ -2381,6 +2445,19 @@ async function initApp(){
               step.textContent=focus || 'What matters to you today?';
               step.previousElementSibling.textContent=focus?'YOUR CHOSEN STEP':'A LITTLE DIRECTION';
               step.nextElementSibling.textContent=focus?'An intention you chose. Go at your own pace.':'Find your next action in your full checklist.';
+              // Text fields save without a page redraw so the input and nav do
+              // not disappear under the user's pointer. Refresh only NOW when
+              // the newly chosen action genuinely fits the current gap.
+              if(DAY_PLAN&&RULES&&CHORES&&SCHED_DATA){
+                const dt=new Date(), minute=dt.getHours()*60+dt.getMinutes();
+                const plan=DAY_PLAN.buildDayPlan({sched:SCHED_DATA,state:Dash.state,today:Dash.today,
+                  dayKind:kindOf(todow(Dash.today)),nowMin:minute,nowTs:Date.now()});
+                const box=root.querySelector('.executionNow');
+                if(box&&plan.now?.source==='outcome'){
+                  box.innerHTML=executionNowBody(plan.now);
+                  bindFocusActions();
+                }
+              }
             }
           }
         };
@@ -2541,6 +2618,12 @@ async function initApp(){
         return;
       }
       document.querySelectorAll('[data-countdown]').forEach(el=>{
+        if(el.dataset.readyTs!==undefined){
+          const left=Math.max(0,Math.ceil((Number(el.dataset.readyTs)-Date.now())/1000));
+          const m=Math.floor(left/60), sec=left%60;
+          el.textContent=left===0?'Check now':`Check in ${m}:${String(sec).padStart(2,'0')}`;
+          return;
+        }
         const starts=el.dataset.startMin!==undefined;
         const left=Math.max(0,Number(starts?el.dataset.startMin:el.dataset.endMin)*60-nowSec);
         const m=Math.floor(left/60), sec=left%60;

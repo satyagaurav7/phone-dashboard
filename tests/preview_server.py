@@ -16,8 +16,10 @@ class Handler(SimpleHTTPRequestHandler):
             stub='''import * as midnight from './ui/midnight.mjs';
 import * as rules from './rules.mjs';
 import * as chores from './chores.mjs';
+import * as dayPlan from './day-plan.mjs';
 globalThis.FLOWSTATE_RULES=rules;
 globalThis.FLOWSTATE_CHORES=chores;
+globalThis.FLOWSTATE_DAY_PLAN=dayPlan;
 const db={}, doc=()=>({}), VAPID_KEY='', swReady=Promise.resolve(null), motionReady=Promise.resolve(null);
 const deleteField=()=>({__delete:true});
 const saved=()=>JSON.parse(localStorage.getItem('qa-cloud')||'{"config":{"score":0},"days":{},"checkIns":{}}');

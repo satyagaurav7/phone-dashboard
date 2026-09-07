@@ -10,17 +10,8 @@ export function header(date, tab) {
     ${['pr','money','health','schedule'].includes(tab)?'<button type="button" class="back-link" data-tab="more">← Back to More</button>':''}`;
 }
 export function today({state,date,checkIn,activity}) {
-  const c=state.checkIns?.[date] || {};
-  const focus=c.firstStep || (c.focus==='rest'?'Make room for rest.':'');
-  return `<div class="today-layout"><section class="daily-lead" aria-labelledby="today-title">
-    <div class="hero"><img class="filament" src="assets/filament.svg" alt="" aria-hidden="true"><h1 id="today-title">One thing,<br>then the next.</h1></div>
-    <div class="chosen-step">${caption(focus?'YOUR CHOSEN STEP':'A LITTLE DIRECTION')}
-      <p class="step-title">${focus?text(focus):'What matters<br>to you today?'}</p>
-      <p class="muted">${focus?'An intention you chose. Go at your own pace.':'Find your next action in your full checklist.'}</p></div>
-    ${link('https://tasks.google.com/','Open Google Tasks','primary-action')}
-    <div class="calendar-link">${link('https://calendar.google.com/','Open calendar','text-link')}</div>
-    <p class="source-note"><span aria-hidden="true">ⓘ</span> Google Tasks not connected to this dashboard</p>
-  </section><section class="reflection-area" aria-label="Optional daily reflection">${checkIn}</section></div>
+  return `<details class="reflection-disclosure plain-details" data-disclosure="reflection"><summary>Plan and reflect</summary><section class="reflection-area" aria-label="Optional daily reflection">${checkIn}</section></details>
+  <p class="source-note"><span aria-hidden="true">ⓘ</span> Google Tasks not connected to this dashboard</p>
   <details class="activity-disclosure" data-disclosure="activities"><summary><span>${caption('YOUR LOCAL RECORD')}<span class="section-serif">Log an activity</span></span><span aria-hidden="true">＋</span></summary>
     <p class="muted">These are dashboard logs. Your complete to-do checklist and its completion stay in Google Tasks.</p>${activity}</details>`;
 }

@@ -78,6 +78,16 @@ test('a monthly chore is due only after thirty days', async () => {
   assert.equal(late.overdueDays, 38);
 });
 
+test('monthly chores can stagger their first occurrence after adoption', async () => {
+  const { choreState } = await import(CHORES_URL);
+  const chore = { id: 'car', cadence: { mode: 'monthly', offsetDays: 7 } };
+  assert.deepEqual(
+    choreState({ chore, record: {}, today: '2026-09-06', since: '2026-09-06' }),
+    { status: 'upcoming', dueDate: '2026-09-13', overdueDays: 0, last: null },
+  );
+  assert.equal(choreState({ chore, record: {}, today: '2026-09-13', since: '2026-09-06' }).status, 'due');
+});
+
 test('an as-needed chore is available but never late', async () => {
   const { choreState, STATUS } = await import(CHORES_URL);
   const state = choreState({ chore: fixture.chores[3], record: {}, today: MON });
@@ -125,16 +135,18 @@ test('a running stage reports an estimate and never completes itself', async () 
 
 test('a fresh install is never told it is already behind', async () => {
   // The app cannot know what was cleaned before it started watching, so it must
-  // not assert a backlog on day one. Occurrences due before choresStart show as
-  // due now, with no "late" claim attached.
+  // not assert a backlog on day one. Daily work begins now; a weekly task waits
+  // for its first real weekday after adoption.
   const { upkeepBoard, choreState, STATUS } = await import(CHORES_URL);
   const fresh = upkeepBoard({ sched: fixture, state: { config: { choresStart: SUN } }, today: SUN });
   assert.equal(fresh.rows.filter(r => r.status === STATUS.OVERDUE).length, 0);
   assert.ok(fresh.rows.some(r => r.status === STATUS.DUE));
 
-  // The weekly Thursday job fell due before adoption: due, not three days late.
+  // The weekly Thursday job fell due before adoption, so its first observed
+  // occurrence is next Thursday rather than being pulled into Sunday.
   const thursday = choreState({ chore: fixture.chores[1], record: {}, today: SUN, since: SUN });
-  assert.equal(thursday.status, STATUS.DUE);
+  assert.equal(thursday.status, STATUS.UPCOMING);
+  assert.equal(thursday.dueDate, '2026-09-17');
   assert.equal(thursday.overdueDays, 0);
 
   // ...and once the app HAS been watching, lateness is reported honestly again.
@@ -217,13 +229,14 @@ test('getready is one scored item per day, not several', async () => {
   const rules = await import(RULES_URL);
   rules.assertSchedule(schedule);
   for (const kind of ['office', 'wfh', 'sat', 'sun']) {
-    const morning = rules.blocksFor(schedule, kind).find(b => b.id === 'morning');
-    assert.ok(morning.keys.includes('getready'), `${kind} morning is missing getready`);
-    assert.equal(morning.keys.filter(k => k === 'getready').length, 1);
+    const blocks = rules.blocksFor(schedule, kind);
+    const containing = blocks.filter(b => b.keys.includes('getready'));
+    assert.equal(containing.length, 1, `${kind} must score getready exactly once`);
+    const block = containing[0];
     const time = schedule.tapPlan.itemTimes[kind].getready;
     const [h, m] = time.split(':').map(Number);
     const at = h * 60 + m;
-    assert.ok(at >= morning.startMin && at <= morning.endMin, `${kind} getready time sits outside Morning`);
+    assert.ok(at >= block.startMin && at <= block.endMin, `${kind} getready time sits outside its block`);
   }
   assert.equal(schedule.tapPlan.steps.getready.length, 4);
 });

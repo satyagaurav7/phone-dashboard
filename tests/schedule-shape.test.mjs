@@ -96,7 +96,7 @@ test('conflicts are reported rather than thrown, with a reason each', async () =
     assert.ok(Array.isArray(found));
     for (const c of found) {
       assert.ok(c.kind && c.detail, 'every conflict names itself and explains');
-      assert.ok(['overlaps-work', 'over-capacity', 'no-transition'].includes(c.kind));
+      assert.ok(['overlaps-work', 'over-capacity', 'overlapping-blocks', 'no-transition'].includes(c.kind));
     }
   }
 });
@@ -118,4 +118,57 @@ test('a block scheduled across working hours is reported', async () => {
 test('the office day no longer reports a capacity conflict', async () => {
   const { scheduleConflicts } = await import(RULES_URL);
   assert.equal(scheduleConflicts(schedule, 'office').filter(c => c.kind === 'over-capacity').length, 0);
+});
+
+test('the WFH gym and fuel windows finish before paid work begins', async () => {
+  const { blocksFor, dayShape, scheduleConflicts } = await import(RULES_URL);
+  const shape = dayShape(schedule, 'wfh');
+  const morning = blocksFor(schedule, 'wfh').filter(b => !b.duringWork && b.endMin <= shape.workStartMin);
+  assert.ok(morning.some(b => b.id === 'gym'));
+  assert.ok(morning.some(b => b.id === 'fuel'));
+  assert.ok(morning.every(b => b.endMin <= shape.workStartMin));
+  assert.equal(
+    scheduleConflicts(schedule, 'wfh').filter(c => c.kind === 'overlaps-work').length,
+    0,
+  );
+});
+
+test('WFH get-ready follows the gym instead of competing with it', async () => {
+  const { blocksFor } = await import(RULES_URL);
+  const blocks = blocksFor(schedule, 'wfh');
+  assert.ok(!blocks.find(b => b.id === 'morning').keys.includes('getready'));
+  assert.ok(blocks.find(b => b.id === 'fuel').keys.includes('getready'));
+});
+
+test('routine blocks form one executable sequence on every day kind', async () => {
+  const { scheduleConflicts } = await import(RULES_URL);
+  for (const kind of KINDS) {
+    assert.deepEqual(
+      scheduleConflicts(schedule, kind),
+      [],
+      `${kind} must not ask for overlapping work or omit transition time`,
+    );
+  }
+});
+
+test('overlapping routine blocks are reported directly', async () => {
+  const { scheduleConflicts } = await import(RULES_URL);
+  const broken = JSON.parse(JSON.stringify(schedule));
+  const fuel = broken.tapPlan.blocks.wfh.find(block => block.id === 'fuel');
+  fuel.start = '08:10';
+  const found = scheduleConflicts(broken, 'wfh');
+  assert.ok(
+    found.some(c => c.kind === 'overlapping-blocks' && c.blockId === 'fuel'),
+    'the checker must name an overlap instead of silently merging it',
+  );
+});
+
+test('the Plan timetable agrees with the canonical office day', () => {
+  const rows = schedule.schedules.office;
+  assert.equal(rows.some(([id]) => id === 'bus1' || id === 'bus2'), false,
+    'the retired bus commute must not reappear in Plan');
+  const deep = rows.find(([id]) => id === 'deepwork');
+  assert.deepEqual(deep.slice(1, 3), ['07:40', '08:25']);
+  assert.equal(rows.some(([id, start]) => id === 'deepwork' && start >= '17:00'), false,
+    'deep work must not also remain in the evening');
 });

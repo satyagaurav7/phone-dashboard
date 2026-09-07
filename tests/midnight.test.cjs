@@ -8,10 +8,43 @@ const root = path.resolve(__dirname,'..');
 const html = readFileSync(path.join(root,'index.html'),'utf8');
 const script = html.slice(html.indexOf('async function initApp(){'),html.indexOf('</script>',html.indexOf('async function initApp(){')));
 const settle = () => new Promise(r => setImmediate(r));
+test('Today opens with one execution board for now, next and the full checklist',async t=>{
+  const a=await app(t,{windows:true});
+  const first=a.$('main section');
+  assert.equal(first?.id,'executionBoard','the execution board owns the first viewport');
+  assert.ok(a.$('#executionBoard .executionNow'));
+  assert.match(a.$('#executionBoard .executionNext').textContent,/Morning/);
+  assert.ok(a.$('#executionBoard .executionNext [data-countdown][data-start-min]'),
+    'the next action must include a live starts-in countdown');
+  assert.ok(a.$('#executionBoard [data-disclosure="full-day"] #dayBoard'));
+  assert.ok(a.$('#executionBoard [data-disclosure="full-day"] #upkeep'));
+  assert.equal(a.w.document.querySelectorAll('.step-title').length,1,'chosen work has one presentation');
+});
+
+test('chosen outcome starts without completing and completes from the execution board',async t=>{
+  const a=await app(t,{windows:true});
+  a.type('[data-ci-text="firstStep"]','Finish one practice exercise'); await settle();
+  assert.match(a.$('.executionNow').textContent,/Finish one practice exercise/);
+  a.click('[data-focus-start]');
+  assert.equal(typeof a.dash.state.checkIns[a.dash.today].focusStartedAt,'number');
+  assert.notEqual(a.dash.state.checkIns[a.dash.today].focusDone,true);
+  a.click('[data-focus-done]');
+  assert.equal(a.dash.state.checkIns[a.dash.today].focusDone,true);
+});
+
+test('Adjust day is a read-only preview that explains fitted and unfitted work',async t=>{
+  const a=await app(t,{windows:true});
+  const before=JSON.stringify(a.dash.state);
+  const preview=a.$('#executionBoard [data-disclosure="adjust-day"]');
+  assert.ok(preview);
+  preview.open=true; preview.dispatchEvent(new a.w.Event('toggle'));
+  assert.match(preview.textContent,/SUGGESTED|No flexible work|COULD NOT FIT/);
+  assert.equal(JSON.stringify(a.dash.state),before,'opening a proposal writes nothing');
+});
+
 test('day board expands into working checklist and keeps the block open after logging',async t=>{
   const a=await app(t,{windows:true});
-  assert.match(a.$('.boardFocus').textContent,/Morning/);
-  assert.match(a.$('.boardFocus').textContent,/Starts in/);
+  assert.match(a.$('.executionNext').textContent,/Morning/);
   const block=a.$('[data-disclosure="block-morning"]');
   block.open=true;
   block.dispatchEvent(new a.w.Event('toggle'));
@@ -100,7 +133,7 @@ async function app(t,{remote={},storage={},offline=false,windows=false}={}) {
   const dom = new JSDOM('<!doctype html><html><body><div id="moodLayer"></div><div id="appRoot"></div></body></html>',{url:'https://fixture.invalid/',runScripts:'outside-only'});
   t.after(async()=>{await settle();await settle();dom.window.close();});
   const w=dom.window, requests=[]; let failure=offline;
-  if(windows){ w.FLOWSTATE_RULES=await import('../rules.mjs'); w.FLOWSTATE_CHORES=await import('../chores.mjs'); }
+  if(windows){ w.FLOWSTATE_RULES=await import('../rules.mjs'); w.FLOWSTATE_CHORES=await import('../chores.mjs'); w.FLOWSTATE_DAY_PLAN=await import('../day-plan.mjs'); }
   for(const [k,v] of Object.entries(storage)) w.localStorage.setItem(k,v);
   class ClockDate extends Date { constructor(...args){super(...(args.length?args:['2026-09-05T08:00:00']));} }
   Object.assign(w,{midnight,Date:ClockDate,db:{},doc:()=>({}),VAPID_KEY:'',swReady:Promise.resolve(null),motionReady:Promise.resolve(null),

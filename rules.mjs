@@ -243,9 +243,8 @@ const clampOut = (start, end, wStart, wEnd) => {
 };
 
 /* Union of block minutes outside working hours, against the free time that
- * actually exists. Union, not sum: blocks may overlap deliberately (the long
- * gym window runs through breakfast on WFH days) and double-counting those
- * would invent a deficit that is not there. */
+ * actually exists. Union keeps capacity reporting defensive if a proposed
+ * schedule contains an overlap; scheduleConflicts reports that overlap. */
 export function dayCapacity(sched, dayKind) {
   const shape = dayShape(sched, dayKind);
   if (!shape) return null;
@@ -293,11 +292,17 @@ export function scheduleConflicts(sched, dayKind) {
     }
   }
 
-  // Consecutive non-overlapping blocks need room to change context.
+  // The execution board needs one unambiguous current block. An overlap is a
+  // schedule defect, not extra capacity, because both blocks would read NOW.
   for (let i = 1; i < blocks.length; i++) {
     const prev = blocks[i - 1], cur = blocks[i];
     const gap = cur.startMin - prev.endMin;
-    if (gap >= 0 && gap < TRANSITION_MIN) {
+    if (gap < 0) {
+      found.push({
+        kind: 'overlapping-blocks', blockId: cur.id,
+        detail: `${cur.title} overlaps ${prev.title} by ${Math.abs(gap)} min`,
+      });
+    } else if (gap < TRANSITION_MIN) {
       found.push({
         kind: 'no-transition', blockId: cur.id,
         detail: `only ${gap} min between ${prev.title} and ${cur.title}`,

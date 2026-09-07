@@ -80,7 +80,27 @@ export function choreState({ chore, record = {}, today, since = null }) {
     return { status: STATUS.ANYTIME, dueDate: null, overdueDays: 0, last };
   }
 
+  if (cadence.mode === 'weekly' && !last && since) {
+    const target = Number(cadence.dow);
+    const firstDue = addDays(since, (target - dayOfWeek(since) + 7) % 7);
+    if (today < firstDue) {
+      return { status: STATUS.UPCOMING, dueDate: firstDue, overdueDays: 0, last: null };
+    }
+  }
+
   if (cadence.mode === 'monthly') {
+    if (!last && since && Number(cadence.offsetDays || 0) > 0) {
+      const firstDue = addDays(since, Number(cadence.offsetDays));
+      if (today < firstDue) {
+        return { status: STATUS.UPCOMING, dueDate: firstDue, overdueDays: 0, last: null };
+      }
+      return {
+        status: today === firstDue ? STATUS.DUE : STATUS.OVERDUE,
+        dueDate: firstDue,
+        overdueDays: Math.max(0, daysBetween(firstDue, today)),
+        last: null,
+      };
+    }
     const elapsed = last ? daysBetween(last, today) : Infinity;
     if (elapsed < 30) {
       return { status: STATUS.DONE, dueDate: addDays(last, 30), overdueDays: 0, last };
@@ -254,7 +274,9 @@ function opensOn(chore, date, lastDone, since) {
   const mode = (chore.cadence || {}).mode;
   if (mode === 'daily') return true;
   if (mode === 'weekly') return dayOfWeek(date) === Number(chore.cadence.dow);
-  if (mode === 'monthly') return lastDone === null ? date === since : daysBetween(lastDone, date) >= 30;
+  if (mode === 'monthly') return lastDone === null
+    ? date === addDays(since, Number(chore.cadence.offsetDays || 0))
+    : daysBetween(lastDone, date) >= 30;
   return false; // asneeded never falls due, so it can never be missed
 }
 

@@ -23,7 +23,7 @@
     "sun": "Sunday"
   },
   "glance": {
-    "office": "Office \u00b7 6:15 wake \u00b7 deep work 7:35 \u00b7 leave 8:35 \u00b7 gym 5:30 pm",
+    "office": "Office \u00b7 6:15 wake \u00b7 deep work 7:40 \u00b7 leave 8:35 \u00b7 gym 5:30 pm",
     "wfh": "WFH \u00b7 6:45 wake \u00b7 gym AM \u00b7 cook lunch 12:30",
     "sat": "Groceries ~$80 \u00b7 meal-prep \u00b7 gym \u00b7 free evening",
     "sun": "Plan Sunday 5 pm \u00b7 prep for Monday"
@@ -76,7 +76,7 @@
         "creatine": "21:45",
         "smokefree": "21:45",
         "phonedown": "21:45",
-        "getready": "06:55"
+        "getready": "08:30"
       },
       "sat": {
         "anchor": "09:00",
@@ -89,9 +89,9 @@
         "vitcd": "09:15",
         "cookmeal": "13:00",
         "lunch": "13:30",
-        "study": "14:00",
-        "money": "14:00",
-        "gym": "15:00",
+        "study": "14:10",
+        "money": "14:10",
+        "gym": "15:20",
         "dinner": "19:30",
         "cooked": "20:00",
         "read5": "21:00",
@@ -124,7 +124,7 @@
         "creatine": "21:45",
         "smokefree": "22:00",
         "phonedown": "22:00",
-        "getready": "09:50"
+        "getready": "09:55"
       }
     },
     "blocks": {
@@ -133,7 +133,7 @@
           "id": "morning",
           "title": "Morning",
           "start": "06:15",
-          "end": "07:00",
+          "end": "06:50",
           "keys": [
             "anchor",
             "walk",
@@ -158,8 +158,8 @@
         {
           "id": "deep-work",
           "title": "Deep work",
-          "start": "07:35",
-          "end": "08:20",
+          "start": "07:40",
+          "end": "08:25",
           "keys": [
             "study",
             "money"
@@ -178,8 +178,8 @@
         {
           "id": "gym",
           "title": "Gym",
-          "start": "17:30",
-          "end": "20:00",
+          "start": "17:20",
+          "end": "19:50",
           "keys": [
             "gym"
           ]
@@ -214,19 +214,18 @@
           "id": "morning",
           "title": "Morning",
           "start": "06:45",
-          "end": "07:15",
+          "end": "06:55",
           "keys": [
             "anchor",
             "walk",
-            "water",
-            "getready"
+            "water"
           ]
         },
         {
           "id": "gym",
           "title": "Gym",
-          "start": "07:00",
-          "end": "10:00",
+          "start": "07:05",
+          "end": "08:20",
           "keys": [
             "gym"
           ]
@@ -235,8 +234,9 @@
           "id": "fuel",
           "title": "Fuel + meds",
           "start": "08:30",
-          "end": "09:30",
+          "end": "09:00",
           "keys": [
+            "getready",
             "breakfast",
             "insulin",
             "omega3",
@@ -295,12 +295,11 @@
           "id": "morning",
           "title": "Morning",
           "start": "09:00",
-          "end": "09:45",
+          "end": "09:05",
           "keys": [
             "anchor",
             "walk",
-            "water",
-            "getready"
+            "water"
           ]
         },
         {
@@ -309,6 +308,7 @@
           "start": "09:15",
           "end": "10:00",
           "keys": [
+            "getready",
             "breakfast",
             "insulin",
             "omega3",
@@ -330,8 +330,8 @@
         {
           "id": "deep-work",
           "title": "Deep work",
-          "start": "14:00",
-          "end": "15:00",
+          "start": "14:10",
+          "end": "15:10",
           "keys": [
             "study",
             "money"
@@ -340,7 +340,7 @@
         {
           "id": "gym",
           "title": "Gym",
-          "start": "14:00",
+          "start": "15:20",
           "end": "17:00",
           "keys": [
             "gym"
@@ -376,20 +376,20 @@
           "id": "morning",
           "title": "Morning",
           "start": "09:30",
-          "end": "10:15",
+          "end": "09:45",
           "keys": [
             "anchor",
             "walk",
-            "water",
-            "getready"
+            "water"
           ]
         },
         {
           "id": "fuel",
           "title": "Fuel + meds",
-          "start": "09:45",
+          "start": "09:55",
           "end": "10:45",
           "keys": [
+            "getready",
             "breakfast",
             "insulin",
             "omega3",
@@ -400,8 +400,8 @@
         {
           "id": "gym",
           "title": "Gym",
-          "start": "10:30",
-          "end": "13:30",
+          "start": "10:55",
+          "end": "12:30",
           "keys": [
             "gym"
           ]
@@ -409,7 +409,7 @@
         {
           "id": "midday",
           "title": "Midday",
-          "start": "12:45",
+          "start": "12:40",
           "end": "13:45",
           "keys": [
             "lunch"
@@ -656,18 +656,18 @@
         "Pack lunch + gym bag \u00b7 get dressed"
       ],
       [
-        "walk",
-        "07:30",
-        "07:37",
-        "\ud83d\udeaa",
-        "Leave the house"
+        "deepwork",
+        "07:40",
+        "08:25",
+        "\ud83d\udcbb",
+        "Cyber upskill + money move"
       ],
       [
-        "bus1",
-        "07:37",
-        "08:50",
-        "\ud83d\udee3\ufe0f",
-        "Travel to work"
+        "drivework",
+        "08:35",
+        "08:55",
+        "\ud83d\ude97",
+        "Drive to work"
       ],
       [
         "workam",
@@ -691,71 +691,57 @@
         "Work \u2014 afternoon block"
       ],
       [
-        "bus2",
+        "drivehome",
         "17:00",
-        "18:10",
-        "\ud83d\udee3\ufe0f",
-        "Travel home"
-      ],
-      [
-        "gymtrip",
-        "18:10",
-        "18:25",
-        "\ud83d\udeb6",
-        "Gym bag \u2192 710 Proudfoot Ln"
+        "17:20",
+        "\ud83d\ude97",
+        "Drive home"
       ],
       [
         "gym",
-        "18:25",
-        "19:25",
+        "17:30",
+        "19:20",
         "\ud83c\udfcb\ufe0f",
-        "GYM \u2014 45\u201350 min session"
+        "Gym + change"
       ],
       [
         "cookdin",
-        "19:40",
-        "20:10",
+        "20:00",
+        "20:30",
         "\ud83c\udf73",
         "Cook dinner \u00b7 bolus"
       ],
       [
         "eatdin",
-        "20:10",
         "20:30",
+        "20:50",
         "\ud83c\udf19",
         "Eat dinner"
       ],
       [
         "read",
-        "20:30",
         "20:50",
+        "21:10",
         "\ud83d\udcda",
-        "CELPIP reading \u2014 20 min"
-      ],
-      [
-        "upskill",
-        "21:00",
-        "21:45",
-        "\ud83d\udcbb",
-        "Cyber upskill / money move"
+        "CELPIP reading or language \u2014 20 min"
       ],
       [
         "prep",
-        "21:45",
-        "22:15",
+        "21:30",
+        "21:55",
         "\ud83c\udf92",
         "Prep tomorrow: lunch \u00b7 clothes \u00b7 creatine"
       ],
       [
         "wind",
+        "21:55",
         "22:15",
-        "22:45",
         "\ud83c\udf12",
         "Wind down \u2014 no screens"
       ],
       [
         "sleep",
-        "22:45",
+        "23:00",
         "",
         "\ud83d\ude34",
         "Lights out \u2014 7.5 hrs"
@@ -1205,7 +1191,8 @@
       "id": "carreset",
       "title": "Car reset",
       "cadence": {
-        "mode": "monthly"
+        "mode": "monthly",
+        "offsetDays": 7
       },
       "activeMin": 25,
       "steps": [
@@ -1218,7 +1205,8 @@
       "id": "wardrobe",
       "title": "Wardrobe reset",
       "cadence": {
-        "mode": "monthly"
+        "mode": "monthly",
+        "offsetDays": 14
       },
       "activeMin": 25,
       "steps": [
@@ -1231,7 +1219,8 @@
       "id": "personaladmin",
       "title": "Personal admin",
       "cadence": {
-        "mode": "monthly"
+        "mode": "monthly",
+        "offsetDays": 21
       },
       "activeMin": 18,
       "steps": [
