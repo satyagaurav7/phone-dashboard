@@ -15,7 +15,7 @@
  * start in CI. Do not "fix" that by adding a workflow — the fix would be to
  * make the repository private first, and that is Satya's decision, not ours.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const API = 'https://tasks.googleapis.com/tasks/v1';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -93,11 +93,28 @@ export function summarise(lists) {
 
 /* ---------------- runner ---------------- */
 
-async function accessToken() {
+/* Credentials come from the environment, or from the local file written by
+ * `oauth-setup.mjs --save`. The file exists so the refresh token never has to
+ * be copied through a terminal transcript or a chat window. */
+export function loadCredentials(env = process.env, credPath = new URL('../.google-oauth.json', import.meta.url)) {
+  const fromEnv = {
+    client_id: env.GOOGLE_OAUTH_CLIENT_ID,
+    client_secret: env.GOOGLE_OAUTH_CLIENT_SECRET,
+    refresh_token: env.GOOGLE_OAUTH_REFRESH_TOKEN,
+  };
+  if (fromEnv.client_id && fromEnv.client_secret && fromEnv.refresh_token) return { ...fromEnv, source: 'env' };
+  if (existsSync(credPath)) {
+    const file = JSON.parse(readFileSync(credPath, 'utf8'));
+    if (file.client_id && file.client_secret && file.refresh_token) return { ...file, source: '.google-oauth.json' };
+  }
+  return null;
+}
+
+async function accessToken(creds) {
   const body = new URLSearchParams({
-    client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
-    client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-    refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN,
+    client_id: creds.client_id,
+    client_secret: creds.client_secret,
+    refresh_token: creds.refresh_token,
     grant_type: 'refresh_token',
   });
   const res = await fetch(TOKEN_URL, { method: 'POST', body });
@@ -112,15 +129,16 @@ async function main() {
     process.exit(2);
   }
 
-  const missing = ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'GOOGLE_OAUTH_REFRESH_TOKEN']
-    .filter(name => !process.env[name]);
-  if (missing.length) {
-    console.error(`Not configured. Missing: ${missing.join(', ')}`);
-    console.error('Get a refresh token once with: node scripts/oauth-setup.mjs');
+  const creds = loadCredentials();
+  if (!creds) {
+    console.error('Not configured — no credentials in the environment or .google-oauth.json.');
+    console.error('Run this once:');
+    console.error('  GOOGLE_OAUTH_CLIENT_ID=xxx GOOGLE_OAUTH_CLIENT_SECRET=yyy node scripts/oauth-setup.mjs --readonly --save');
     process.exit(78);
   }
+  console.log(`Credentials from ${creds.source}. Scope: ${creds.scope || 'unknown'}`);
 
-  const token = await accessToken();
+  const token = await accessToken(creds);
   const get = async path => {
     const res = await fetch(`${API}/${path}`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) throw new Error(`GET ${path} -> ${res.status}`);

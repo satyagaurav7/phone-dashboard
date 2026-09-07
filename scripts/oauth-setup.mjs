@@ -15,12 +15,22 @@
  */
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
+import { writeFileSync, chmodSync } from 'node:fs';
 
 const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 const PORT = 8765;
 const REDIRECT = `http://localhost:${PORT}/callback`;
-const SCOPE = 'https://www.googleapis.com/auth/tasks';
+/* Scope is chosen per run. The Phase A audit only reads, so mint it with
+ * --readonly and the resulting token physically cannot modify a task, however
+ * it is later misused. Plan section 10: minimum necessary scope. Ask for the
+ * writable scope only when a write has actually been approved. */
+const READONLY = process.argv.includes('--readonly');
+const SCOPE = READONLY
+  ? 'https://www.googleapis.com/auth/tasks.readonly'
+  : 'https://www.googleapis.com/auth/tasks';
+const SAVE = process.argv.includes('--save');
+const CRED_PATH = new URL('../.google-oauth.json', import.meta.url);
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.error(
@@ -46,6 +56,8 @@ authUrl.searchParams.set('state', state);
 
 console.log('\nOpen this in the browser where you are signed in as booms.satya@gmail.com:\n');
 console.log(authUrl.toString());
+console.log(`\nScope: ${SCOPE}`);
+console.log(READONLY ? 'Read-only: this token cannot modify anything.' : 'WRITABLE token — only do this once a write is actually approved.');
 console.log('\nWaiting for the redirect on localhost…\n');
 
 const server = createServer(async (req, res) => {
@@ -85,6 +97,23 @@ const server = createServer(async (req, res) => {
     server.close();
     process.exitCode = 1;
     return;
+  }
+
+  if (SAVE) {
+    // Written locally so the refresh token never has to travel through a
+    // terminal transcript, a chat window or a clipboard. Gitignored, and
+    // tasks-audit.mjs reads it directly. It is still a real credential sitting
+    // on disk: delete it when you are done, and revoke the grant at
+    // myaccount.google.com/permissions.
+    writeFileSync(CRED_PATH, JSON.stringify({
+      client_id: CLIENT_ID, client_secret: CLIENT_SECRET,
+      refresh_token: data.refresh_token, scope: SCOPE,
+      created: new Date().toISOString(),
+    }, null, 2));
+    try { chmodSync(CRED_PATH, 0o600); } catch {}
+    console.log('\nSaved to .google-oauth.json (gitignored, owner-only).');
+    console.log('The audit reads it directly; nothing needs copying anywhere.');
+    console.log('Delete it when done; revoke at myaccount.google.com/permissions.\n');
   }
 
   res.writeHead(200, { 'Content-Type': 'text/html' })

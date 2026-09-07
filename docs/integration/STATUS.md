@@ -12,6 +12,14 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 - Pending confirmation: laundry setup/load count, shared chore ownership, collection schedule, live commitments and selected task list. Next implementation step is a read-only mapping audit after access approval.
 - Plan is local/uncommitted. Existing UI changes remain in the shared working tree; the prior fetch/publish attempt was blocked by approval-review usage limits and was not retried. Coordinate ownership before editing those files.
 
+### OAuth prepared for a read-only audit (2026-09-07)
+
+- `oauth-setup.mjs` gained `--readonly` (requests `auth/tasks.readonly`, so the minted token physically cannot modify a task) and `--save` (writes `.google-oauth.json`, gitignored, chmod 600). `tasks-audit.mjs` reads that file, so the refresh token never has to pass through a terminal transcript, a chat window or a clipboard.
+- The writable scope is still available but is now opt-out rather than the only option, matching plan section 10's minimum-necessary-scope rule. Only mint it once a write is actually approved.
+- The agent did not and will not perform the Google consent: signing into the account and granting OAuth are the account holder's actions, and the refresh token is a credential the agent must not handle. `console.cloud.google.com` was also blocked to the agent's browser, and that browser is not Satya's signed-in Chrome in any case.
+- Remaining human steps: enable the Tasks API, create a Web application OAuth client with redirect `http://localhost:8765/callback`, then run `oauth-setup.mjs --readonly --save` and `tasks-audit.mjs`. Note port 8765 is also used by `tests/preview_server.py`; stop that first.
+- Verification: 57/57 `tests/*.test.mjs` including credential precedence, the gitignore guard, and a structural check that the read-only scope path exists. Nothing was run against a real Google account.
+
 ### Chores now score; Google sync blocked on credentials (2026-09-07)
 
 - Claude, `main`, from `034aba7`. User reversed plan section 8.10: chores must cost something.

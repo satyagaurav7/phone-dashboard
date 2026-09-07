@@ -18,3 +18,4 @@ legacy-calendar-backup.json
 # Local Google Tasks audit output — contains real task titles.
 tasks-audit*.json
 audit-report*.json
+.google-oauth.json

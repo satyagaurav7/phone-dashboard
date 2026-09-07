@@ -91,3 +91,37 @@ test('the summary counts completed tasks and notes that due carries no time', as
   assert.equal(row.dated, 2);
   assert.equal(row.withTimeOfDay, 0, 'the API discards time of day; nothing should claim otherwise');
 });
+
+test('credentials come from env, else the saved file, else nothing', async () => {
+  const { loadCredentials } = await import(AUDIT_URL);
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+
+  const env = { GOOGLE_OAUTH_CLIENT_ID: 'a', GOOGLE_OAUTH_CLIENT_SECRET: 'b', GOOGLE_OAUTH_REFRESH_TOKEN: 'c' };
+  assert.equal(loadCredentials(env, join(tmpdir(), 'nope.json')).source, 'env');
+
+  const dir = mkdtempSync(join(tmpdir(), 'cred-'));
+  const path = join(dir, '.google-oauth.json');
+  writeFileSync(path, JSON.stringify({ client_id: 'x', client_secret: 'y', refresh_token: 'z', scope: 'ro' }));
+  const fromFile = loadCredentials({}, path);
+  assert.equal(fromFile.source, '.google-oauth.json');
+  assert.equal(fromFile.refresh_token, 'z');
+
+  assert.equal(loadCredentials({}, join(dir, 'absent.json')), null);
+  // A partial environment must not shadow the file.
+  assert.equal(loadCredentials({ GOOGLE_OAUTH_CLIENT_ID: 'only' }, path).source, '.google-oauth.json');
+});
+
+test('the saved credential file is gitignored', () => {
+  const ignore = readFileSync(new URL('../.gitignore', import.meta.url), 'utf8');
+  assert.ok(ignore.includes('.google-oauth.json'), 'a refresh token must never be committable');
+});
+
+test('oauth-setup can mint a token that cannot write', () => {
+  const setup = readFileSync(new URL('../scripts/oauth-setup.mjs', import.meta.url), 'utf8');
+  assert.ok(setup.includes('auth/tasks.readonly'), '--readonly must request the read-only scope');
+  assert.ok(/READONLY = process\.argv\.includes\('--readonly'\)/.test(setup));
+  // The writable scope must remain opt-out, not the only option.
+  assert.ok(/READONLY[\s\S]{0,120}tasks\.readonly[\s\S]{0,80}auth\/tasks'/.test(setup));
+});
