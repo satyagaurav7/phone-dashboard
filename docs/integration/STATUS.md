@@ -1,6 +1,6 @@
 # Unified integration execution status
 
-Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are done locally and uncommitted; T2 is unclaimed.
+Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are committed locally; T2 is unclaimed.
 
 ## Current state
 
@@ -13,7 +13,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 | ID | Deliverable | Depends on | State | Owner |
 |---|---|---|---|---|
 | P0 | Plan, spec, portable handoff, agent pointers | — | Done locally | Planning session |
-| T1 | Deployment artifact boundary and integration baseline | — | **Done locally, uncommitted** | Released (Claude, 2026-09-06) |
+| T1 | Deployment artifact boundary and integration baseline | — | **Committed locally** | Released (Claude, 2026-09-06) |
 | T2 | Versioned registry and snapshot contract | T1 | Pending | Unassigned |
 | T3 | Fixture-backed Workspace UI | T2 | Pending | Unassigned |
 | T4 | Local collector with Encore + trading adapters | T2 | Pending | Unassigned |
@@ -21,7 +21,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 | T6 | Authenticated snapshot transport and emulator tests | T3, T5 | Pending | Unassigned |
 | T7 | Phone rollout, operations, agent handoff verification | T6 | Pending | Unassigned |
 | T8 | Graphify quality and refresh workflow | T7 | Pending | Unassigned |
-| F1 | Day windows, signed balance, notifications, and unarmed Beeminder reporter | — | **Done locally, uncommitted** | Released (Codex, 2026-09-07) |
+| F1 | Day windows, signed balance, notifications, and unarmed Beeminder reporter | — | **Committed locally** | Released (Codex, 2026-09-07) |
 
 ## F1 claim record (active)
 
@@ -57,7 +57,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 - Local browser loaded the artifact at the Firebase auth gate with no console warnings/errors. Signed-in UI behavior was not exercised because this session did not request or enter the account password.
 - `git diff --check`: exit 0 (line-ending warnings only).
 
-**Commit(s), or explicit uncommitted state:** Uncommitted. Existing unrelated uncommitted T1/integration changes remain in the same worktree.
+**Commit(s), or explicit uncommitted state:** `7f66990` contains F1 together with the previously uncommitted T1/integration changes, as explicitly requested by the user.
 **Remote and deployment state:** Not pushed or deployed. The live site and scheduled workflow are unchanged.
 **Phone verification:** Not performed. Countdown thresholds, blackout logging, real push delivery, and responsive signed-in layout still require authenticated/physical-device checks.
 **Failures / configuration still needed:** Create and verify the Beeminder goal manually; fill public `schedule.json` stake user/goal values; keep `stakes.enabled` false through the dry-run observation period; add `BEEMINDER_TOKEN` only when arming; then use `--live`. Real API idempotency, outage backfill, stake readback, and any legitimate future charge are not locally verified.
