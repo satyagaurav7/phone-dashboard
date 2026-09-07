@@ -23,7 +23,7 @@
     "sun": "Sunday"
   },
   "glance": {
-    "office": "Office \u00b7 6:15 wake \u00b7 leave 7:30 \u00b7 gym 6:25 pm",
+    "office": "Office \u00b7 6:15 wake \u00b7 deep work 7:35 \u00b7 leave 8:35 \u00b7 gym 5:30 pm",
     "wfh": "WFH \u00b7 6:45 wake \u00b7 gym AM \u00b7 cook lunch 12:30",
     "sat": "Groceries ~$80 \u00b7 meal-prep \u00b7 gym \u00b7 free evening",
     "sun": "Plan Sunday 5 pm \u00b7 prep for Monday"
@@ -41,17 +41,17 @@
         "bonehealth": "07:05",
         "vitcd": "07:05",
         "lunch": "12:30",
-        "gym": "18:25",
-        "cookmeal": "20:35",
-        "dinner": "21:00",
-        "cooked": "20:30",
-        "read5": "20:30",
-        "language": "20:30",
-        "study": "21:50",
-        "money": "22:10",
-        "creatine": "22:35",
-        "smokefree": "22:45",
-        "phonedown": "22:50",
+        "gym": "17:45",
+        "cookmeal": "20:05",
+        "dinner": "20:35",
+        "cooked": "20:50",
+        "read5": "21:00",
+        "language": "21:05",
+        "study": "07:40",
+        "money": "07:55",
+        "creatine": "21:35",
+        "smokefree": "21:50",
+        "phonedown": "22:00",
         "getready": "06:35"
       },
       "wfh": {
@@ -156,19 +156,30 @@
           ]
         },
         {
+          "id": "deep-work",
+          "title": "Deep work",
+          "start": "07:35",
+          "end": "08:20",
+          "keys": [
+            "study",
+            "money"
+          ]
+        },
+        {
           "id": "midday",
           "title": "Midday",
           "start": "12:15",
           "end": "13:15",
           "keys": [
             "lunch"
-          ]
+          ],
+          "duringWork": true
         },
         {
           "id": "gym",
           "title": "Gym",
           "start": "17:30",
-          "end": "20:30",
+          "end": "20:00",
           "keys": [
             "gym"
           ]
@@ -176,8 +187,8 @@
         {
           "id": "evening",
           "title": "Evening",
-          "start": "20:30",
-          "end": "21:45",
+          "start": "20:00",
+          "end": "21:15",
           "keys": [
             "cookmeal",
             "dinner",
@@ -187,20 +198,10 @@
           ]
         },
         {
-          "id": "deep-work",
-          "title": "Deep work",
-          "start": "21:45",
-          "end": "22:30",
-          "keys": [
-            "study",
-            "money"
-          ]
-        },
-        {
           "id": "wind-down",
           "title": "Wind-down",
-          "start": "22:30",
-          "end": "23:15",
+          "start": "21:30",
+          "end": "22:15",
           "keys": [
             "creatine",
             "smokefree",
@@ -251,7 +252,8 @@
           "keys": [
             "cookmeal",
             "lunch"
-          ]
+          ],
+          "duringWork": true
         },
         {
           "id": "afternoon",
@@ -322,7 +324,8 @@
           "keys": [
             "cookmeal",
             "lunch"
-          ]
+          ],
+          "duringWork": true
         },
         {
           "id": "deep-work",
@@ -410,7 +413,8 @@
           "end": "13:45",
           "keys": [
             "lunch"
-          ]
+          ],
+          "duringWork": true
         },
         {
           "id": "afternoon",
@@ -1236,5 +1240,31 @@
         "Subscriptions"
       ]
     }
-  ]
+  ],
+  "dayShape": {
+    "office": {
+      "wake": "06:15",
+      "sleep": "23:00",
+      "workStart": "09:00",
+      "workEnd": "17:00",
+      "commuteMin": 20
+    },
+    "wfh": {
+      "wake": "06:45",
+      "sleep": "23:00",
+      "workStart": "09:00",
+      "workEnd": "17:00",
+      "commuteMin": 0
+    },
+    "sat": {
+      "wake": "09:00",
+      "sleep": "23:00",
+      "commuteMin": 0
+    },
+    "sun": {
+      "wake": "09:30",
+      "sleep": "23:00",
+      "commuteMin": 0
+    }
+  }
 }

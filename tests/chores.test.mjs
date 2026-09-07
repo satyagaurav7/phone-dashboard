@@ -439,3 +439,51 @@ test('undo actually returns the points the completion earned', async () => {
   assert.equal(choreLedger({ sched, state: undone, today: MON }).total, 0);
   assert.ok(withPoints > 0);
 });
+
+test('phase 1 rebalance: a good week is positive, neglect still reaches blackout', async () => {
+  const { choreLedger, CHORE_POINTS, CHORE_DAILY_FLOOR } = await import(CHORES_URL);
+  assert.equal(CHORE_POINTS.onTime, 8, 'on-time reward raised so a good week can be positive');
+  assert.equal(CHORE_POINTS.outstandingPerDay, -5, 'the per-day charge is unchanged');
+  assert.equal(CHORE_DAILY_FLOOR, -20, 'exactly the four daily chores');
+
+  const start = MON, end = '2026-09-13';
+  const days = []; for (let d = start; d <= end; d = addDaysLocal(d, 1)) days.push(d);
+  const run = doneFn => {
+    const chores = {};
+    for (const c of schedule.chores) {
+      const done = {};
+      for (const d of days) if (doneFn(c, d)) done[d] = true;
+      chores[c.id] = { done };
+    }
+    return choreLedger({ sched: schedule, state: { config: { choresStart: start }, chores }, today: addDaysLocal(end, 1) }).total;
+  };
+  const perfect = run(() => true);
+  const good = run(c => c.cadence.mode !== 'monthly');
+  const nothing = run(() => false);
+
+  assert.ok(perfect > 300, `a perfect week should be strongly positive, got ${perfect}`);
+  assert.ok(good > 0, `a good week must be positive, got ${good}`);
+  assert.ok(nothing < -100, `total neglect must still hurt, got ${nothing}`);
+  assert.ok(nothing > -200, `but the floor must bound it, got ${nothing}`);
+});
+
+test('the daily floor bounds one bad day without softening a bad week', async () => {
+  const { choreLedger, CHORE_DAILY_FLOOR } = await import(CHORES_URL);
+  // Every chore outstanding on a single completed day: the charge is capped.
+  const led = choreLedger({
+    sched: schedule,
+    state: { config: { choresStart: MON }, chores: {} },
+    today: '2026-09-09',
+  });
+  const perDay = {};
+  for (const [d, v] of Object.entries(led.byDate)) perDay[d] = v;
+  for (const [d, v] of Object.entries(perDay)) {
+    assert.ok(v >= CHORE_DAILY_FLOOR, `${d} charged ${v}, below the floor ${CHORE_DAILY_FLOOR}`);
+  }
+});
+
+function addDaysLocal(dateStr, n) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const t = Date.UTC(y, m - 1, d) + n * 86400000;
+  return new Date(t).toISOString().slice(0, 10);
+}

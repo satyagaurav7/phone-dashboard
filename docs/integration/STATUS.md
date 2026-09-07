@@ -20,6 +20,24 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 - Pending confirmation: laundry setup/load count, shared chore ownership, collection schedule, live commitments and selected task list. Next implementation step is a read-only mapping audit after access approval.
 - Plan is local/uncommitted. Existing UI changes remain in the shared working tree; the prior fetch/publish attempt was blocked by approval-review usage limits and was not retried. Coordinate ownership before editing those files.
 
+### Phase 1 complete: canonical schedule, conflict validation, chore rebalance (2026-09-08)
+
+Design approved; user also approved moving Deep work to the morning. Tests written first (12 red, then implemented to green).
+
+**Office day rewritten.** Deep work 21:15-22:00 -> **07:35-08:20**, gym **17:30-20:00 (150 min)**, evening 20:00-21:15, wind-down **21:30-22:15**. Eleven office item times realigned into their new windows. Capacity now **390 scheduled against 485 available, 95 min slack** (was 345 against 340, a deficit, with wind-down 15 min past the sleep target). WFH/Sat/Sun keep 3-hour gym windows; only the office day was over-committed.
+
+**`schedule.json` gained `dayShape`** per day kind (wake, sleep, workStart, workEnd, commuteMin). Office 09:00-17:00 and 20 min commute are confirmed by the user; **WFH work hours are an assumption** (same 09:00-17:00) and are recorded as such — correct them before relying on WFH capacity. Blocks may declare `duringWork: true` (only `midday` does) so a legitimate lunch break is not reported as a conflict.
+
+**`rules.mjs`**: `dayShape`, `dayCapacity` (union of block minutes outside working hours against real free time — union, not sum, because the long gym window deliberately overlaps other blocks on WFH days), `scheduleConflicts` (reports `overlaps-work`, `no-transition`, `over-capacity`), `TRANSITION_MIN = 10`. `assertSchedule` now **throws** when any block ends after the sleep target — the exact defect that shipped.
+
+Conflicts now reported (information for phases 2-3, not errors): office has three zero/5-minute transitions (Morning->Fuel, Fuel->Deep work, Gym->Evening); **WFH gym 07:00-10:00 and fuel 08:30-09:30 run into 09:00 working hours** and need a decision; Saturday has a zero-minute Midday->Deep work transition.
+
+**Chore rebalance shipped**: `CHORE_POINTS.onTime` 3 -> **8**, `CHORE_DAILY_FLOOR = -20` applied to each day's negative portion. Measured on the real catalogue, Mon-Sun: perfect **+357**, scenario B (dailies 5/7 + all weeklies) **-31 -> +108**, total neglect **-140** (blackout in ~2.5 days). The floor equals exactly the four daily chores. **The ledger is derived, so historical days re-score under the new constants** — the balance will visibly jump; this is expected, not a bug.
+
+Verification: **97/97 `tests/*.test.mjs`** (12 new: 10 schedule-shape, 2 chore rebalance) and **17/17 `tests/midnight.test.cjs`**; `build-site` clean; viewports emulated at 320/375/430/desktop with **no horizontal scroll at any width** (an earlier 320px overflow report was a measurement artifact from a CSS width hack against a `position:fixed` nav); service worker `midnight-v7`. `index.html` unchanged in this phase, so the per-minute focus/scroll guard from `1906862` is intact and its test still passes.
+
+Not done, and deliberately: the duplicate `<h1>` and duplicate activity logger remain (phase 3 removes them); no planner yet (phase 2); Beeminder unarmed; Google writes disabled.
+
 ### Day board execution-surface design written, awaiting approval (2026-09-08)
 
 - Claude, `main`, verified at `39bd500` (= `origin/main` via `git ls-remote`, deploy success, clean tree, 85/85 + 17/17). No newer agent changes found.

@@ -48,6 +48,7 @@ export function blocksFor(sched, dayKind) {
     startMin: parseMin(block.start),
     endMin: parseMin(block.end),
     keys: [...block.keys],
+    duringWork: block.duringWork === true,
   }));
 }
 
@@ -70,6 +71,18 @@ export function assertSchedule(sched) {
     for (const [key, count] of counts) {
       if (!(key in times)) throw new Error(`${key} in blocks for ${kind} has no item time`);
       if (count !== 1) throw new Error(`${key} appears ${count} times in blocks for ${kind}`);
+    }
+    // A block running past the sleep target is the defect that shipped: the
+    // office evening ended at 23:15 against a 23:00 target, every day, by
+    // design. This one throws.
+    const shape = sched?.dayShape?.[kind];
+    if (shape?.sleep) {
+      const sleepMin = parseMin(shape.sleep);
+      for (const block of blocks) {
+        if (block.endMin > sleepMin) {
+          throw new Error(`${kind}: ${block.id} ends after the sleep target ${shape.sleep}`);
+        }
+      }
     }
     // The suggested tap time must fall inside the window that scores it.
     // Without this the app can display "cook a meal at 19:40" and then fail the
@@ -193,4 +206,111 @@ export function canDeclareDayOff({ dayOff = {}, dateStr }) {
   const used = Object.keys(dayOff).filter(date => date >= start && date <= dateStr).sort();
   if (used.length < DAY_OFF_LIMIT) return { allowed: true, nextAvailableDate: null };
   return { allowed: false, nextAvailableDate: addDays(used[used.length - DAY_OFF_LIMIT], DAY_OFF_WINDOW_DAYS) };
+}
+
+/* ---------------------------------------------------------------------------
+ * Day shape and feasibility (phase 1).
+ *
+ * The office evening shipped arithmetically impossible: 345 minutes of blocks
+ * against the 340 that existed between arriving home and a 23:00 sleep target,
+ * with wind-down ending at 23:15. Nothing in the code could say so, because the
+ * schedule had no notion of when the day starts, ends, or is spent at work.
+ *
+ * A declared shape makes that checkable. Overrunning bedtime throws — it is the
+ * defect that shipped and must not reach the phone again. Everything else is
+ * REPORTED rather than thrown: a conflict is information the planner and the
+ * user act on, and silently refusing to load a schedule would be worse than
+ * showing what is wrong with it.
+ */
+export function dayShape(sched, dayKind) {
+  const raw = sched?.dayShape?.[dayKind];
+  if (!raw) return null;
+  return {
+    wakeMin: parseMin(raw.wake),
+    sleepMin: parseMin(raw.sleep),
+    workStartMin: raw.workStart ? parseMin(raw.workStart) : null,
+    workEndMin: raw.workEnd ? parseMin(raw.workEnd) : null,
+    commuteMin: Number(raw.commuteMin || 0),
+  };
+}
+
+const overlaps = (a1, a2, b1, b2) => a1 < b2 && b1 < a2;
+const clampOut = (start, end, wStart, wEnd) => {
+  // Minutes of [start,end) that fall OUTSIDE the work interval.
+  if (wStart == null) return Math.max(0, end - start);
+  const inside = Math.max(0, Math.min(end, wEnd) - Math.max(start, wStart));
+  return Math.max(0, end - start) - inside;
+};
+
+/* Union of block minutes outside working hours, against the free time that
+ * actually exists. Union, not sum: blocks may overlap deliberately (the long
+ * gym window runs through breakfast on WFH days) and double-counting those
+ * would invent a deficit that is not there. */
+export function dayCapacity(sched, dayKind) {
+  const shape = dayShape(sched, dayKind);
+  if (!shape) return null;
+  const work = shape.workStartMin != null ? shape.workEndMin - shape.workStartMin : 0;
+  const availableMin = (shape.sleepMin - shape.wakeMin) - work - 2 * shape.commuteMin;
+
+  const spans = blocksFor(sched, dayKind)
+    .map(b => [b.startMin, b.endMin])
+    .sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  for (const [s, e] of spans) {
+    const last = merged[merged.length - 1];
+    if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+    else merged.push([s, e]);
+  }
+  const scheduledMin = merged.reduce(
+    (n, [s, e]) => n + clampOut(s, e, shape.workStartMin, shape.workEndMin), 0);
+
+  return {
+    availableMin, scheduledMin,
+    slackMin: availableMin - scheduledMin,
+    feasible: scheduledMin <= availableMin,
+  };
+}
+
+export const TRANSITION_MIN = 10;
+
+export function scheduleConflicts(sched, dayKind) {
+  const shape = dayShape(sched, dayKind);
+  if (!shape) return [];
+  const blocks = blocksFor(sched, dayKind).slice().sort((a, b) => a.startMin - b.startMin);
+  const found = [];
+
+  for (const block of blocks) {
+    if (shape.workStartMin != null
+      && overlaps(block.startMin, block.endMin, shape.workStartMin, shape.workEndMin)
+      && !block.duringWork) {
+      // A block may declare duringWork when being inside the working day is
+      // correct — lunch, for instance. Declared in the schedule rather than
+      // matched by id here, so moving that block still gets checked.
+      found.push({
+        kind: 'overlaps-work', blockId: block.id,
+        detail: `${block.title} runs into working hours`,
+      });
+    }
+  }
+
+  // Consecutive non-overlapping blocks need room to change context.
+  for (let i = 1; i < blocks.length; i++) {
+    const prev = blocks[i - 1], cur = blocks[i];
+    const gap = cur.startMin - prev.endMin;
+    if (gap >= 0 && gap < TRANSITION_MIN) {
+      found.push({
+        kind: 'no-transition', blockId: cur.id,
+        detail: `only ${gap} min between ${prev.title} and ${cur.title}`,
+      });
+    }
+  }
+
+  const cap = dayCapacity(sched, dayKind);
+  if (cap && !cap.feasible) {
+    found.push({
+      kind: 'over-capacity', blockId: null,
+      detail: `${cap.scheduledMin} min scheduled against ${cap.availableMin} available`,
+    });
+  }
+  return found;
 }

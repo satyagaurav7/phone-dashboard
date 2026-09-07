@@ -233,7 +233,21 @@ export function completePatch(today, record = {}) {
  * The charge compounds: -5 per outstanding chore per day, every day it stays
  * undone. With this catalogue that is steep by design.
  */
-export const CHORE_POINTS = Object.freeze({ onTime: 3, late: 1, outstandingPerDay: -5 });
+export const CHORE_POINTS = Object.freeze({ onTime: 8, late: 1, outstandingPerDay: -5 });
+
+/* The most a day of household neglect can cost, applied to that day's negative
+ * portion only. At +3 on time the arithmetic was wrong in a way neither of us
+ * had checked: a genuinely good week — daily resets five days in seven and
+ * every weekly chore done — still scored -31, so only near-perfection was ever
+ * non-negative and blackout was the steady state rather than a warning.
+ *
+ * -20 is not a round number, it is exactly the four daily chores. One day of
+ * complete neglect costs those; weeklies stacked on the same day cannot
+ * compound further. Measured over one week with the real catalogue:
+ * perfect +350, good +108, dailies-only +39, nothing -140 (blackout in ~2.5
+ * days). Missing still hurts; doing the work is now worth more than it costs
+ * to skip. */
+export const CHORE_DAILY_FLOOR = -20;
 
 /* Does a fresh occurrence open on `date`, given when it was last completed? */
 function opensOn(chore, date, lastDone, since) {
@@ -254,13 +268,11 @@ export function choreLedger({ sched, state = {}, today }) {
   const records = state.chores || {};
   const byDate = {};
   const outstandingToday = [];
-  let total = 0;
   let pendingToday = 0;
 
   const add = (date, points) => {
     if (!points) return;
     byDate[date] = (byDate[date] || 0) + points;
-    total += points;
   };
 
   for (const chore of choreCatalogue(sched)) {
@@ -307,5 +319,16 @@ export function choreLedger({ sched, state = {}, today }) {
     }
   }
 
-  return { total, byDate, pendingToday, outstandingToday };
+  // Apply the floor per day, to the negative portion only: a day that earned
+  // points keeps them, and a day of neglect is bounded rather than unbounded.
+  let floored = 0;
+  for (const value of Object.values(byDate)) {
+    floored += value < 0 ? Math.max(value, CHORE_DAILY_FLOOR) : value;
+  }
+  for (const date of Object.keys(byDate)) {
+    if (byDate[date] < 0) byDate[date] = Math.max(byDate[date], CHORE_DAILY_FLOOR);
+  }
+  pendingToday = Math.max(pendingToday, CHORE_DAILY_FLOOR);
+
+  return { total: floored, byDate, pendingToday, outstandingToday };
 }
