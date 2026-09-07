@@ -4,6 +4,14 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Day board optimization review (2026-09-07)
+
+- Codex reviewed clean `main` at `42f32a2`, latest board/upkeep/sync code, schedules, tests and prior plans. Deliverable: `docs/superpowers/plans/2026-09-07-day-board-optimization-review.md`; documentation only, no runtime changes or live writes.
+- Recommends canonical timing, one Now/Next/Background execution board, protected meaningful work, passive overlap and explicit replanning. Preserves the user's chosen chore penalties pending separate policy approval and acknowledges confirmed in-unit laundry/room-only ownership.
+- Findings: seven office item times outside scoring windows; current chore Move can erase historical penalties; daily partial steps lack occurrence scope; task-sync runner lacks actual app-state/completion round trip and actual completion-time metadata. The earlier statement that sync needs only consent is superseded by this source review.
+- Fresh checks: 75/75 module tests, 17/17 controller tests, public build succeeded. Synthetic pure-function probes reproduced the move-history and partial-step problems and inspected late inbound completion metadata. No live account, deployment or physical-device verification.
+- Next: coordinate with current UI owner; regression tests and canonical schedule proposal before implementation. Policy changes and Google writes still need explicit approval. Review ownership released; plan/status edits local and uncommitted.
+
 ### Household task planning handoff (2026-09-07)
 
 - User redirected Codex to planning while Claude may own UI implementation. No further UI edits or deployment for this request.
@@ -11,6 +19,20 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 - Google Tasks API timing limits checked against official documentation. Plan keeps source tasks/completion in Google and timing metadata in FLOWSTATE; no live writes or recurrence automation enabled.
 - Pending confirmation: laundry setup/load count, shared chore ownership, collection schedule, live commitments and selected task list. Next implementation step is a read-only mapping audit after access approval.
 - Plan is local/uncommitted. Existing UI changes remain in the shared working tree; the prior fetch/publish attempt was blocked by approval-review usage limits and was not retried. Coordinate ownership before editing those files.
+
+### Closeout: three defects fixed, Google sync parked unarmed (2026-09-07)
+
+Codex's `docs/superpowers/plans/2026-09-07-day-board-optimization-review.md` found real defects in Claude's work. Three were reproduced and fixed before closing out.
+
+1. **The schedule punished following its own instructions.** Seven office items had suggested tap times outside the window that scores them (cookmeal 19:40 against Evening 20:30-21:45, and so on). Cause: widening the gym window to three hours moved the evening blocks later, and `tapPlan.itemTimes` was not moved with them. Times realigned, and `assertSchedule` now rejects any item whose suggested time falls outside its block, so this cannot regress silently. Consequence to note: the office evening now runs to 22:50. If that is too late, the fix is a 2.5-hour gym window (still inside the stated "2 and half to 3hrs"), not drifting the times again.
+2. **"Move to tomorrow" erased assessed penalties.** `choreLedger` applied a single `moved` date to every historical day, so a chore three days overdue at -15 dropped to 0 on one tap — an eraser for the mechanic the user had just asked to be made harsher. Records now carry `movedAt`; deferral applies only from the day it was requested. Legacy records without `movedAt` forgive nothing.
+3. **Sub-steps leaked across days.** A daily chore opened showing yesterday's half-ticked checklist. Steps are now stamped with `stepsOccurrence` and only surface for the occurrence they belong to.
+
+Not fixed, recorded as open (from the same review): chore windows are one clock time across all day kinds and can collide with saved evening slots; laundry stage selection infers earlier stages complete and has no Undo; blackout still hides non-Today tabs, which chores can now trigger; `tasks-sync.mjs` uses a UTC date for today, plans from preview state rather than authenticated app state, does not PATCH remote completion, does not persist inbound completions, and does not call `retryDecision` from the runner. **Consent is necessary but not sufficient for the round trip** — do not enable live writes on the strength of a token alone.
+
+**Google Tasks sync is parked, built and unarmed.** No credential was ever created; `.google-oauth.json` and `.google-client.json` do not exist. Nothing in this repository can reach a Google account. The engine, its gates and 18 tests are in place for whenever it is picked up.
+
+Verification at closeout: 80/80 `tests/*.test.mjs`, 17/17 `tests/midnight.test.cjs`, build clean, service worker bumped to `midnight-v5`.
 
 ### Task-sync engine built and tested against stubs (2026-09-07)
 

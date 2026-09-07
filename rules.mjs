@@ -71,6 +71,23 @@ export function assertSchedule(sched) {
       if (!(key in times)) throw new Error(`${key} in blocks for ${kind} has no item time`);
       if (count !== 1) throw new Error(`${key} appears ${count} times in blocks for ${kind}`);
     }
+    // The suggested tap time must fall inside the window that scores it.
+    // Without this the app can display "cook a meal at 19:40" and then fail the
+    // block because Evening does not open until 20:30 — punishing the user for
+    // following the app's own instructions. Seven office items drifted this way
+    // when the gym window was widened to three hours and the evening blocks
+    // moved but their item times did not.
+    for (const block of blocks) {
+      for (const key of block.keys) {
+        const at = parseMin(times[key]);
+        if (at < block.startMin || at > block.endMin) {
+          throw new Error(
+            `${kind}: ${key} is suggested at ${times[key]} but ${block.id} scores ` +
+            `only ${Math.floor(block.startMin / 60)}:${String(block.startMin % 60).padStart(2, '0')}` +
+            `-${Math.floor(block.endMin / 60)}:${String(block.endMin % 60).padStart(2, '0')}`);
+        }
+      }
+    }
   }
   return true;
 }

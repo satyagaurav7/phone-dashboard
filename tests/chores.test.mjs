@@ -268,7 +268,9 @@ test('a daily chore charges for each skipped day', async () => {
 test('a moved chore is not charged before the day it was moved to', async () => {
   const { choreLedger } = await import(CHORES_URL);
   const sched = { chores: [fixture.chores[0]] };
-  const state = { config: { choresStart: MON }, chores: { daily: { moved: '2026-09-10' } } };
+  // movedAt is required: a deferral covers days from when it was requested,
+  // not every day in the record's past. See the regression test below.
+  const state = { config: { choresStart: MON }, chores: { daily: { moved: '2026-09-10', movedAt: MON } } };
   const led = choreLedger({ sched, state, today: '2026-09-09' });
   assert.equal(led.total, 0);
   assert.equal(led.pendingToday, 0);
@@ -315,4 +317,70 @@ test('completing accumulates history rather than overwriting it', async () => {
   const second = completePatch(SUN, first);
   assert.deepEqual(second.done, { [THU]: true, [SUN]: true });
   assert.equal(second.last, SUN);
+});
+
+test('moving a chore cannot erase penalties already assessed', async () => {
+  // Regression. `moved` alone used to be applied to every past date, so a chore
+  // three days overdue at -15 dropped to 0 the instant "Move to tomorrow" was
+  // pressed — turning the button into an eraser for the whole mechanic.
+  const { choreLedger, CHORE_POINTS } = await import(CHORES_URL);
+  const sched = { chores: [{ id: 'x', title: 'X', cadence: { mode: 'weekly', dow: 0 }, activeMin: 10, steps: ['a'] }] };
+  const base = { config: { choresStart: '2026-09-06' }, chores: {} };
+  const before = choreLedger({ sched, state: base, today: '2026-09-09' }).total;
+  assert.equal(before, 3 * CHORE_POINTS.outstandingPerDay);
+
+  const moved = {
+    config: { choresStart: '2026-09-06' },
+    chores: { x: { moved: '2026-09-10', movedAt: '2026-09-09' } },
+  };
+  assert.equal(choreLedger({ sched, state: moved, today: '2026-09-09' }).total, before,
+    'history is untouched by a deferral made today');
+
+  // The deferral does suppress the days it actually covers, going forward.
+  const later = { config: { choresStart: '2026-09-06' }, chores: { x: { moved: '2026-09-12', movedAt: '2026-09-09' } } };
+  assert.equal(choreLedger({ sched, state: later, today: '2026-09-11' }).total, before,
+    'the deferred days 09/09-09/11 add no further charge');
+});
+
+test('a legacy move record forgives nothing retroactively', async () => {
+  const { choreLedger, CHORE_POINTS } = await import(CHORES_URL);
+  const sched = { chores: [{ id: 'x', title: 'X', cadence: { mode: 'weekly', dow: 0 }, activeMin: 10, steps: ['a'] }] };
+  // Written before movedAt existed: it must not silently wipe assessed charges.
+  const legacy = { config: { choresStart: '2026-09-06' }, chores: { x: { moved: '2026-09-10' } } };
+  assert.equal(choreLedger({ sched, state: legacy, today: '2026-09-09' }).total, 3 * CHORE_POINTS.outstandingPerDay);
+});
+
+test("yesterday's ticked steps do not carry into today's occurrence", async () => {
+  const { upkeepBoard } = await import(CHORES_URL);
+  const sched = { chores: [{ id: 'y', title: 'Y', cadence: { mode: 'daily' }, activeMin: 5, steps: ['a', 'b'] }] };
+  const stale = { config: { choresStart: '2026-09-06' }, chores: { y: { steps: { 0: true }, stepsOccurrence: '2026-09-08' } } };
+  assert.deepEqual(upkeepBoard({ sched, state: stale, today: '2026-09-09' }).rows[0].stepsDone, {},
+    'a new day starts with an empty checklist');
+
+  const current = { config: { choresStart: '2026-09-06' }, chores: { y: { steps: { 0: true }, stepsOccurrence: '2026-09-09' } } };
+  assert.deepEqual(upkeepBoard({ sched, state: current, today: '2026-09-09' }).rows[0].stepsDone, { 0: true },
+    "today's own progress is kept");
+});
+
+test('every suggested tap time falls inside the window that scores it', async () => {
+  // The app must never display a time and then punish following it.
+  const rules = await import(RULES_URL);
+  rules.assertSchedule(schedule);
+  for (const kind of ['office', 'wfh', 'sat', 'sun']) {
+    for (const block of rules.blocksFor(schedule, kind)) {
+      for (const key of block.keys) {
+        const [h, m] = schedule.tapPlan.itemTimes[kind][key].split(':').map(Number);
+        const at = h * 60 + m;
+        assert.ok(at >= block.startMin && at <= block.endMin,
+          `${kind} ${key} suggested outside ${block.id}`);
+      }
+    }
+  }
+});
+
+test('a drifted schedule is rejected rather than shipped', async () => {
+  const rules = await import(RULES_URL);
+  const broken = JSON.parse(JSON.stringify(schedule));
+  broken.tapPlan.itemTimes.office.dinner = '19:40'; // before Evening opens
+  assert.throws(() => rules.assertSchedule(broken), /dinner is suggested at 19:40/);
 });

@@ -124,7 +124,11 @@ export function upkeepBoard({ sched, state = {}, today }) {
       ...computed,
       steps: chore.steps,
       stages: chore.stages,
-      stepsDone: record.steps && computed.status !== STATUS.DONE ? { ...record.steps } : {},
+      // Steps belong to ONE occurrence. Without the stepsOccurrence check a
+      // daily chore opened today showed yesterday's half-ticked checklist as
+      // already done — inherited progress for work that was never done today.
+      stepsDone: record.steps && computed.status !== STATUS.DONE
+        && record.stepsOccurrence === computed.dueDate ? { ...record.steps } : {},
       stage: record.stage || null,
     };
   });
@@ -177,7 +181,7 @@ export function completePatch(today, record = {}) {
   // were missed, and a single `last` field cannot answer that: it says a chore
   // was done on the 8th, but not whether the 6th and 7th were also done or
   // skipped. `last` is kept alongside it because the board reads it.
-  return { last: today, done: { ...(record.done || {}), [today]: true }, steps: {}, stage: null, moved: null };
+  return { last: today, done: { ...(record.done || {}), [today]: true }, steps: {}, stepsOccurrence: null, stage: null, moved: null, movedAt: null };
 }
 
 /* ---------------------------------------------------------------------------
@@ -230,6 +234,7 @@ export function choreLedger({ sched, state = {}, today }) {
     const record = records[chore.id] || {};
     const done = record.done || {};
     const moved = record.moved || null;
+    const movedAt = record.movedAt || null;
     let lastDone = null;
     let openSince = null;
 
@@ -246,8 +251,19 @@ export function choreLedger({ sched, state = {}, today }) {
       }
 
       if (openSince === null) continue;
-      // A moved chore is not outstanding until the day it was moved to.
-      if (moved && date < moved) continue;
+      // Deferral applies from the day the move was ASKED FOR, never before it.
+      //
+      // This used to read `if (moved && date < moved)`, which applied today's
+      // single `moved` date to every past day as well: a chore three days
+      // overdue at -15 dropped to 0 the moment you pressed "Move to tomorrow".
+      // That made the button an eraser for accumulated penalties and quietly
+      // gutted the whole point of chores costing anything. Moving changes where
+      // work sits next; it does not rewrite what already happened.
+      //
+      // A record with no movedAt is from before this fix. It suppresses
+      // nothing historical — the safe direction, since the alternative is
+      // silently forgiving charges that were correctly assessed.
+      if (moved && movedAt && date >= movedAt && date < moved) continue;
 
       if (date < today) add(date, CHORE_POINTS.outstandingPerDay);
       else {

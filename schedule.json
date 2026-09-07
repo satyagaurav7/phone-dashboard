@@ -23,10 +23,10 @@
     "sun": "Sunday"
   },
   "glance": {
-    "office": "Office · 6:15 wake · leave 7:30 · gym 6:25 pm",
-    "wfh": "WFH · 6:45 wake · gym AM · cook lunch 12:30",
-    "sat": "Groceries ~$80 · meal-prep · gym · free evening",
-    "sun": "Plan Sunday 5 pm · prep for Monday"
+    "office": "Office \u00b7 6:15 wake \u00b7 leave 7:30 \u00b7 gym 6:25 pm",
+    "wfh": "WFH \u00b7 6:45 wake \u00b7 gym AM \u00b7 cook lunch 12:30",
+    "sat": "Groceries ~$80 \u00b7 meal-prep \u00b7 gym \u00b7 free evening",
+    "sun": "Plan Sunday 5 pm \u00b7 prep for Monday"
   },
   "tapPlan": {
     "itemTimes": {
@@ -42,16 +42,16 @@
         "vitcd": "07:05",
         "lunch": "12:30",
         "gym": "18:25",
-        "cookmeal": "19:40",
-        "dinner": "20:10",
+        "cookmeal": "20:35",
+        "dinner": "21:00",
         "cooked": "20:30",
         "read5": "20:30",
         "language": "20:30",
-        "study": "21:00",
-        "money": "21:00",
-        "creatine": "21:45",
-        "smokefree": "22:15",
-        "phonedown": "22:15",
+        "study": "21:50",
+        "money": "22:10",
+        "creatine": "22:35",
+        "smokefree": "22:45",
+        "phonedown": "22:50",
         "getready": "06:35"
       },
       "wfh": {
@@ -578,7 +578,7 @@
       ]
     },
     "labels": {
-      "anchor": "Anchor ⚓",
+      "anchor": "Anchor \u2693",
       "water": "Hydrate",
       "walk": "Stretch + fill bottles",
       "read5": "Open the book",
@@ -613,148 +613,148 @@
         "wake",
         "06:15",
         "06:20",
-        "⏰",
-        "Wake · CGM check + basal · water"
+        "\u23f0",
+        "Wake \u00b7 CGM check + basal \u00b7 water"
       ],
       [
         "medit",
         "06:20",
         "06:35",
-        "🧘",
+        "\ud83e\uddd8",
         "Meditate / breathwork"
       ],
       [
         "shower",
         "06:35",
         "06:50",
-        "🚿",
+        "\ud83d\udebf",
         "Shower + brush"
       ],
       [
         "mkbfast",
         "06:50",
         "07:05",
-        "🍳",
+        "\ud83c\udf73",
         "Make breakfast (oats + yogurt + PB)"
       ],
       [
         "eatbfast",
         "07:05",
         "07:15",
-        "🌅",
-        "Eat breakfast · bolus · supplements"
+        "\ud83c\udf05",
+        "Eat breakfast \u00b7 bolus \u00b7 supplements"
       ],
       [
         "pack",
         "07:15",
         "07:30",
-        "🎒",
-        "Pack lunch + gym bag · get dressed"
+        "\ud83c\udf92",
+        "Pack lunch + gym bag \u00b7 get dressed"
       ],
       [
         "walk",
         "07:30",
         "07:37",
-        "🚪",
+        "\ud83d\udeaa",
         "Leave the house"
       ],
       [
         "bus1",
         "07:37",
         "08:50",
-        "🛣️",
+        "\ud83d\udee3\ufe0f",
         "Travel to work"
       ],
       [
         "workam",
         "09:00",
         "12:30",
-        "💼",
-        "Work — morning block"
+        "\ud83d\udcbc",
+        "Work \u2014 morning block"
       ],
       [
         "lunch",
         "12:30",
         "13:00",
-        "☀️",
-        "Eat packed lunch · bolus"
+        "\u2600\ufe0f",
+        "Eat packed lunch \u00b7 bolus"
       ],
       [
         "workpm",
         "13:00",
         "17:00",
-        "💼",
-        "Work — afternoon block"
+        "\ud83d\udcbc",
+        "Work \u2014 afternoon block"
       ],
       [
         "bus2",
         "17:00",
         "18:10",
-        "🛣️",
+        "\ud83d\udee3\ufe0f",
         "Travel home"
       ],
       [
         "gymtrip",
         "18:10",
         "18:25",
-        "🚶",
-        "Gym bag → 710 Proudfoot Ln"
+        "\ud83d\udeb6",
+        "Gym bag \u2192 710 Proudfoot Ln"
       ],
       [
         "gym",
         "18:25",
         "19:25",
-        "🏋️",
-        "GYM — 45–50 min session"
+        "\ud83c\udfcb\ufe0f",
+        "GYM \u2014 45\u201350 min session"
       ],
       [
         "cookdin",
         "19:40",
         "20:10",
-        "🍳",
-        "Cook dinner · bolus"
+        "\ud83c\udf73",
+        "Cook dinner \u00b7 bolus"
       ],
       [
         "eatdin",
         "20:10",
         "20:30",
-        "🌙",
+        "\ud83c\udf19",
         "Eat dinner"
       ],
       [
         "read",
         "20:30",
         "20:50",
-        "📚",
-        "CELPIP reading — 20 min"
+        "\ud83d\udcda",
+        "CELPIP reading \u2014 20 min"
       ],
       [
         "upskill",
         "21:00",
         "21:45",
-        "💻",
+        "\ud83d\udcbb",
         "Cyber upskill / money move"
       ],
       [
         "prep",
         "21:45",
         "22:15",
-        "🎒",
-        "Prep tomorrow: lunch · clothes · creatine"
+        "\ud83c\udf92",
+        "Prep tomorrow: lunch \u00b7 clothes \u00b7 creatine"
       ],
       [
         "wind",
         "22:15",
         "22:45",
-        "🌒",
-        "Wind down — no screens"
+        "\ud83c\udf12",
+        "Wind down \u2014 no screens"
       ],
       [
         "sleep",
         "22:45",
         "",
-        "😴",
-        "Lights out — 7.5 hrs"
+        "\ud83d\ude34",
+        "Lights out \u2014 7.5 hrs"
       ]
     ],
     "wfh": [
@@ -762,126 +762,126 @@
         "wake",
         "06:45",
         "06:55",
-        "⏰",
-        "Wake · CGM + basal · water · change"
+        "\u23f0",
+        "Wake \u00b7 CGM + basal \u00b7 water \u00b7 change"
       ],
       [
         "gymtrip",
         "06:55",
         "07:10",
-        "🚶",
-        "Head to gym — 710 Proudfoot Ln"
+        "\ud83d\udeb6",
+        "Head to gym \u2014 710 Proudfoot Ln"
       ],
       [
         "gym",
         "07:10",
         "08:15",
-        "🏋️",
-        "GYM — full session 60–70 min"
+        "\ud83c\udfcb\ufe0f",
+        "GYM \u2014 full session 60\u201370 min"
       ],
       [
         "home",
         "08:15",
         "08:30",
-        "🚶",
+        "\ud83d\udeb6",
         "Back home"
       ],
       [
         "shower",
         "08:30",
         "08:50",
-        "🚿",
+        "\ud83d\udebf",
         "Shower + dress"
       ],
       [
         "eatbfast",
         "08:50",
         "09:00",
-        "🌅",
-        "Quick breakfast · bolus · supplements"
+        "\ud83c\udf05",
+        "Quick breakfast \u00b7 bolus \u00b7 supplements"
       ],
       [
         "workam",
         "09:00",
         "12:30",
-        "💼",
-        "Work — morning block (WFH)"
+        "\ud83d\udcbc",
+        "Work \u2014 morning block (WFH)"
       ],
       [
         "cooklunch",
         "12:30",
         "12:55",
-        "🍳",
-        "COOK lunch — the delivery-trigger hour"
+        "\ud83c\udf73",
+        "COOK lunch \u2014 the delivery-trigger hour"
       ],
       [
         "eatlunch",
         "12:55",
         "13:15",
-        "☀️",
-        "Eat lunch · bolus"
+        "\u2600\ufe0f",
+        "Eat lunch \u00b7 bolus"
       ],
       [
         "workpm",
         "13:15",
         "17:00",
-        "💼",
-        "Work — afternoon block"
+        "\ud83d\udcbc",
+        "Work \u2014 afternoon block"
       ],
       [
         "read",
         "17:15",
         "17:35",
-        "📚",
-        "CELPIP reading — 20 min"
+        "\ud83d\udcda",
+        "CELPIP reading \u2014 20 min"
       ],
       [
         "upskill",
         "17:45",
         "18:45",
-        "💻",
+        "\ud83d\udcbb",
         "Cyber upskill + money move"
       ],
       [
         "cookdin",
         "18:45",
         "19:15",
-        "🍳",
-        "Cook dinner · bolus"
+        "\ud83c\udf73",
+        "Cook dinner \u00b7 bolus"
       ],
       [
         "eatdin",
         "19:15",
         "19:45",
-        "🌙",
+        "\ud83c\udf19",
         "Eat dinner"
       ],
       [
         "free",
         "19:45",
         "21:15",
-        "🎯",
-        "Free — friends · errands · earned treat"
+        "\ud83c\udfaf",
+        "Free \u2014 friends \u00b7 errands \u00b7 earned treat"
       ],
       [
         "medit",
         "21:15",
         "21:30",
-        "🧘",
+        "\ud83e\uddd8",
         "Meditate / breathwork"
       ],
       [
         "prep",
         "21:45",
         "22:15",
-        "🎒",
-        "Prep · creatine · wind down"
+        "\ud83c\udf92",
+        "Prep \u00b7 creatine \u00b7 wind down"
       ],
       [
         "sleep",
         "22:30",
         "",
-        "😴",
+        "\ud83d\ude34",
         "Lights out"
       ]
     ],
@@ -890,49 +890,49 @@
         "wake",
         "09:00",
         "09:30",
-        "⏰",
-        "Wake easy · CGM + basal · breakfast"
+        "\u23f0",
+        "Wake easy \u00b7 CGM + basal \u00b7 breakfast"
       ],
       [
         "groc",
         "10:00",
         "11:30",
-        "🛒",
-        "Groceries — full week, one run (list in repo)"
+        "\ud83d\uded2",
+        "Groceries \u2014 full week, one run (list in repo)"
       ],
       [
         "prep5",
         "13:00",
         "14:30",
-        "🍳",
+        "\ud83c\udf73",
         "Meal-prep: 5 lunches + boiled eggs + dal pot"
       ],
       [
         "gym",
         "15:00",
         "16:15",
-        "🏋️",
-        "GYM — 710 Proudfoot Ln"
+        "\ud83c\udfcb\ufe0f",
+        "GYM \u2014 710 Proudfoot Ln"
       ],
       [
         "free",
         "16:30",
         "21:00",
-        "🎉",
-        "Free — friends / trip (use an earned treat)"
+        "\ud83c\udf89",
+        "Free \u2014 friends / trip (use an earned treat)"
       ],
       [
         "read",
         "21:00",
         "21:20",
-        "📚",
-        "CELPIP reading — 20 min"
+        "\ud83d\udcda",
+        "CELPIP reading \u2014 20 min"
       ],
       [
         "sleep",
         "23:00",
         "",
-        "😴",
+        "\ud83d\ude34",
         "Lights out"
       ]
     ],
@@ -941,50 +941,50 @@
         "wake",
         "09:30",
         "10:00",
-        "⏰",
-        "Slow morning · CGM + basal"
+        "\u23f0",
+        "Slow morning \u00b7 CGM + basal"
       ],
       [
         "gym",
         "11:00",
         "12:15",
-        "🏋️",
+        "\ud83c\udfcb\ufe0f",
         "GYM or long walk"
       ],
       [
         "read",
         "15:00",
         "15:20",
-        "📚",
-        "CELPIP reading — 20 min"
+        "\ud83d\udcda",
+        "CELPIP reading \u2014 20 min"
       ],
       [
         "plansun",
         "17:00",
         "17:45",
-        "🗺️",
-        "PLAN SUNDAY — budget check · book the week"
+        "\ud83d\uddfa\ufe0f",
+        "PLAN SUNDAY \u2014 budget check \u00b7 book the week"
       ],
       [
         "prepmon",
         "19:00",
         "19:45",
-        "🎒",
-        "Prep office Monday: lunch · clothes · bag"
+        "\ud83c\udf92",
+        "Prep office Monday: lunch \u00b7 clothes \u00b7 bag"
       ],
       [
         "wind",
         "22:00",
         "22:30",
-        "🌒",
+        "\ud83c\udf12",
         "Wind down"
       ],
       [
         "sleep",
         "22:30",
         "",
-        "😴",
-        "Early night — Monday is 6:15"
+        "\ud83d\ude34",
+        "Early night \u2014 Monday is 6:15"
       ]
     ]
   },

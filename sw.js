@@ -55,7 +55,7 @@ self.addEventListener('notificationclick', (event) => {
 
 /* ---------------- app-shell cache ---------------- */
 const CACHE_PREFIX = 'flowstate-';
-const CACHE = CACHE_PREFIX + 'midnight-v4';
+const CACHE = CACHE_PREFIX + 'midnight-v5';
 const SHELL = [
   './',
   'index.html',

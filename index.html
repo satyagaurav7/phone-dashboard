@@ -2265,7 +2265,12 @@ async function initApp(){
             Dash.setMany({[`chores.${id}`]:CHORES.completePatch(Dash.today,choreRec(id))});
             flowToast(`${chore.title} done`);
           } else {
-            Dash.set(`chores.${id}.steps.${idx}`,done[idx]);
+            // Stamp which occurrence these ticks belong to, so tomorrow's
+            // checklist does not open already half-ticked from today.
+            const occ=CHORES.choreState({chore,record:choreRec(id),today:Dash.today,
+              since:Dash.state.config&&Dash.state.config.choresStart}).dueDate||Dash.today;
+            Dash.setMany({[`chores.${id}.steps.${idx}`]:done[idx],
+                          [`chores.${id}.stepsOccurrence`]:occ});
           }
         });
       });
@@ -2282,8 +2287,12 @@ async function initApp(){
           const id=el.dataset.choreMove;
           // Moves the preferred slot only. It cannot reach an external deadline,
           // and it does not count as doing the chore.
-          Dash.set(`chores.${id}.moved`,CHORES.addDays(Dash.today,1));
-          flowToast('Moved to tomorrow');
+          // movedAt records WHEN the deferral was asked for. Without it the
+          // ledger applied one moved date to every past day, so this button
+          // erased already-assessed penalties.
+          Dash.setMany({[`chores.${id}.moved`]:CHORES.addDays(Dash.today,1),
+                        [`chores.${id}.movedAt`]:Dash.today});
+          flowToast('Moved to tomorrow · past days still count');
         });
       });
       root.querySelectorAll('[data-chorestage]').forEach(el=>{
