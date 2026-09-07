@@ -107,16 +107,17 @@ test('a running stage reports an estimate and never completes itself', async () 
   const { stagePlan } = await import(CHORES_URL);
   const chore = fixture.chores[4];
   const startedAt = Date.parse('2026-09-13T13:55:00-04:00');
-  const plan = stagePlan({ chore, record: { stage: { id: 'wash', startedAt } }, nowTs: startedAt + 10 * 60000 });
+  const record = { stage: { id: 'wash', startedAt, occurrence: SUN, done: ['sort'] } };
+  const plan = stagePlan({ chore, record, nowTs: startedAt + 10 * 60000, occurrence: SUN });
   assert.equal(plan.current.id, 'wash');
-  assert.equal(plan.stages[0].state, 'complete');
+  assert.equal(plan.stages[0].state, 'complete', 'sort was recorded done, so it reads done');
   assert.equal(plan.stages[1].state, 'running');
   assert.equal(plan.stages[2].state, 'pending');
   assert.equal(plan.readyAt, startedAt + 60 * 60000);
   assert.equal(plan.overdueEstimate, false);
 
   // The estimate elapses. That is a prompt to check, not a finished stage.
-  const past = stagePlan({ chore, record: { stage: { id: 'wash', startedAt } }, nowTs: startedAt + 90 * 60000 });
+  const past = stagePlan({ chore, record, nowTs: startedAt + 90 * 60000, occurrence: SUN });
   assert.equal(past.overdueEstimate, true);
   assert.equal(past.current.state, 'running');
   assert.equal(past.stages[2].state, 'pending');
@@ -184,7 +185,7 @@ test('date maths steps calendar days, not fixed 24-hour spans', async () => {
   assert.equal(dayOfWeek(THU), 4);
 });
 
-test('the production catalogue is well formed and scores nothing', async () => {
+test('the production catalogue is well formed and carries no inline score', async () => {
   const { upkeepBoard } = await import(CHORES_URL);
   const board = upkeepBoard({ sched: schedule, state: {}, today: MON });
   assert.ok(board.rows.length >= 10);
@@ -383,4 +384,58 @@ test('a drifted schedule is rejected rather than shipped', async () => {
   const broken = JSON.parse(JSON.stringify(schedule));
   broken.tapPlan.itemTimes.office.dinner = '19:40'; // before Evening opens
   assert.throws(() => rules.assertSchedule(broken), /dinner is suggested at 19:40/);
+});
+
+test('a stage started last week does not look live this week', async () => {
+  const { stagePlan } = await import(CHORES_URL);
+  const chore = fixture.chores[4];
+  const record = { stage: { id: 'wash', startedAt: Date.now(), occurrence: '2026-09-06' } };
+  const stale = stagePlan({ chore, record, nowTs: Date.now(), occurrence: '2026-09-13' });
+  assert.equal(stale.current, null, "last week's load is not still running");
+  const live = stagePlan({ chore, record, nowTs: Date.now(), occurrence: '2026-09-06' });
+  assert.equal(live.current.id, 'wash');
+});
+
+test('jumping to a later stage marks the skipped ones skipped, not done', async () => {
+  // Starting the dryer used to silently assert that sorting and washing had
+  // happened. It says "skipped" now, because the app did not see them happen.
+  const { stagePlan, startStagePatch } = await import(CHORES_URL);
+  const chore = fixture.chores[4];
+  const patch = startStagePatch({ chore, record: {}, stageId: 'fold', occurrence: '2026-09-13', nowTs: 1 });
+  const plan = stagePlan({ chore, record: patch, nowTs: 2, occurrence: '2026-09-13' });
+  assert.equal(plan.stages[0].state, 'skipped');
+  assert.equal(plan.stages[1].state, 'skipped');
+  assert.equal(plan.stages[2].state, 'running');
+});
+
+test('working through stages in order records them as genuinely complete', async () => {
+  const { stagePlan, startStagePatch } = await import(CHORES_URL);
+  const chore = fixture.chores[4];
+  let record = startStagePatch({ chore, record: {}, stageId: 'sort', occurrence: '2026-09-13', nowTs: 1 });
+  record = startStagePatch({ chore, record, stageId: 'wash', occurrence: '2026-09-13', nowTs: 2 });
+  record = startStagePatch({ chore, record, stageId: 'fold', occurrence: '2026-09-13', nowTs: 3 });
+  const plan = stagePlan({ chore, record, nowTs: 4, occurrence: '2026-09-13' });
+  assert.equal(plan.stages[0].state, 'complete');
+  assert.equal(plan.stages[1].state, 'complete');
+  assert.equal(plan.stages[2].state, 'running');
+});
+
+test('undo removes only today and restores the previous completion', async () => {
+  const { undoCompletePatch, completePatch } = await import(CHORES_URL);
+  const after = completePatch(SUN, { done: { [THU]: true } });
+  const undone = undoCompletePatch(SUN, after);
+  assert.deepEqual(undone.done, { [THU]: true });
+  assert.equal(undone.last, THU, 'the earlier completion is not lost');
+  assert.equal(undoCompletePatch(THU, { done: { [THU]: true } }).last, null);
+});
+
+test('undo actually returns the points the completion earned', async () => {
+  const { choreLedger, completePatch, undoCompletePatch } = await import(CHORES_URL);
+  const sched = { chores: [fixture.chores[0]] };
+  const base = { config: { choresStart: MON } };
+  const done = { ...base, chores: { daily: completePatch(MON, {}) } };
+  const withPoints = choreLedger({ sched, state: done, today: MON }).total;
+  const undone = { ...base, chores: { daily: undoCompletePatch(MON, done.chores.daily) } };
+  assert.equal(choreLedger({ sched, state: undone, today: MON }).total, 0);
+  assert.ok(withPoints > 0);
 });

@@ -1,9 +1,11 @@
 /* Home upkeep engine.
  *
- * Deliberately separate from rules.mjs. Plan section 8.10: chores stay out of
- * evaluateDay, the signed balance, blackout and the Beeminder reporter. Nothing
- * here returns a score, and nothing here is imported by the scoring path — a
- * missed chore must never be able to cost money. Keep it that way.
+ * Deliberately separate from rules.mjs. The boundary has MOVED once and the
+ * current line is this: chores DO score — see choreLedger at the bottom, which
+ * Satya asked for on 2026-09-07, reversing plan section 8.10 — but they move the
+ * BALANCE ONLY. evaluateDay never sees them, and stakes.mjs posts on the day
+ * verdict rather than the balance, so a missed chore can drag the app into
+ * blackout and can never cost real money. Keep that half of the boundary.
  *
  * The other rule this file enforces is section 8.7: one outstanding occurrence
  * per template. A weekly chore skipped for a month is one overdue job, not four.
@@ -149,13 +151,22 @@ export function upkeepBoard({ sched, state = {}, today }) {
  * is *estimated* to be ready. Section 8.5 and section 6: a finished estimate is
  * never a finished stage — the machine is not the authority on whether the
  * clothes are dry, and nothing here auto-completes. */
-export function stagePlan({ chore, record = {}, nowTs }) {
+export function stagePlan({ chore, record = {}, nowTs, occurrence = null }) {
   const stages = (chore.stages || []).map(stage => ({ ...stage, state: 'pending' }));
   if (!stages.length) return { stages, current: null, readyAt: null, overdueEstimate: false };
 
   const started = record.stage || null;
+  // A running load belongs to one occurrence. Without this check last Sunday's
+  // half-finished laundry still showed as running this Sunday.
+  const stale = started && occurrence && started.occurrence && started.occurrence !== occurrence;
+  if (stale) return { stages, current: null, readyAt: null, overdueEstimate: false };
+
   const index = started ? stages.findIndex(s => s.id === started.id) : -1;
-  for (let i = 0; i < index; i++) stages[i].state = 'complete';
+  // Earlier stages are marked complete only when they were actually recorded as
+  // done. Starting the dryer used to silently assert that sorting and washing
+  // had happened, inventing history the user never entered.
+  const doneIds = new Set(started?.done || []);
+  for (let i = 0; i < index; i++) stages[i].state = doneIds.has(stages[i].id) ? 'complete' : 'skipped';
 
   if (index === -1) return { stages, current: null, readyAt: null, overdueEstimate: false };
 
@@ -175,6 +186,28 @@ export function stagePlan({ chore, record = {}, nowTs }) {
 
 /* The record patch for completing a chore. Returned rather than written so the
  * caller owns persistence, and so this stays a pure function under test. */
+/* Starting a stage records it, and remembers which earlier stages were really
+ * completed. Jumping ahead is allowed — sometimes the machine is already
+ * running — but the skipped ones are shown as skipped, never as done. */
+export function startStagePatch({ chore, record = {}, stageId, occurrence, nowTs = Date.now() }) {
+  const ids = (chore.stages || []).map(s => s.id);
+  const from = record.stage && record.stage.occurrence === occurrence ? record.stage : null;
+  const done = new Set(from?.done || []);
+  if (from) done.add(from.id);            // the stage you were on is finished
+  const target = ids.indexOf(stageId);
+  const kept = ids.filter((id, i) => i < target && done.has(id));
+  return { stage: { id: stageId, startedAt: nowTs, occurrence, done: kept } };
+}
+
+/* Undo, because a mis-tap on a phone should not be permanent. Removes today's
+ * completion and leaves every other day's history alone. */
+export function undoCompletePatch(today, record = {}) {
+  const done = { ...(record.done || {}) };
+  delete done[today];
+  const remaining = Object.keys(done).sort();
+  return { done, last: remaining.length ? remaining[remaining.length - 1] : null };
+}
+
 export function completePatch(today, record = {}) {
   // `done` is a set of completion dates, not just the most recent one. The
   // ledger has to walk history to know which occurrences were met and which

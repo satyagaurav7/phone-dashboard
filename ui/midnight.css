@@ -35,3 +35,5 @@ h1{font:400 clamp(40px,5vw,62px)/1.04 var(--editorial);letter-spacing:-.045em;ma
 .choreStage.complete b{color:var(--text-2);text-decoration:line-through}.choreStage.running b{color:var(--accent-flow)}
 .choreActions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:6px 0 14px}
 .stepWrap{padding:0 0 6px 36px}.stepWrap>summary{list-style:none;cursor:pointer;font:11px var(--mono);color:var(--text-2);padding:6px 0}.stepWrap>summary::-webkit-details-marker{display:none}
+.choreCost{font:11px var(--mono);color:var(--text-2);margin-left:auto}.choreRow.overdue .choreCost{color:#ff9090}
+.choreStage.skipped b{color:var(--text-2)}.choreStage.skipped small{color:#c9a227}

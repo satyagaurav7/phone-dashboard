@@ -20,6 +20,21 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 - Pending confirmation: laundry setup/load count, shared chore ownership, collection schedule, live commitments and selected task list. Next implementation step is a read-only mapping audit after access approval.
 - Plan is local/uncommitted. Existing UI changes remain in the shared working tree; the prior fetch/publish attempt was blocked by approval-review usage limits and was not retried. Coordinate ownership before editing those files.
 
+### Second review pass: remaining P2 findings fixed (2026-09-07)
+
+Four more items from Codex's review, all correctness rather than policy. The chosen penalties are unchanged.
+
+1. **Blackout hid the escape hatch.** Non-Today tabs were removed from the nav and every tab forced back to Today. Now that chores can drive the balance below the floor, that took away the day-off control — which lives in More — and the schedule, at the moment they were most needed. Recovery, planning and settings now stay reachable; only cosmetics are withdrawn, and the balance and its consequences remain fully visible. Verified in the harness: with `tier-blackout` applied, More and Plan render and `#dayOffDate` is reachable.
+2. **Laundry stages invented history.** Starting a later stage marked every earlier one complete, asserting work the app never saw. Skipped stages now read `skipped`, and only stages actually recorded as finished read `complete`. Stages are also occurrence-scoped, so last Sunday's load no longer shows as running this Sunday.
+3. **No Undo.** A mis-tap marking a chore done was permanent. `undoCompletePatch` removes today's completion only, restores the previous `last`, and returns the points — verified live: balance moved -20 → -23 on undo.
+4. **The balance was one opaque number.** Each chore row now shows its own running contribution ("+3 so far"), so it is inspectable rather than a single figure to argue with.
+
+Stale documentation corrected: `chores.mjs`'s header claimed chores never score, which stopped being true when the ledger was added. It now states the current boundary — chores move the balance, never the day verdict, so they cannot reach the money stake.
+
+Deliberately not done, and left for approval because they are policy or redesign rather than defects: the unified Day board in review section 3; the schedule adjustments in section 7; a per-day cap on household exposure (section 9 recommends evaluating one, and notes four daily chores alone produce -20/day); per-day-kind chore windows to avoid collisions with saved evening slots. The `tasks-sync.mjs` gaps stand as recorded — consent remains necessary but not sufficient.
+
+Verification: 85/85 `tests/*.test.mjs` (5 new), 17/17 `tests/midnight.test.cjs`, build clean, service worker `midnight-v6`, browser-driven checks for undo, stage skipping, per-chore cost and blackout navigation.
+
 ### Closeout: three defects fixed, Google sync parked unarmed (2026-09-07)
 
 Codex's `docs/superpowers/plans/2026-09-07-day-board-optimization-review.md` found real defects in Claude's work. Three were reproduced and fixed before closing out.

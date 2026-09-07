@@ -178,7 +178,7 @@
   .stakeLine.emergency,.stakeLine.stale{padding:9px;border:1px solid #FF6B6B;background:rgba(255,64,64,.12);color:#FFD6D6}
   body.tier-debt{--mood-c1:232,91,91;--mood-c2:139,124,246}
   body.tier-blackout #moodLayer{display:none}body.tier-blackout{background:#08090c}
-  body.tier-blackout .bottomNav .navBtn:not([data-tab="today"]){display:none}
+  body.tier-blackout .bottomNav .navBtn:not([data-tab="today"]):not([data-tab="more"]):not([data-tab="plan"]){opacity:.55}
 
   /* ============ cards — three elevation levels ============
      Every card used to be var(--card) + a 1.5px hairline, so Supplements carried
@@ -1300,7 +1300,7 @@ async function initApp(){
       return `<section id="dayBoard"><div class="boardHeading"><h1>Your day</h1><span>${result.blocks.reduce((n,b)=>n+b.items.filter(i=>d[i.key]===true).length,0)} / ${result.blocks.reduce((n,b)=>n+b.items.length,0)} logged</span></div>
         ${focus?`<div class="boardFocus"><span>${open.length?'RIGHT NOW':'UP NEXT'}</span><strong>${escHtml(focus.title)}</strong><div class="windowCount" data-countdown ${open.length?`data-end-min="${focus.endMin}"`:`data-start-min="${focus.startMin}"`}></div>${open.length?nextLine:`<small>Starts at ${fmt(focus.startMin)}</small>`}</div>`:result.off?'<p>Day off. No windows today.</p>':'<p>All windows closed for today.</p>'}
         <div class="windowHead"><span class="verdict ${result.verdict}">${result.verdict.toUpperCase()}</span><span>${sign(result.delta)} today</span><span class="windowBalance ${ledger.total<0?'balanceNeg':''}">Balance ${sign(ledger.total)}</span></div>
-        ${ledger.tier==='blackout'?'<div class="stakeLine emergency">Blackout clears when the balance returns above zero. Logging stays available.</div>':''}
+        ${ledger.tier==='blackout'?'<div class="stakeLine emergency">Blackout: the balance is below '+RULES.BLACKOUT_FLOOR+'. Cosmetics are off until it returns above zero. Logging, the schedule, settings and the day-off control all stay available.</div>':''}
         ${rows}
       </section>`;
     }
@@ -1330,6 +1330,14 @@ async function initApp(){
       try{ board=CHORES.upkeepBoard({sched:SCHED_DATA,state:s,today:Dash.today}); }
       catch(e){ return ''; }
       const now=Date.now();
+      // Per-chore running cost, so the balance is inspectable rather than one
+      // opaque number: you can see which chore is actually draining it.
+      const perChore={};
+      try{
+        for(const c of (SCHED_DATA.chores||[])){
+          perChore[c.id]=CHORES.choreLedger({sched:{chores:[c]},state:s,today:Dash.today}).total;
+        }
+      }catch(e){}
       const fmtClock=ts=>new Date(ts).toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit',hour12:false});
       const rows=board.rows.map(r=>{
         const chip=CHORE_CHIP[r.status]||r.status.toUpperCase();
@@ -1338,19 +1346,24 @@ async function initApp(){
         const wait=r.waitMin?` · ${Math.round(r.waitMin/60*10)/10}h waiting`:'';
         let body='';
         if(r.stages&&r.stages.length){
-          const plan=CHORES.stagePlan({chore:r,record:(s.chores||{})[r.id]||{},nowTs:now});
+          const plan=CHORES.stagePlan({chore:r,record:(s.chores||{})[r.id]||{},nowTs:now,occurrence:r.dueDate});
           body=`<div class="choreStages">`+plan.stages.map(st=>{
             const running=st.state==='running';
             const ready=running&&plan.readyAt?`<small>${plan.overdueEstimate?'Estimate passed — go and check':`Ready about ${escHtml(fmtClock(plan.readyAt))}`}</small>`:'';
             const cd=st.waitMin?`${st.waitMin} min wait`:`${st.activeMin||0} min`;
-            return `<div class="choreStage ${st.state}"><span><b>${escHtml(st.label)}</b><small>${cd}</small>${ready}</span><button type="button" class="chip" data-chorestage="${escAttr(r.id)}:${escAttr(st.id)}">${running?'Restart':'Start'}</button></div>`;
+            const mark=st.state==='complete'?' · done':st.state==='skipped'?' · skipped':'';
+            return `<div class="choreStage ${st.state}"><span><b>${escHtml(st.label)}</b><small>${cd}${mark}</small>${ready}</span><button type="button" class="chip" data-chorestage="${escAttr(r.id)}:${escAttr(st.id)}">${running?'Restart':'Start'}</button></div>`;
           }).join('')+`</div><p class="boardNote">A finished estimate is not a finished load. Nothing here ticks itself off.</p>`;
         } else if(r.steps&&r.steps.length){
           const done=r.stepsDone||{};
           body=`<div class="choreSteps">`+r.steps.map((label,i)=>`<button type="button" class="stepItem${done[i]===true?' checked':''}" data-chorestep="${escAttr(r.id)}:${i}" aria-pressed="${done[i]===true}"><span class="boardCheck">${done[i]===true?icon('check'):''}</span><span>${escHtml(label)}</span></button>`).join('')+`</div>`;
         }
+        const ledgerCost=perChore[r.id]||0;
+        const costLine=ledgerCost?`<span class="choreCost">${ledgerCost>0?'+':''}${ledgerCost} so far</span>`:'';
         const actions=`<div class="choreActions"><button type="button" class="chip" data-chore-done="${escAttr(r.id)}">${r.status==='done'?'Done today':'Mark done'}</button>`+
-          (r.status==='done'||r.status==='anytime'?'':`<button type="button" class="quiet-link" data-chore-move="${escAttr(r.id)}">Move to tomorrow</button>`)+`</div>`;
+          (r.status==='done'?`<button type="button" class="quiet-link" data-chore-undo="${escAttr(r.id)}">Undo</button>`:'')+
+          (r.status==='done'||r.status==='anytime'?'':`<button type="button" class="quiet-link" data-chore-move="${escAttr(r.id)}">Move to tomorrow</button>`)+
+          costLine+`</div>`;
         return `<details class="choreRow ${r.status}" data-disclosure="chore-${escAttr(r.id)}"><summary><span class="choreName">${escHtml(r.title)}<small>${escHtml(cost)}${escHtml(wait)}${r.window?` · from ${escHtml(r.window)}`:''}</small></span><span class="choreChip">${chip}${late}</span><span class="boardChevron">⌄</span></summary>${body}${actions}</details>`;
       }).join('');
       const led=combinedLedger();
@@ -2165,7 +2178,12 @@ async function initApp(){
       const tier=windowLedger().tier;
       document.body.classList.toggle('tier-debt',tier==='debt');
       document.body.classList.toggle('tier-blackout',tier==='blackout');
-      if(tier==='blackout'&&tab!=='today') tab='today';
+      // Blackout used to force every tab back to Today and hide the rest of
+      // the nav. Now that chores can drive the balance below the floor, that
+      // took away the day-off control — which lives in More — at the exact
+      // moment it was needed, and hid the schedule you would use to dig out.
+      // Accountability stays loud; recovery stays reachable. Only cosmetics
+      // are withdrawn. Nothing here reverses the chosen penalties.
       const tabChanged = tab!==lastTab;
       // The status element is recreated by every redraw, so the live state has
       // to be repainted onto it or it reverts to whatever the template said.
@@ -2282,6 +2300,18 @@ async function initApp(){
           flowToast(`${chore.title} done`);
         });
       });
+      root.querySelectorAll('[data-chore-undo]').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const id=el.dataset.choreUndo;
+          const chore=(SCHED_DATA.chores||[]).find(c=>c.id===id); if(!chore) return;
+          // A mis-tap on a phone should not be permanent. Removes today's
+          // completion only; every other day's history is left alone.
+          Dash.setMany(Object.fromEntries(Object.entries(
+            CHORES.undoCompletePatch(Dash.today,choreRec(id))
+          ).map(([k,v])=>[`chores.${id}.${k}`,v])));
+          flowToast(`${chore.title} un-done`);
+        });
+      });
       root.querySelectorAll('[data-chore-move]').forEach(el=>{
         el.addEventListener('click',()=>{
           const id=el.dataset.choreMove;
@@ -2298,9 +2328,15 @@ async function initApp(){
       root.querySelectorAll('[data-chorestage]').forEach(el=>{
         el.addEventListener('click',()=>{
           const [id,stage]=el.dataset.chorestage.split(':');
-          // Records that a stage started. It never completes the stage: only
-          // the user can say the load is actually done.
-          Dash.set(`chores.${id}.stage`,{id:stage,startedAt:Date.now()});
+          const chore=(SCHED_DATA.chores||[]).find(c=>c.id===id); if(!chore) return;
+          const occ=CHORES.choreState({chore,record:choreRec(id),today:Dash.today,
+            since:Dash.state.config&&Dash.state.config.choresStart}).dueDate||Dash.today;
+          // Records that a stage started, and which earlier stages were really
+          // finished. It never completes the stage, and never infers that the
+          // ones before it happened.
+          Dash.setMany(Object.fromEntries(Object.entries(
+            CHORES.startStagePatch({chore,record:choreRec(id),stageId:stage,occurrence:occ})
+          ).map(([k,v])=>[`chores.${id}.${k}`,v])));
         });
       });
 
