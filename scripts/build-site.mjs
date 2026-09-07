@@ -23,6 +23,10 @@ export const PUBLIC_FILES = [
   'manifest.json',
   'schedule.json',
   'rules.mjs',
+  'ui/midnight.css',
+  'ui/midnight.mjs',
+  'assets/filament.svg',
+  'fonts/newsreader.woff2',
   'icons',
   'moods',
   'tools/mood-measure.html',
@@ -31,7 +35,10 @@ export const PUBLIC_FILES = [
 
 // Without these the deployed site is broken, so a missing one fails the build
 // rather than publishing a half-working shell.
-export const REQUIRED_FILES = ['index.html', 'sw.js', 'manifest.json', 'schedule.json', 'rules.mjs'];
+export const REQUIRED_FILES = [
+  'index.html', 'sw.js', 'manifest.json', 'schedule.json', 'rules.mjs',
+  'ui/midnight.css', 'ui/midnight.mjs', 'assets/filament.svg', 'fonts/newsreader.woff2',
+];
 
 async function exists(path) {
   try {
