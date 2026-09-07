@@ -15,7 +15,7 @@
  */
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
-import { writeFileSync, chmodSync } from 'node:fs';
+import { writeFileSync, chmodSync, readFileSync } from 'node:fs';
 
 /* Environment first, but fall back to asking. Putting a client secret on a
  * command line writes it into shell history, where it outlives its usefulness;
@@ -28,8 +28,24 @@ async function ask(question) {
   return answer;
 }
 
+/* Third source: a local file the account holder writes themselves. It exists so
+ * the client secret can reach this script without being typed onto a command
+ * line, pasted into a chat, or read by anyone else — including whoever is
+ * driving this repository. Gitignored, and never printed back. */
+const CLIENT_FILE = new URL('../.google-client.json', import.meta.url);
+
 let CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
 let CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  try {
+    const file = JSON.parse(readFileSync(CLIENT_FILE, 'utf8'));
+    CLIENT_ID = CLIENT_ID || file.client_id;
+    CLIENT_SECRET = CLIENT_SECRET || file.client_secret;
+    if (CLIENT_ID && CLIENT_SECRET) console.log('Using client details from .google-client.json');
+  } catch { /* absent or unreadable: fall through to the prompt */ }
+}
+
 if ((!CLIENT_ID || !CLIENT_SECRET) && process.stdin.isTTY) {
   console.log('\nFrom console.cloud.google.com → APIs & Services → Credentials.');
   console.log('Nothing typed here is written to the repository or printed back.\n');
@@ -51,7 +67,11 @@ const CRED_PATH = new URL('../.google-oauth.json', import.meta.url);
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.error(
-    'Set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET first.\n' +
+    'No client details found. Any one of these works:\n' +
+    '  - write .google-client.json in the project root:\n' +
+    '      {"client_id": "...", "client_secret": "..."}\n' +
+    '  - run this in an interactive terminal and be prompted\n' +
+    '  - set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET\n\n' +
     'Create them at console.cloud.google.com → APIs & Services → Credentials →\n' +
     'Create credentials → OAuth client ID → Web application, with redirect URI\n' +
     `exactly: ${REDIRECT}`

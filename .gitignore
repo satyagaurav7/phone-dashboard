@@ -19,3 +19,4 @@ legacy-calendar-backup.json
 tasks-audit*.json
 audit-report*.json
 .google-oauth.json
+.google-client.json
