@@ -1,6 +1,6 @@
 # Unified integration execution status
 
-Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T2 is committed at 3ad06bc (local only, not pushed); T3 and T4 are unclaimed.
+Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T2 and T4 are committed locally and not pushed; T3 is unclaimed.
 
 ## Current state
 
@@ -157,7 +157,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 | T1 | Deployment artifact boundary and integration baseline | — | **Deployed** | Released (Claude, 2026-09-06) |
 | T2 | Versioned registry and snapshot contract | T1 | **Committed 3ad06bc, not pushed** | Claude, 2026-09-07 |
 | T3 | Fixture-backed Workspace UI | T2 | Pending | Unassigned |
-| T4 | Local collector with Encore + trading adapters | T2 | Pending | Unassigned |
+| T4 | Local collector with Encore + trading adapters | T2 | **Committed, not pushed** | Claude, 2026-09-07 |
 | T5 | Sleepforge, downloader, references, Graphify metadata | T4 | Pending | Unassigned |
 | T6 | Authenticated snapshot transport and emulator tests | T3, T5 | Pending | Unassigned |
 | T7 | Phone rollout, operations, agent handoff verification | T6 | Pending | Unassigned |
@@ -306,9 +306,67 @@ Next task and exact first action: T3 (fixture-backed Workspace view) or T4 (Enco
 Ownership released: yes.
 ```
 
+## Session record — T4
+
+```text
+Task ID and state: T4 (Encore + trading collector) — implemented, tested, and demonstrated against a
+  live local Encore server. Committed locally; NOT pushed, NOT deployed.
+Agent/session and UTC timestamp: Claude Code, 2026-09-08T01:00Z
+Checkout path, branch, starting commit (per repo):
+  phone-dashboard  C:/Users/Satya/Downloads/Projects/phone-dashboard  main  2aaeab4 (T2)
+  encore           main  3840e9c   read-only; 22 pre-existing dirty entries, all mtimes 2026-09-06,
+                                   verified unchanged by this session
+  ai-trading-lab   main  90ddc53   read-only, not running during the demo
+File ownership / overlaps checked: created scripts/integrations/{collect,config,bounded}.mjs,
+  scripts/integrations/adapters/{encore,trading}.mjs, tests/integration-{collect,adapters}.test.mjs.
+  All new. Codex's uncommitted .gitignore/index.html/sw.js/ui/midnight.css remain untouched and unstaged.
+Changes and decisions:
+  - SPEC anticipated GET /api/summary on the trading dashboard. That route does not exist. The real
+    sensitive routes are /api/portfolio, /api/overview, /api/watchlist, /api/journal and /api/signals.
+    The adapter calls /api/health only; tests assert the others are never requested.
+  - /api/health returns watchlist, memory_cache_keys and recent_errors alongside the useful fields.
+    recent_errors is raw tracebacks and can carry provider API keys. None are mapped, and the tests
+    assert their absence from the serialised snapshot rather than trusting review.
+  - Encore's job object carries a raw `error` string with local paths. Never forwarded; a failed scrape
+    becomes status degraded + reasonCode invalid-data, and job.step is collapsed to a fixed vocabulary.
+  - Encore's feed is 38,076 lots with retail/resale/profit/bid fields. Only `count` is mapped. No pricing
+    is recomputed and no lot data leaves the laptop.
+  - guardrailsActive defaults to FALSE when the guardrail block is missing or malformed: only an explicit
+    orders_possible_from_dashboard === false is treated as safe.
+  - Size caps enforced from content-length BEFORE the body is read (products 25 MiB, health 128 KiB),
+    5s timeout, redirect:'error', max 2 sources in flight.
+  - Config requires a bare origin, rejects credentials, non-http schemes and unregistered IDs. --out is
+    refused inside the repository or any source root, so snapshots cannot reach the Pages artifact.
+Commands run and actual results:
+  node --test tests/integration-adapters.test.mjs -> 18 pass, 0 fail
+  node --test tests/integration-collect.test.mjs  -> 18 pass, 0 fail
+  node --test tests/*.test.mjs                    -> 177 pass, 0 fail (was 141 before T2/T4)
+  node scripts/build-site.mjs --out <temp>        -> integrations/, scripts/, tests/, docs/ all absent
+  CLI, private temp config and output:
+    preview (no --out)      -> both sources unavailable, "preview only — nothing written"
+    --out ./snapshots       -> refused, exit 1, "must not be inside the repository"
+    --out <temp>, no servers-> 2 explicit failed-observation snapshots written
+    --out <temp>, Encore up -> encore: ready, 2 metrics, itemCount 38076, jobState idle;
+                               ai-trading-lab: unavailable/unreachable, 0 metrics
+  Live encore.json contained only schemaVersion, sourceId, timestamps, status, reasonCode, the two
+  metrics, empty links and the revision. No titles, URLs, prices or profit figures.
+  Temp config and snapshot directory deleted after the demo.
+Commit(s), or explicit uncommitted state: see git log; T4 commit follows 2aaeab4 on main, local only.
+Remote and deployment state: NOT pushed, NOT deployed. origin/main still 5647209. The collector performs
+  no cloud writes by design; publication is T6.
+Phone verification: none, and none applicable. T4 ships no UI.
+Failures / configuration still needed: none failing. Operator config path and real base URLs stay private
+  and outside the repo. Host allowlists remain empty until a URL is verified in T6.
+Next task and exact first action: T3 (fixture-backed Workspace view). First action is to write
+  tests/integration-view.test.mjs asserting distinct ready/stale/unavailable/not-configured/reference-only
+  text and literal rendering of an <img onerror=...> fixture label, and watch it fail before creating
+  integrations/view.mjs.
+Ownership released: yes.
+```
+
 ## Next action
 
-Push 3ad06bc, then start T4 for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
+Push the T2 and T4 commits, then start T3 for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
 
 ## Evidence from planning
 
