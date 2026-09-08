@@ -28,6 +28,14 @@ function addDays(dateStr, days) {
   return date.toISOString().slice(0, 10);
 }
 
+/* The schedule's own clock. Exported because the board used to read the
+   browser's zone while scoring read this one: a phone whose clock is set
+   elsewhere would show a day and a minute the scorer disagreed with. One
+   clock, one answer. */
+export function zonedNow(timestamp, timeZone) {
+  return wallParts(timestamp, timeZone || 'America/Toronto');
+}
+
 function wallParts(timestamp, timeZone) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone,

@@ -4,6 +4,13 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### One clock: board and scorer agree (2026-09-08)
+
+- Board rendering, Now/Next selection, the live countdown, evaluateDay calls, chore occurrence checks and the check-in phase all read `rules.zonedNow(Date.now(), schedule.timezone)` instead of the browser's own `getHours()/getMinutes()`. Scoring was already Toronto-aware, so on a device whose clock is set elsewhere the two disagreed silently: the board could call a window upcoming that the scorer had already failed, or roll the date early and file work under the wrong day. Date arithmetic on an explicit date stays local, because a date string has no zone to resolve.
+- If `rules.mjs` fails to load the helper falls back to browser-local rather than refusing to render. That is the pre-existing behaviour, preserved deliberately.
+- Fixed a fixture defect found by this work: `Date.now()` is a static and is not intercepted by subclassing `Date`, so the jsdom harness ran with two clocks — `new Date()` pinned and `Date.now()` at the real time. Anything reading the second saw the real today. The harness now has one clock.
+- Verified 254/254 tests. The new timezone guard was confirmed to FAIL against the pre-fix source (23/24) and pass after, so it guards something. Browser check at 375 px under TZ=UTC: no overflow, countdown reads "Starts 12:15 · Starts in 3h 15m" at 09:00 Toronto. Cache stays midnight-v16 — the shell list is unchanged. Item 4 of the focused repair brief is closed; item 2 (staged laundry dependencies) remains open.
+
 ### Per-task times (2026-09-08)
 
 - Every routine row displays its saved per-day-kind planned time beside its instructions, including accessible button labels. Hydration says start time plus throughout the day. Existing schedule and scoring windows are unchanged; Get ready steps share their parent's planned time.

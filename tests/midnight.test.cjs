@@ -176,6 +176,26 @@ test('the header balance includes chores, and the day verdict never does',async 
   assert.equal(a.dash.state.days[today].roomreset,undefined);
 });
 
+/* The board and the scorer must agree on what time it is. jsdom runs with the
+   process timezone, so setting it away from Toronto reproduces a phone whose
+   clock is set elsewhere: 02:00 UTC is still 22:00 the previous evening in
+   Toronto. Before the shared clock landed the board read 02:00 and called
+   every routine block upcoming, while rules.mjs scored the day as already
+   over. */
+test('the board reads the schedule timezone, not the browser one',async t=>{
+  const original=process.env.TZ;
+  process.env.TZ='UTC';
+  t.after(()=>{ if(original===undefined) delete process.env.TZ; else process.env.TZ=original; });
+  const a=await app(t,{windows:true,clock:'2026-09-08T02:00:00Z'});
+  assert.equal(a.dash.today,'2026-09-07',"the day rolls on Toronto midnight, not the browser clock");
+  const blocks=[...a.w.document.querySelectorAll('#dayBoard .boardBlock')];
+  assert.ok(blocks.length>0,'the day board rendered');
+  assert.ok(blocks.some(b=>!b.classList.contains('upcoming')),
+    'at 22:00 Toronto the day is nearly over; reading 02:00 would leave every block upcoming');
+  const times=[...a.w.document.querySelectorAll('#dayBoard .routineTime time')];
+  assert.ok(times.length>0,'rows still carry their planned time');
+});
+
 async function app(t,{remote={},storage={},offline=false,windows=false,clock='2026-09-05T08:00:00'}={}) {
   const midnight = await import('../ui/midnight.mjs');
   const dom = new JSDOM('<!doctype html><html><body><div id="moodLayer"></div><div id="appRoot"></div></body></html>',{url:'https://fixture.invalid/',runScripts:'outside-only'});
@@ -183,7 +203,10 @@ async function app(t,{remote={},storage={},offline=false,windows=false,clock='20
   const w=dom.window, requests=[]; let failure=offline;
   if(windows){ w.FLOWSTATE_RULES=await import('../rules.mjs'); w.FLOWSTATE_CHORES=await import('../chores.mjs'); w.FLOWSTATE_DAY_PLAN=await import('../day-plan.mjs'); }
   for(const [k,v] of Object.entries(storage)) w.localStorage.setItem(k,v);
-  class ClockDate extends Date { constructor(...args){super(...(args.length?args:[clock]));} }
+  // Date.now() is a static and is NOT intercepted by subclassing, so without
+  // this the fixture had two clocks: `new Date()` at the pinned time and
+  // `Date.now()` at the real one. Anything reading the second saw today.
+  class ClockDate extends Date { constructor(...args){super(...(args.length?args:[clock]));} static now(){ return new ClockDate().getTime(); } }
   Object.assign(w,{midnight,Date:ClockDate,db:{},doc:()=>({}),VAPID_KEY:'',swReady:Promise.resolve(null),motionReady:Promise.resolve(null),
     matchMedia:()=>({matches:true}),scrollTo:()=>{},confirm:()=>true,
     fetch:async()=>({json:async()=>windows?JSON.parse(readFileSync(path.join(root,'schedule.json'),'utf8')):{}}),caches:{match:async()=>null},

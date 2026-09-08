@@ -598,9 +598,6 @@ onAuthStateChanged(auth, async (user) => {
 async function initApp(){
   const userDocRef = doc(db, 'dashboard', 'satya');
   const KEY = 'satya_daily_web';
-  const todayStr = d => { d = d || new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
-  const addDays = (s,n) => { const d = new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return todayStr(d); };
-  const T = todayStr();
 
   // Timetable lives in schedule.json — one source of truth shared with the
   // notification sender (scripts/notify.mjs). SW caches it for offline.
@@ -611,6 +608,28 @@ async function initApp(){
   try { SCHED_DATA = await (await fetch('schedule.json', { cache: 'no-cache' })).json(); }
   catch (e) { try { const c = await caches.match('schedule.json'); if (c) SCHED_DATA = await c.json(); } catch (e2) {} }
   if (RULES && SCHED_DATA) RULES.assertSchedule(SCHED_DATA);
+
+  /* ---------- one clock ----------
+     Scoring has always been zone-aware (rules.mjs reads schedule.timezone);
+     the board read the browser's own zone instead. On a phone whose clock is
+     not Toronto's those two disagree, and the disagreement is silent: the
+     board opens a window the scorer still calls upcoming, or rolls the date a
+     few hours early and files the day's work under yesterday. Both now come
+     from the same function.
+
+     zonedNow returns whole minutes, so seconds are taken from the raw clock —
+     every real UTC offset is a whole number of minutes. If rules.mjs failed to
+     load the app falls back to browser-local rather than refusing to render;
+     that is the pre-existing behaviour, not an improvement. */
+  const TZ = () => SCHED_DATA?.timezone || 'America/Toronto';
+  const zonedNow = () => { try { return RULES ? RULES.zonedNow(Date.now(), TZ()) : null; } catch (e) { return null; } };
+  const localDateStr = d => { d = d || new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+  // Calendar arithmetic on an explicit date stays local: the argument is a
+  // date, not an instant, so there is no zone to resolve.
+  const todayStr = d => d ? localDateStr(d) : (zonedNow()?.date ?? localDateStr());
+  const addDays = (s,n) => { const d = new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return localDateStr(d); };
+  const nowMinute = () => { const z = zonedNow(); if (z) return z.minute; const n = new Date(); return n.getHours()*60+n.getMinutes(); };
+  const T = todayStr();
 
   const blankDay = () => ({anchor:false,water:false,walk:false,read5:false,cookmeal:false,phonedown:false,smokefree:false,gym:false,language:false,cooked:false,sleep:false,study:false,money:false,meditate:false,breakfast:false,lunch:false,dinner:false,insulin:false,omega3:false,creatine:false,bonehealth:false,vitcd:false,fines:[],sched:{},hydro:[],log:{},completed:false});
 
@@ -1016,7 +1035,7 @@ async function initApp(){
     let moodApplied = null;
     function applyMood(){
       const mood = moodOf();
-      const key = new Date().getHours() + ':' + mood.key;
+      const key = Math.floor(nowMinute()/60) + ':' + mood.key;
       if(key === moodApplied) return;                  // avoid pointless repaints
       moodApplied = key;
       /* Brightness no longer answers to momentum. It used to run 0.40→1.40 with
@@ -1025,7 +1044,7 @@ async function initApp(){
          and saturation are now constant and the hour is the only thing that
          moves the light. The earned cosmetic is the mood art itself (c1/c2/k),
          which still changes when a mood is unlocked. P0.1. */
-      const hr = new Date().getHours();
+      const hr = Math.floor(nowMinute()/60);
       const tod = hr < 10 ? 16 : hr < 17 ? 0 : hr < 22 ? -12 : -28;
       const r = document.documentElement.style;
       r.setProperty('--mood-intensity', '1.10');
@@ -1236,7 +1255,7 @@ async function initApp(){
 
     function checkInCard(s,d){
       return midnight.checkIn({state:s,date:Dash.today,day:d,
-        phase:ciPhase||(new Date().getHours()>=17?'evening':'morning'),small:SMALL_WINS,big:BIG_WINS});
+        phase:ciPhase||(nowMinute()>=17*60?'evening':'morning'),small:SMALL_WINS,big:BIG_WINS});
     }
 
     /* Reminder controls. Deliberately shows what each switch does NOT cover —
@@ -1300,7 +1319,7 @@ async function initApp(){
 
     function dayBoardHTML(s,d){
       if(!RULES||!SCHED_DATA||s.config?.windowsEnabled===false) return '';
-      const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
+      const nowMin=nowMinute();
       const kind=kindOf(todow(Dash.today));
       const result=RULES.evaluateDay({sched:SCHED_DATA,dayKind:kind,day:d,dateStr:Dash.today,nowMin,isDayOff:!!s.dayOff?.[Dash.today]});
       // combinedLedger, not RULES.balance: the header must show the same number
@@ -1345,7 +1364,7 @@ async function initApp(){
       const ci=s.checkIns?.[Dash.today]||{};
       const chosen=ci.firstStep|| (ci.focus==='rest'?'Make room for rest.':'What matters to you today?');
       if(!DAY_PLAN||!RULES||!CHORES||!SCHED_DATA) return `<section id="executionBoard"><div class="boardHeading"><h1>Today</h1></div><div class="executionOutcome"><span class="eyebrow">WORTH DOING</span><p class="step-title">${escHtml(chosen)}</p><p class="muted">Choose one concrete result in Plan and reflect.</p></div></section>`;
-      const nowDate=new Date(), nowMin=nowDate.getHours()*60+nowDate.getMinutes();
+      const nowMin=nowMinute();
       const kind=kindOf(todow(Dash.today));
       const plan=DAY_PLAN.buildDayPlan({sched:SCHED_DATA,state:s,today:Dash.today,dayKind:kind,nowMin,nowTs:Date.now()});
       const action=plan.now;
@@ -2029,7 +2048,7 @@ async function initApp(){
       const render=()=>{
         const d=Dash.state.days[dstr]||{};
         const scored=RULES&&SCHED_DATA&&dstr>=(Dash.state.config?.windowsStart||'9999-12-31')
-          ? RULES.evaluateDay({sched:SCHED_DATA,dayKind:kindOf(todow(dstr)),day:d,dateStr:dstr,nowMin:dstr<Dash.today?null:(new Date().getHours()*60+new Date().getMinutes()),isDayOff:!!Dash.state.dayOff?.[dstr]}) : null;
+          ? RULES.evaluateDay({sched:SCHED_DATA,dayKind:kindOf(todow(dstr)),day:d,dateStr:dstr,nowMin:dstr<Dash.today?null:nowMinute(),isDayOff:!!Dash.state.dayOff?.[dstr]}) : null;
         const verdict=scored?`<span class="verdict ${scored.verdict}">${scored.verdict.toUpperCase()} · ${scored.delta>0?'+':''}${scored.delta}</span>`:'<span class="verdict">—</span>';
         const rowsHtml=groups.map(([g,items])=>
           `<div style="font-family:var(--disp);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:var(--sub);margin:10px 0 6px">${g}</div>`+
@@ -2086,7 +2105,7 @@ async function initApp(){
       const d=days[sel]||{}; const sched=d.sched||{};
       const editable=sel<=Dash.today;
       const isToday=sel===Dash.today;
-      const n=new Date(); const nowM=n.getHours()*60+n.getMinutes();
+      const nowM=nowMinute();
       const fineSum=dd=>(dd&&dd.fines)?dd.fines.reduce((t,k)=>{const f=FINES.find(x=>x[0]===k);return t+(f?f[3]:0);},0):0;
       let done=0,missed=0;
       const rows=blocks.map((b,i)=>{
@@ -2523,7 +2542,7 @@ async function initApp(){
           Dash.set(path,next);
           if(next===true&&RULES&&SCHED_DATA&&path.startsWith(`days.${Dash.today}.`)&&!path.includes('.sched.')){
             const key=path.split('.').pop();
-            const nowMin=new Date().getHours()*60+new Date().getMinutes();
+            const nowMin=nowMinute();
             const block=RULES.blocksFor(SCHED_DATA,kindOf(todow(Dash.today))).find(b=>b.keys.includes(key));
             if(block&&nowMin>block.endMin) flowToast(`Logged late · +1 · ${block.title} already failed`);
           }
@@ -2601,7 +2620,7 @@ async function initApp(){
               // not disappear under the user's pointer. Refresh NOW and its
               // controls after either replacing or clearing the chosen action.
               if(DAY_PLAN&&RULES&&CHORES&&SCHED_DATA){
-                const dt=new Date(), minute=dt.getHours()*60+dt.getMinutes();
+                const minute=nowMinute();
                 const plan=DAY_PLAN.buildDayPlan({sched:SCHED_DATA,state:Dash.state,today:Dash.today,
                   dayKind:kindOf(todow(Dash.today)),nowMin:minute,nowTs:Date.now()});
                 const box=root.querySelector('.executionNow');
@@ -2654,7 +2673,7 @@ async function initApp(){
         const input=root.querySelector('#dayOffDate'), date=input&&input.value;
         if(!date||date<Dash.today) return flowToast('Choose today or a future date.');
         const kind=kindOf(todow(date)), first=Math.min(...RULES.blocksFor(SCHED_DATA,kind).map(b=>b.startMin));
-        const nowMin=new Date().getHours()*60+new Date().getMinutes();
+        const nowMin=nowMinute();
         if(date===Dash.today&&nowMin>=first) return flowToast('Today already opened. A day off must be declared before the first window.');
         const allowed=RULES.canDeclareDayOff({dayOff:Dash.state.dayOff,dateStr:date});
         if(!allowed.allowed) return flowToast(`Day-off limit reached. Next available ${allowed.nextAvailableDate}.`);
@@ -2750,7 +2769,7 @@ async function initApp(){
 
     let lastBoardMinute=null;
     function updateCountdowns(){
-      const now=new Date(), nowSec=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
+      const nowSec=nowMinute()*60+new Date().getSeconds();
       const minute=Math.floor(nowSec/60);
       const changed=lastBoardMinute!==null&&lastBoardMinute!==minute;
       lastBoardMinute=minute;
