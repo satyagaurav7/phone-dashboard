@@ -1,6 +1,6 @@
 # Unified integration execution status
 
-Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T1-T4 and F1 are pushed and DEPLOYED (9645dca). T5 and T6 are unclaimed.
+Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T1-T4 and F1 are deployed. T6 is partially done: publisher and transport built and tested, rules and credentials outstanding. T5 is unclaimed.
 
 ## Current state
 
@@ -159,7 +159,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 | T3 | Fixture-backed Workspace UI | T2 | **Deployed** | Claude, 2026-09-07 |
 | T4 | Local collector with Encore + trading adapters | T2 | **Deployed (collector is local-only by design)** | Claude, 2026-09-07 |
 | T5 | Sleepforge, downloader, references, Graphify metadata | T4 | Pending | Unassigned |
-| T6 | Authenticated snapshot transport and emulator tests | T3, T5 | Pending | Unassigned |
+| T6 | Authenticated snapshot transport and emulator tests | T3, T5 | **Partial: logic done, rules/credentials blocked** | Claude, 2026-09-07 |
 | T7 | Phone rollout, operations, agent handoff verification | T6 | Pending | Unassigned |
 | T8 | Graphify quality and refresh workflow | T7 | Pending | Unassigned |
 | F1 | Day windows, signed balance, notifications, and unarmed Beeminder reporter | — | **Deployed; stakes unarmed** | Released (Codex, 2026-09-07) |
@@ -501,9 +501,65 @@ graphify) and are T5. 4 are reference entries by design and will never have coll
 reaches the phone until T6.
 ```
 
+## Session record — T6 (partial)
+
+```text
+Task ID and state: T6 partial. publishSnapshots, snapshotPath and subscribeSnapshots are implemented
+  and tested with injected dependencies. Rules are UNVERIFIED and publishing is NOT possible here.
+Agent/session and UTC timestamp: Claude Code, 2026-09-08T02:26Z
+Checkout path, branch, starting commit: phone-dashboard, main, c2d8f06
+Files: created scripts/integrations/publish.mjs, integrations/firestore-transport.mjs,
+  tests/integration-publish.test.mjs, firestore.integration.rules, firebase.integration.json,
+  docs/integration/OPERATIONS.md. Modified scripts/integrations/collect.mjs (entry-point guard).
+Changes and decisions:
+  - Namespace users/{uid}/integrations/{sourceId}. Recorded in OPERATIONS that this does NOT match the
+    app's existing dashboard/satya shape; a uid-keyed path was chosen so a rule can compare against
+    request.auth.uid instead of special-casing one hardcoded document name. The project now has two
+    shapes and that cost is written down rather than hidden.
+  - snapshotPath() throws rather than returning an uncertain path. Admin bypasses Firestore rules, so
+    rules cannot be the control on writes; the path and payload constraints live in publish.mjs.
+  - Writes go through a transaction comparing observedAt and revision. Equal observedAt counts as older:
+    re-publishing the same observation with a new revision is not new information about the source.
+  - Dry run is the default; --apply currently exits 1 because no Admin adapter is configured. It does not
+    pretend to succeed.
+  - The transport revalidates every stored document through the contract and drops failures whole. It is
+    NOT wired into index.html: connecting it before the rules exist would replace an honest
+    "No data yet" with a permanent permission error on a live app.
+  - onError is called with NO argument. A Firestore error names the uid and the denied path.
+BUG FOUND AND FIXED: both CLI entry-point guards were wrong. publish.mjs used
+  `import.meta.url.endsWith('publish.mjs')`, true on any import, so `node --test` executed main() and
+  killed the runner. collect.mjs used the basename variant, correct by luck. Both now compare
+  import.meta.url to pathToFileURL(process.argv[1]).href. Only writing a test surfaced this.
+Commands run and actual results:
+  node --test tests/integration-publish.test.mjs -> 16 pass, 0 fail
+  node --test tests/*.test.mjs                   -> 213 pass, 0 fail
+  node --test tests/midnight.test.cjs            -> 20 pass, 0 fail
+  collect then publish dry-run against live Encore -> "encore would-write / nothing written"
+  publish --apply -> exits 1 with the OPERATIONS pointer, as intended
+  build-site --out <temp> -> publish.mjs, firestore-transport.mjs, both firebase files and
+    OPERATIONS.md all absent from the artifact
+  grep for apikey/serviceaccount/private_key/refresh_token across the new files -> none
+NOT DONE, and blocked on the account holder:
+  - The deployed Firestore rules have never been read. firestore.integration.rules is an EMULATOR file
+    and must not be deployed; the production change is a hand-merged delta documented in OPERATIONS.
+  - tests/integration-rules.test.mjs was deliberately NOT written. The Firestore emulator is a Java
+    process and no JRE exists on this machine (checked PATH, Program Files, PowerShell). Writing an
+    authorization test that has never executed would be worse than recording the gap. THE RULES IN THIS
+    REPO ARE UNVERIFIED.
+  - No Admin credentials, and an agent must not handle them.
+Commit(s): follows c2d8f06 on main.
+Remote and deployment state: to be pushed. The artifact is unchanged by this task — every new file is
+  laptop-side or documentation, so deploying it changes nothing a user can see.
+Phone verification: not applicable; no user-visible change.
+Next task and exact first action: the account holder reads the live Firestore rules and merges the delta
+  in OPERATIONS.md. After that, install a JRE and write tests/integration-rules.test.mjs, then wire the
+  transport in syncWorkspace() per the snippet in OPERATIONS.
+Ownership released: yes.
+```
+
 ## Next action
 
-T6 (authenticated snapshot transport) is the highest-value next task: without it every Workspace card stays empty. First action is to inspect the deployed Firestore rules baseline before writing any rule. T5 adds the remaining three collectors for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
+Account holder: read the live Firestore rules and merge the delta in docs/integration/OPERATIONS.md. Agent work available meanwhile: T5 adds the remaining three collectors for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
 
 ## Evidence from planning
 

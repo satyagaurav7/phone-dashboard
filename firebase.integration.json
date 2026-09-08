@@ -1,0 +1,11 @@
+{
+  "//": "Emulator-only config for integration rules tests. Never points at the production project.",
+  "firestore": {
+    "rules": "firestore.integration.rules"
+  },
+  "emulators": {
+    "firestore": { "port": 8181 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}

@@ -9,6 +9,7 @@
    mutation, and process launching. */
 
 import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { validateSnapshot } from '../../integrations/contract.mjs';
 import { validateConfig, validateOutDir } from './config.mjs';
@@ -143,6 +144,6 @@ async function main(argv) {
   console.log(args.out ? 'wrote ' + planWrites(results, args.out).length + ' snapshot(s) to ' + args.out : 'preview only — nothing written');
 }
 
-if (process.argv[1] && import.meta.url.endsWith(path.basename(process.argv[1]))) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main(process.argv.slice(2)).catch(e => { console.error(String(e.message || e)); process.exit(1); });
 }

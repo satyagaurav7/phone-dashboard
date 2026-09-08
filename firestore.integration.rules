@@ -1,0 +1,48 @@
+rules_version = '2';
+
+/* EMULATOR RULES — NOT A PRODUCTION FILE. DO NOT DEPLOY THIS.
+ *
+ * This file exists to test the integration namespace in isolation. It is
+ * deliberately NOT a copy of production, because production's current rules
+ * have never been read by anyone writing this: deploying this file would
+ * silently replace whatever protects `dashboard/satya` today.
+ *
+ * The production change is a DELTA to be merged into the inspected live rules
+ * by hand. See docs/integration/OPERATIONS.md.
+ *
+ * UNTESTED: no Firestore emulator has run against these rules. The emulator is
+ * a Java process and no JRE is installed on the development machine. Treat this
+ * as a reviewed proposal, not a verified control.
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* The existing dashboard document. Reproduced here ONLY so emulator tests
+     * can assert that adding the integration namespace does not disturb it.
+     * The real rule in production may well differ — this is a stand-in. */
+    match /dashboard/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    /* Integration snapshots.
+     *
+     * Read: owner only. Write: nobody.
+     *
+     * The publisher uses the Firebase Admin SDK, which BYPASSES these rules
+     * entirely. So `allow write: if false` is not what keeps the data honest —
+     * it only guarantees that a compromised browser session cannot forge a
+     * snapshot. The real write constraints live in scripts/integrations/
+     * publish.mjs, which is why that file validates the path and the payload
+     * before touching the store. */
+    match /users/{uid}/integrations/{sourceId} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    /* Anything not named above stays denied. */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
