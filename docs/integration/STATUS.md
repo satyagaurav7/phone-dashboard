@@ -4,6 +4,11 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Bottle shortcuts (2026-09-08)
+
+- Inline hydration uses the existing bottle catalogue: sipper 890 ml, Stanley 1180 ml, black bottle 800 ml, cup 250 ml. Each named button logs its displayed volume; half-bottle options and Undo remain available. No goal changes.
+- Verified 23 controller tests, browser checks at four widths, and public build. Cache midnight-v15; publishing under existing authorization.
+
 ### Inline routine guidance (2026-09-08)
 
 - Added concise instructions for all 22 routine keys in schedule.json, displayed directly on Day board rows. Anchor follows the existing bed/blanket definition. Get ready opens its brush/shower/dress/skincare checklist by default and retains existing parent completion behavior.

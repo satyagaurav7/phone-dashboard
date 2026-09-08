@@ -28,9 +28,11 @@ test('routine guidance and get-ready steps are visible, water logs and undoes in
   assert.equal(a.w.document.querySelectorAll('[data-step^="getready:"]').length,4);
   assert.match(a.$('.inlineWater').textContent,/Saved daily target: 2500 ml/);
   a.click('[data-water-add="250"]');
-  a.click('[data-water-add="500"]');
-  assert.equal(a.dash.state.days[a.dash.today].hydro.reduce((n,x)=>n+x.ml,0),750);
-  assert.match(a.$('.inlineWater').textContent,/1750 ml remaining/);
+  a.click('[data-water-add="890"]');
+  assert.equal(a.dash.state.days[a.dash.today].hydro.reduce((n,x)=>n+x.ml,0),1140);
+  assert.match(a.$('.inlineWater').textContent,/1360 ml remaining/);
+  assert.match(a.$('[data-water-add="1180"]').textContent,/Stanley/);
+  assert.match(a.$('[data-water-add="800"]').textContent,/Black bottle/);
   assert.notEqual(a.dash.state.days[a.dash.today].water,true);
   a.click('[data-water-undo]');
   assert.equal(a.dash.state.days[a.dash.today].hydro.length,1);
