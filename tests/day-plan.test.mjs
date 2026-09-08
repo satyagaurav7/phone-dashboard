@@ -37,12 +37,33 @@ test('chosen outcome is offered only when it fits before the next routine', asyn
   assert.equal(tooShort.next.title, 'Evening');
 
   const fits = buildDayPlan(base({
-    state, today: '2026-09-04', dayKind: 'wfh', nowMin: 20 * 60 + 20,
+    state, today: '2026-09-04', dayKind: 'wfh', nowMin: 20 * 60 + 25,
     nowTs: Date.parse('2026-09-04T20:20:00-04:00'),
   }));
   assert.equal(fits.now.source, 'outcome');
   assert.equal(fits.now.title, 'Finish one practice exercise');
   assert.equal(fits.now.activeMin, 25);
+});
+
+test('Now and adjustment protect work, commuting and sleep', async () => {
+  const { buildDayPlan } = await import(PLAN_URL);
+  for (const minute of [300, 520, 600, 1025, 1390]) {
+    const plan = buildDayPlan(base({today:'2026-09-08',dayKind:'office',nowMin:minute,
+      state:{config:{choresStart:'2026-09-08'},checkIns:{'2026-09-08':{firstStep:'Practice'}}}}));
+    assert.equal(plan.now,null,`protected minute ${minute}`);
+    for (const row of plan.adjustment.scheduled) {
+      assert.ok(row.startMin>=375 && row.endMin<=1380);
+      assert.ok(!((row.startMin<735 && row.endMin>520)||(row.startMin<1040 && row.endMin>795)),
+        'no personal work during work or commute');
+    }
+  }
+});
+
+test('declared lunch remains actionable and transition gaps are reserved', async () => {
+  const { buildDayPlan } = await import(PLAN_URL);
+  assert.equal(buildDayPlan(base({dayKind:'office',nowMin:750})).now?.blockId,'midday');
+  const state={checkIns:{'2026-09-06':{firstStep:'Practice',focusMinutes:25}}};
+  assert.notEqual(buildDayPlan(base({state,dayKind:'wfh',nowMin:1220})).now?.source,'outcome');
 });
 
 test('running laundry is background and exposes its estimated handoff', async () => {

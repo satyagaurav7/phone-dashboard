@@ -22,7 +22,7 @@ test('Today opens with one execution board for now, next and the full checklist'
 });
 
 test('chosen outcome starts without completing and completes from the execution board',async t=>{
-  const a=await app(t,{windows:true});
+  const a=await app(t,{windows:true,clock:'2026-09-05T10:15:00'});
   a.type('[data-ci-text="firstStep"]','Finish one practice exercise'); await settle();
   assert.match(a.$('.executionNow').textContent,/Finish one practice exercise/);
   a.click('[data-focus-start]');
@@ -128,14 +128,14 @@ test('the header balance includes chores, and the day verdict never does',async 
   assert.equal(a.dash.state.days[today].roomreset,undefined);
 });
 
-async function app(t,{remote={},storage={},offline=false,windows=false}={}) {
+async function app(t,{remote={},storage={},offline=false,windows=false,clock='2026-09-05T08:00:00'}={}) {
   const midnight = await import('../ui/midnight.mjs');
   const dom = new JSDOM('<!doctype html><html><body><div id="moodLayer"></div><div id="appRoot"></div></body></html>',{url:'https://fixture.invalid/',runScripts:'outside-only'});
   t.after(async()=>{await settle();await settle();dom.window.close();});
   const w=dom.window, requests=[]; let failure=offline;
   if(windows){ w.FLOWSTATE_RULES=await import('../rules.mjs'); w.FLOWSTATE_CHORES=await import('../chores.mjs'); w.FLOWSTATE_DAY_PLAN=await import('../day-plan.mjs'); }
   for(const [k,v] of Object.entries(storage)) w.localStorage.setItem(k,v);
-  class ClockDate extends Date { constructor(...args){super(...(args.length?args:['2026-09-05T08:00:00']));} }
+  class ClockDate extends Date { constructor(...args){super(...(args.length?args:[clock]));} }
   Object.assign(w,{midnight,Date:ClockDate,db:{},doc:()=>({}),VAPID_KEY:'',swReady:Promise.resolve(null),motionReady:Promise.resolve(null),
     matchMedia:()=>({matches:true}),scrollTo:()=>{},confirm:()=>true,
     fetch:async()=>({json:async()=>windows?JSON.parse(readFileSync(path.join(root,'schedule.json'),'utf8')):{}}),caches:{match:async()=>null},

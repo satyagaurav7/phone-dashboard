@@ -1,4 +1,4 @@
-import { evaluateDay, scheduleConflicts, dayCapacity, dayShape } from './rules.mjs';
+import { evaluateDay, scheduleConflicts, dayCapacity, dayShape, blocksFor, TRANSITION_MIN } from './rules.mjs';
 import { upkeepBoard, stagePlan, STATUS } from './chores.mjs';
 
 const parseClock = value => {
@@ -55,6 +55,34 @@ const outcomeEntry = (state, today, nowMin) => {
 
 const byStart = (a, b) => a.startMin - b.startMin || a.title.localeCompare(b.title);
 
+function protectedTime(sched, dayKind) {
+  const shape = dayShape(sched, dayKind);
+  if (!shape) return [];
+  const intervals = [];
+  const add = (title, startMin, endMin) => {
+    if (endMin > startMin) intervals.push({id:`protected:${title}:${startMin}`,title,startMin,endMin});
+  };
+  add('Sleep', 0, shape.wakeMin);
+  add('Sleep', shape.sleepMin, 1440);
+  if (shape.workStartMin != null) {
+    let cursor = shape.workStartMin;
+    for (const block of blocksFor(sched, dayKind).filter(b=>b.duringWork).sort(byStart)) {
+      const start = Math.max(shape.workStartMin, block.startMin);
+      const end = Math.min(shape.workEndMin, block.endMin);
+      if (end <= start) continue;
+      add('Work', cursor, start);
+      cursor = Math.max(cursor, end);
+    }
+    add('Work', cursor, shape.workEndMin);
+    add('Commute', shape.workStartMin-shape.commuteMin, shape.workStartMin);
+    add('Commute', shape.workEndMin, shape.workEndMin+shape.commuteMin);
+  }
+  return intervals;
+}
+
+const collides = (start, end, block, buffer = TRANSITION_MIN) =>
+  start < block.endMin + buffer && end + buffer > block.startMin;
+
 export function previewAdjustment({
   nowMin, endMin, fixed = [], flexible = [], background = [], transitionMin = 10,
 }) {
@@ -107,6 +135,10 @@ export function buildDayPlan({ sched, state = {}, today, dayKind, nowMin, nowTs 
     isDayOff: Boolean(state.dayOff?.[today]),
   });
   const routines = evaluated.blocks.map(block => routineEntry(block, today));
+  const protectedIntervals = protectedTime(sched, dayKind);
+  const fixed = [...protectedIntervals, ...routines];
+  const fitsNow = row => !fixed.some(block=>collides(nowMin, nowMin+row.activeMin, block));
+  const availableNow = !protectedIntervals.some(block=>collides(nowMin, nowMin+1, block, 0));
   const currentRoutines = routines.filter(row => row.state === 'open' && row.remainingKeys.length);
   const futureRoutines = routines.filter(row => row.startMin > nowMin && row.remainingKeys.length).sort(byStart);
 
@@ -148,15 +180,13 @@ export function buildDayPlan({ sched, state = {}, today, dayKind, nowMin, nowTs 
 
   const outcome = outcomeEntry(state, today, nowMin);
   const readyHandoff = handoffs.find(row => row.ready);
-  let now = readyHandoff || currentRoutines[0] || null;
+  let now = availableNow ? readyHandoff || currentRoutines[0] || null : null;
 
-  const fixedNext = futureRoutines[0] || null;
-  const minutesUntilFixed = fixedNext ? fixedNext.startMin - nowMin : Infinity;
-  if (!now && outcome && outcome.activeMin <= minutesUntilFixed) now = outcome;
+  if (!now && outcome && fitsNow(outcome)) now = outcome;
 
   if (!now) {
     const readyChore = dueChores
-      .filter(row => row.startMin <= nowMin && row.activeMin <= minutesUntilFixed)
+      .filter(row => row.startMin <= nowMin && fitsNow(row))
       .sort((a, b) => (a.state === STATUS.OVERDUE ? -1 : 0) - (b.state === STATUS.OVERDUE ? -1 : 0) || byStart(a, b))[0];
     if (readyChore) now = readyChore;
   }
@@ -171,7 +201,7 @@ export function buildDayPlan({ sched, state = {}, today, dayKind, nowMin, nowTs 
   const adjustment = shape ? previewAdjustment({
     nowMin,
     endMin: shape.sleepMin,
-    fixed: routines.filter(row => ['open', 'upcoming'].includes(row.state) && row.remainingKeys.length),
+    fixed,
     flexible: [outcome, ...dueChores].filter(Boolean).map(row => ({
       ...row,
       preferredStart: row.startMin,

@@ -4,6 +4,12 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Protected-time planner repair (2026-09-08)
+
+- Codex repaired Now selection and Adjust day using shared protected work, commute, and sleep intervals. Declared lunch blocks remain actionable. Flexible work respects ten-minute transitions and routine windows even after routine items are completed.
+- Verified 250/250 module/controller tests and the 21-entry public build. Regression cases cover pre-wake, commuting, paid work, post-bedtime, lunch, and transition gaps. Existing outcome-control fixture now runs in a valid free period. No visual layout changes; no physical-device verification. Cache: midnight-v12.
+- Publishing this focused repair under existing authorization. Laundry dependency planning, outcome replacement, timezone consistency, and reward-label repairs remain in the focused repair brief.
+
 ### Visual simplicity and motion refresh (2026-09-07)
 
 - Codex continued from clean `5647209` in the shared checkout. Updated presentation only: neutral dark surfaces, clearer current action, compact typography, readable Next countdown, quieter routine status, tap feedback and 180ms disclosure reveals triggered by interaction. Reduced-motion preference disables reveals and transitions.
