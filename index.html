@@ -2240,6 +2240,15 @@ async function initApp(){
       root.querySelectorAll('details[data-disclosure]').forEach(el=>{
         if(openDisclosures.has(el.dataset.disclosure)) el.open=openDisclosures.get(el.dataset.disclosure);
         el.addEventListener('toggle',()=>openDisclosures.set(el.dataset.disclosure,el.open));
+        el.querySelector(':scope > summary')?.addEventListener('click',()=>{
+          requestAnimationFrame(()=>{
+            if(!el.open || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            Array.from(el.children).filter(child=>child.tagName!=='SUMMARY').forEach(child=>{
+              child.animate?.([{opacity:0,transform:'translateY(-4px)'},{opacity:1,transform:'translateY(0)'}],
+                {duration:180,easing:'ease-out'});
+            });
+          });
+        });
       });
       root.querySelectorAll('[data-ci-phase]').forEach(el=>el.addEventListener('click',()=>{ciPhase=el.dataset.ciPhase;draw(Dash.state);}));
 

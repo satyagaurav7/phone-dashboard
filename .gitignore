@@ -20,3 +20,4 @@ tasks-audit*.json
 audit-report*.json
 .google-oauth.json
 .google-client.json
+tests/visual-output/
