@@ -37,6 +37,12 @@ export async function collectSource({ config, fetch, now }) {
     links: [],
   };
 
+  // A source listed with no base URL is unconfigured, not unreachable. Without
+  // this the URL constructor throws and collectAll reports the wrong state.
+  if (!config || typeof config.baseUrl !== 'string') {
+    return { ...base, sourceUpdatedAt: null, status: 'not-configured', reasonCode: 'not-configured', metrics: [] };
+  }
+
   const health = await getJson(fetch, endpoint(config.baseUrl, '/api/health'), { maxBytes: SIZE_CAPS.health });
   if (!health.ok) {
     return { ...base, status: 'unavailable', reasonCode: health.reasonCode, metrics: [] };

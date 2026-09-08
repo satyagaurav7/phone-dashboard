@@ -265,3 +265,166 @@ test('both adapters produce contract-valid snapshots once a revision is added', 
     assert.equal(r.ok, true, snap.sourceId + ': ' + JSON.stringify(r.errors));
   }
 });
+
+/* ===================== T5: file-backed and reference ==================== */
+
+import { collectSource as collectSleepforge } from '../scripts/integrations/adapters/sleepforge.mjs';
+import { collectSource as collectDownloader } from '../scripts/integrations/adapters/downloader.mjs';
+import { collectSource as collectGraphify } from '../scripts/integrations/adapters/graphify.mjs';
+import { collectSource as collectReference } from '../scripts/integrations/adapters/references.mjs';
+import { SOURCES } from '../integrations/registry.mjs';
+import { ADAPTERS } from '../scripts/integrations/collect.mjs';
+
+/** Fake filesystem. Records every path touched so tests can assert what was NOT read. */
+function fakeFs(files = {}) {
+  const reads = [];
+  return {
+    reads,
+    stat: async p => { reads.push(p); if (!(p in files)) throw new Error('ENOENT'); return { size: files[p].length, mtimeMs: Date.parse('2026-09-07T09:00:00Z') }; },
+    readFile: async p => { if (!(p in files)) throw new Error('ENOENT'); return files[p]; },
+  };
+}
+
+// Shape-accurate ledger: the real file carries slug, recipe_slug, seed and
+// video_id, so the fixture does too — the test proves they are dropped.
+const LEDGER = JSON.stringify({
+  version: 1,
+  episodes: [
+    { number: 1, slug: 'deep-brown-noise-000', recipe_slug: 'deep-brown-noise', seed: 8675309, created: '2026-09-06', video_id: 'XpNSoPNVa60', status: 'rendered' },
+    { number: 2, slug: 'deep-brown-noise-001', recipe_slug: 'deep-brown-noise', seed: 1234567, created: '2026-09-07', video_id: 'ZzQqWwEeRr1', status: 'uploaded' },
+  ],
+});
+
+test('sleepforge maps counts and the last recorded stage only', async () => {
+  const fs = fakeFs({ '/p/ledger.json': LEDGER });
+  const snap = await collectSleepforge({ config: { ledgerPath: '/p/ledger.json' }, ...fs, now });
+  const m = Object.fromEntries(snap.metrics.map(x => [x.key, x.value]));
+  assert.equal(snap.status, 'ready');
+  assert.equal(m.episodeCount, 2);
+  assert.equal(m.latestStage, 'uploaded', 'newest by episode number, not array order');
+  assert.equal(m.ledgerAvailable, true);
+});
+
+test('sleepforge never forwards slugs, seeds, or video IDs', async () => {
+  const fs = fakeFs({ '/p/ledger.json': LEDGER });
+  const snap = await collectSleepforge({ config: { ledgerPath: '/p/ledger.json' }, ...fs, now });
+  const s = JSON.stringify(snap);
+  for (const banned of ['deep-brown-noise', 'XpNSoPNVa60', 'ZzQqWwEeRr1', '8675309', '1234567', 'slug', 'seed', 'video_id', 'recipe']) {
+    assert.equal(s.includes(banned), false, banned + ' leaked');
+  }
+});
+
+test('sleepforge does not claim an upload is published', async () => {
+  const fs = fakeFs({ '/p/ledger.json': LEDGER });
+  const snap = await collectSleepforge({ config: { ledgerPath: '/p/ledger.json' }, ...fs, now });
+  const stage = snap.metrics.find(m => m.key === 'latestStage');
+  assert.match(stage.label, /recorded/i, 'the label must not imply the video is live');
+  assert.equal(/publish|live|public/i.test(JSON.stringify(snap)), false);
+});
+
+test('sleepforge handles missing, malformed, and unconfigured ledgers', async () => {
+  const none = await collectSleepforge({ config: {}, ...fakeFs(), now });
+  assert.equal(none.status, 'not-configured');
+
+  const missing = await collectSleepforge({ config: { ledgerPath: '/nope.json' }, ...fakeFs(), now });
+  assert.equal(missing.status, 'unavailable');
+  assert.equal(missing.reasonCode, 'missing-file');
+
+  const bad = await collectSleepforge({ config: { ledgerPath: '/p/x.json' }, ...fakeFs({ '/p/x.json': '{"episodes":' }), now });
+  assert.equal(bad.reasonCode, 'invalid-data');
+});
+
+test('downloader is opt-in: no path and no manifest are both not-configured', async () => {
+  const unset = await collectDownloader({ config: {}, ...fakeFs(), now });
+  assert.equal(unset.status, 'not-configured');
+
+  // Configured but the downloader has never run: still not an error to fix.
+  const absent = await collectDownloader({ config: { manifestPath: '/p/manifest.json' }, ...fakeFs(), now });
+  assert.equal(absent.status, 'not-configured');
+  assert.equal(absent.reasonCode, 'not-configured');
+});
+
+test('downloader publishes counts, never filenames, URLs, or creators', async () => {
+  const manifest = JSON.stringify({
+    'https://fanbox.cc/@creator/posts/1': { file: 'C:/Users/Satya/pics/secret-01.png', status: 'done' },
+    'https://fanbox.cc/@creator/posts/2': { file: 'C:/Users/Satya/pics/secret-02.png', status: 'pending' },
+  });
+  const snap = await collectDownloader({ config: { manifestPath: '/p/m.json' }, ...fakeFs({ '/p/m.json': manifest }), now });
+  const m = Object.fromEntries(snap.metrics.map(x => [x.key, x.value]));
+  assert.equal(m.downloadedCount, 1);
+  assert.equal(m.pendingCount, 1);
+  // 'fanbox' is excluded deliberately: it is the registered source id, not
+  // content. Everything below comes from inside the manifest.
+  const s = JSON.stringify(snap);
+  for (const banned of ['creator', 'secret-01', 'secret-02', 'C:/', 'png', 'https://']) {
+    assert.equal(s.includes(banned), false, banned + ' leaked');
+  }
+});
+
+test('graphify reports graph size and never reads the path-keyed manifest', async () => {
+  const graph = JSON.stringify({ nodes: [{ id: 'a' }, { id: 'b' }], links: [{ source: 'a', target: 'b' }] });
+  const fs = fakeFs({ '/p/graph.json': graph, '/p/manifest.json': '{"C:/Users/Satya/secret.mjs":{}}' });
+  const snap = await collectGraphify({ config: { graphPath: '/p/graph.json' }, ...fs, now });
+
+  const m = Object.fromEntries(snap.metrics.map(x => [x.key, x.value]));
+  assert.equal(m.nodeCount, 2);
+  assert.equal(m.edgeCount, 1);
+  assert.equal(fs.reads.includes('/p/manifest.json'), false,
+    'manifest.json is keyed by absolute local paths and must never be opened');
+  assert.equal(JSON.stringify(snap).includes('C:/Users'), false);
+});
+
+test('graphify never publishes node labels or inferred edges', async () => {
+  const graph = JSON.stringify({
+    nodes: [{ id: 'x', label: 'PasswordAuthGate', source_file: 'C:/Users/Satya/index.html' }],
+    links: [{ source: 'x', target: 'x', relation: 'calls' }],
+  });
+  const snap = await collectGraphify({ config: { graphPath: '/p/g.json' }, ...fakeFs({ '/p/g.json': graph }), now });
+  const s = JSON.stringify(snap);
+  for (const banned of ['PasswordAuthGate', 'C:/Users', 'index.html', 'calls', 'relation']) {
+    assert.equal(s.includes(banned), false, banned + ' leaked');
+  }
+});
+
+test('graphify over the size cap is bounded, not streamed', async () => {
+  const huge = { stat: async () => ({ size: 11 * 1024 * 1024, mtimeMs: 0 }),
+                 readFile: async () => { throw new Error('must not read an 11 MiB graph'); } };
+  const snap = await collectGraphify({ config: { graphPath: '/p/big.json' }, ...huge, now });
+  assert.equal(snap.status, 'unavailable');
+  assert.equal(snap.reasonCode, 'invalid-data');
+});
+
+
+test('reference adapters touch no filesystem at all', async () => {
+  for (const id of ['anchor-context', 'ai-memory-portability', 'personal-hub', 'pr-documents']) {
+    const fs = fakeFs();
+    const snap = await collectReference({ sourceId: id, ...fs, now });
+    assert.equal(snap.status, 'reference-only', id);
+    assert.deepEqual(snap.metrics, [], id + ' must publish no counts');
+    assert.deepEqual(snap.links, []);
+    assert.equal(snap.sourceUpdatedAt, null);
+    // A file count is still a disclosure: it says how much is in there.
+    assert.equal(fs.reads.length, 0, id + ' opened something');
+  }
+});
+
+test('AI Memory Portability stays reference-only until a real service is verified', async () => {
+  const snap = await collectReference({ sourceId: 'ai-memory-portability', ...fakeFs(), now });
+  assert.equal(snap.status, 'reference-only', 'a design document is not a connected integration');
+});
+
+test('EVERY registered source has an adapter and produces a contract-valid snapshot', async () => {
+  for (const source of SOURCES) {
+    const adapter = ADAPTERS[source.id];
+    assert.ok(adapter, source.id + ' has no adapter');
+    // Unconfigured on purpose: this asserts the honest resting state of each one.
+    const snap = await adapter({
+      sourceId: source.id, config: {}, ...fakeFs(),
+      fetch: async () => { throw new Error('down'); }, now,
+    });
+    const r = validateSnapshot({ ...snap, revision: 'sha256-test' }, NOW);
+    assert.equal(r.ok, true, source.id + ': ' + JSON.stringify(r.errors));
+    assert.ok(['ready', 'degraded', 'unavailable', 'not-configured', 'reference-only'].includes(snap.status),
+      source.id + ' produced no explicit state');
+  }
+});

@@ -41,6 +41,12 @@ export async function collectSource({ config, fetch, now }) {
   const expiresAt = new Date(observedMs + source.ttlMs).toISOString();
   const base = { schemaVersion: 1, sourceId: SOURCE_ID, observedAt, expiresAt, links: [] };
 
+  // A source listed with no base URL is unconfigured, not unreachable. Without
+  // this the URL constructor throws and collectAll reports the wrong state.
+  if (!config || typeof config.baseUrl !== 'string') {
+    return { ...base, sourceUpdatedAt: null, status: 'not-configured', reasonCode: 'not-configured', metrics: [] };
+  }
+
   // Exactly two requests, both GET, both read-only. /api/refresh, /api/prepare
   // and /api/queue exist on this server and are deliberately never touched.
   const [status, products] = await Promise.all([

@@ -1,6 +1,6 @@
 # Unified integration execution status
 
-Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T1-T4 and F1 are deployed. T6 is partially done: publisher and transport built and tested, rules and credentials outstanding. T5 is unclaimed.
+Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T1-T5 and F1 done; T1-T4 deployed. T6 is partial: publisher and transport built and tested, rules and credentials outstanding.
 
 ## Current state
 
@@ -158,7 +158,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 | T2 | Versioned registry and snapshot contract | T1 | **Deployed** | Claude, 2026-09-07 |
 | T3 | Fixture-backed Workspace UI | T2 | **Deployed** | Claude, 2026-09-07 |
 | T4 | Local collector with Encore + trading adapters | T2 | **Deployed (collector is local-only by design)** | Claude, 2026-09-07 |
-| T5 | Sleepforge, downloader, references, Graphify metadata | T4 | Pending | Unassigned |
+| T5 | Sleepforge, downloader, references, Graphify metadata | T4 | **Done, local** | Claude, 2026-09-07 |
 | T6 | Authenticated snapshot transport and emulator tests | T3, T5 | **Partial: logic done, rules/credentials blocked** | Claude, 2026-09-07 |
 | T7 | Phone rollout, operations, agent handoff verification | T6 | Pending | Unassigned |
 | T8 | Graphify quality and refresh workflow | T7 | Pending | Unassigned |
@@ -554,6 +554,57 @@ Phone verification: not applicable; no user-visible change.
 Next task and exact first action: the account holder reads the live Firestore rules and merges the delta
   in OPERATIONS.md. After that, install a JRE and write tests/integration-rules.test.mjs, then wire the
   transport in syncWorkspace() per the snippet in OPERATIONS.
+Ownership released: yes.
+```
+
+## Session record — T5
+
+```text
+Task ID and state: T5 complete. All nine registered sources now have an adapter and an explicit state.
+Agent/session and UTC timestamp: Claude Code, 2026-09-08T02:42Z
+Checkout path, branch, starting commit: phone-dashboard, main, a385923
+Files: created scripts/integrations/adapters/{sleepforge,downloader,graphify,references}.mjs; extended
+  bounded.mjs (readJsonFile + ledger/graph size caps), collect.mjs (nine adapters, stat + sourceId
+  injected), config.mjs (file-backed and reference source shapes), tests/integration-adapters.test.mjs.
+Schemas verified against source before mapping:
+  sleepforge  out/ledger.json is {version, episodes:[{number,slug,recipe_slug,seed,created,video_id,
+    status}]}. Only the count and the newest status are mapped. slug, recipe_slug, seed and video_id
+    are content identifiers and are dropped; a test asserts each is absent.
+  graphify    graph.json gives nodes/links counts. manifest.json is deliberately NEVER opened: its keys
+    are ABSOLUTE LOCAL PATHS, so every key is a filesystem disclosure. A test asserts the adapter does
+    not stat or read it.
+  downloader  no manifest exists on this machine; opt-in via private config, absent path yields
+    not-configured rather than an error telling the user to go and run a scraper.
+  references  open NOTHING. No read, no stat, no directory listing, no file count - a count of PR
+    documents is still information about PR documents.
+Decisions:
+  - "uploaded" in the ledger does not mean published. The metric is labelled "Last recorded stage" and
+    nothing infers visibility from the presence of a video_id.
+  - File mtime is reported as sourceUpdatedAt: a freshness hint about the FILE, never proof an upload
+    succeeded.
+  - AI Memory Portability stays reference-only. A design document is not a connected integration.
+BUG FOUND AND FIXED: the encore and trading adapters THREW on a missing baseUrl, because endpoint()
+  hit the URL constructor with undefined. collectAll caught it and reported 'unreachable', which is the
+  wrong state - the honest answer is 'not-configured'. Both now guard first. Found only by the
+  "every registered source" coverage test, not by any hand-written case.
+Commands run and actual results:
+  node --test tests/integration-adapters.test.mjs -> 30 pass, 0 fail
+  node --test tests/*.test.mjs                    -> 225 pass, 0 fail (was 213)
+  node --test tests/midnight.test.cjs             -> 20 pass, 0 fail
+  Live collect of all nine against real files:
+    encore unavailable, ai-trading-lab unavailable (servers down), sleepforge ready (3 metrics),
+    fanbox-downloader not-configured, graphify ready (3 metrics), four references reference-only.
+    sleepforge read the real ledger: episodeCount 1, latestStage "uploaded".
+    graphify read the real 2.5 MB graph: nodeCount 2351, edgeCount 4250, generatedAt 2026-09-06.
+  Leak audit across all nine written snapshots for slugs, seeds, video ids, absolute paths, usernames,
+  filenames and creator URLs -> 0 hits.
+  build-site -> all four new adapters absent from the artifact.
+  encore 3840e9c and ai-trading-lab 90ddc53 unchanged; no source repo was written to.
+Commit(s): follows a385923 on main.
+Remote and deployment state: to be pushed. The artifact is unchanged - every new file is laptop-side.
+Phone verification: not applicable; no user-visible change until T6 publishes.
+Next task and exact first action: T6 remains blocked on the account holder reading the live Firestore
+  rules and merging the delta in OPERATIONS.md. After that, wire the transport per the snippet there.
 Ownership released: yes.
 ```
 

@@ -11,6 +11,8 @@
 export const SIZE_CAPS = {
   productFeed: 25 * 1024 * 1024, // Encore ships ~38k lots
   health: 128 * 1024,
+  ledger: 4 * 1024 * 1024,
+  graph: 10 * 1024 * 1024,
 };
 
 export const REQUEST_TIMEOUT_MS = 5000;
@@ -51,6 +53,36 @@ export async function getJson(fetchImpl, url, { maxBytes, timeoutMs = REQUEST_TI
 
   try {
     return { ok: true, data: JSON.parse(text) };
+  } catch {
+    return { ok: false, reasonCode: 'invalid-data' };
+  }
+}
+
+/**
+ * Read and parse a JSON file with a hard size cap, checked from stat before the
+ * bytes are read. A missing file is `missing-file`, not an error the user has to
+ * go and fix: an unconfigured optional source is a normal state.
+ *
+ * @returns {Promise<{ok:true,data:unknown,mtimeMs:number}|{ok:false,reasonCode:string}>}
+ */
+export async function readJsonFile({ readFile, stat }, filePath, { maxBytes }) {
+  let info;
+  try {
+    info = await stat(filePath);
+  } catch {
+    return { ok: false, reasonCode: 'missing-file' };
+  }
+  if (!info || typeof info.size !== 'number') return { ok: false, reasonCode: 'missing-file' };
+  if (info.size > maxBytes) return { ok: false, reasonCode: 'invalid-data' };
+
+  let text;
+  try {
+    text = await readFile(filePath, 'utf8');
+  } catch {
+    return { ok: false, reasonCode: 'missing-file' };
+  }
+  try {
+    return { ok: true, data: JSON.parse(text), mtimeMs: Number(info.mtimeMs) || 0 };
   } catch {
     return { ok: false, reasonCode: 'invalid-data' };
   }

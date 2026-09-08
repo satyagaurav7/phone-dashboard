@@ -15,8 +15,24 @@ import { validateSnapshot } from '../../integrations/contract.mjs';
 import { validateConfig, validateOutDir } from './config.mjs';
 import { collectSource as encore } from './adapters/encore.mjs';
 import { collectSource as trading } from './adapters/trading.mjs';
+import { collectSource as sleepforge } from './adapters/sleepforge.mjs';
+import { collectSource as downloader } from './adapters/downloader.mjs';
+import { collectSource as graphify } from './adapters/graphify.mjs';
+import { collectSource as reference } from './adapters/references.mjs';
 
-export const ADAPTERS = { encore, 'ai-trading-lab': trading };
+/* Every registered source has an adapter. The four reference entries share one,
+   which emits from the registry label and never opens a file — see references.mjs. */
+export const ADAPTERS = {
+  encore,
+  'ai-trading-lab': trading,
+  sleepforge,
+  'fanbox-downloader': downloader,
+  graphify,
+  'anchor-context': reference,
+  'ai-memory-portability': reference,
+  'personal-hub': reference,
+  'pr-documents': reference,
+};
 
 /** Max sources in flight. Two keeps a laptop responsive and bounds the blast radius. */
 const MAX_CONCURRENCY = 2;
@@ -53,7 +69,7 @@ async function mapLimit(items, limit, worker) {
 /**
  * @returns {Promise<Array<{sourceId:string, ok:boolean, snapshot?:object, reasonCode?:string, errors?:string[]}>>}
  */
-export async function collectAll({ config, adapters = ADAPTERS, fetch, readFile, now }) {
+export async function collectAll({ config, adapters = ADAPTERS, fetch, readFile, stat, now }) {
   const ids = Object.keys(config.sources);
 
   return mapLimit(ids, MAX_CONCURRENCY, async id => {
@@ -62,7 +78,7 @@ export async function collectAll({ config, adapters = ADAPTERS, fetch, readFile,
 
     let raw;
     try {
-      raw = await adapter({ config: config.sources[id], fetch, readFile, now });
+      raw = await adapter({ sourceId: id, config: config.sources[id], fetch, readFile, stat, now });
     } catch {
       // The adapter's exception text is dropped on purpose: it is the most
       // likely carrier of local paths and credentials.
@@ -111,7 +127,7 @@ function parseArgs(argv) {
 }
 
 async function main(argv) {
-  const { readFile, writeFile, rename, mkdir } = await import('node:fs/promises');
+  const { readFile, writeFile, rename, mkdir, stat } = await import('node:fs/promises');
   const args = parseArgs(argv);
   if (!args.config) {
     console.error('usage: node scripts/integrations/collect.mjs --config <file> [--out <dir>]');
@@ -129,7 +145,7 @@ async function main(argv) {
     await mkdir(args.out, { recursive: true });
   }
 
-  const results = await collectAll({ config: parsed.value, fetch, readFile, now: Date.now });
+  const results = await collectAll({ config: parsed.value, fetch, readFile, stat, now: Date.now });
 
   for (const w of planWrites(results, args.out)) {
     await writeFile(w.tempPath, w.body, 'utf8');
