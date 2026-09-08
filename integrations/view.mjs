@@ -25,7 +25,7 @@ export const STATE_COPY = {
 
 const FIXTURE_BADGE = 'Sample data — not live';
 const LAPTOP_ONLY = 'Available on laptop';
-const LOAD_FAILED = 'Could not load workspace data';
+const LOAD_FAILED = 'Could not load published data — showing nothing published yet';
 
 const el = (document, tag, className, text) => {
   const node = document.createElement(tag);
@@ -59,10 +59,10 @@ function safeHref(href, allowedHosts) {
  * @returns {{render:Function, refresh:Function, clear:Function, dispose:Function}}
  */
 export function mountWorkspace({ container, sources = SOURCES, document = globalThis.document }) {
-  let last = { snapshots: [], nowMs: 0, fixture: false };
+  let last = { snapshots: [], nowMs: 0, fixture: false, failed: false };
 
   const badge = el(document, 'p', 'ws-badge', FIXTURE_BADGE);
-  const error = el(document, 'p', 'ws-error', LOAD_FAILED);
+  const notice = el(document, 'p', 'ws-error', LOAD_FAILED);
 
   // One section per source, built once. Re-render replaces text, not structure,
   // so a failing source cannot tear down its siblings.
@@ -138,12 +138,13 @@ export function mountWorkspace({ container, sources = SOURCES, document = global
     }
   }
 
-  function render(snapshots, nowMs, { fixture = false } = {}) {
-    last = { snapshots: Array.isArray(snapshots) ? snapshots : [], nowMs, fixture };
+  function render(snapshots, nowMs, { fixture = false, failed = false } = {}) {
+    last = { snapshots: Array.isArray(snapshots) ? snapshots : [], nowMs, fixture, failed };
     const byId = new Map(last.snapshots.filter(s => s && s.sourceId).map(s => [s.sourceId, s]));
 
     container.replaceChildren();
     if (fixture) container.appendChild(badge);
+    if (failed) container.appendChild(notice);
 
     for (const source of sources) {
       const parts = sections.get(source.id);
@@ -160,9 +161,12 @@ export function mountWorkspace({ container, sources = SOURCES, document = global
   return {
     render,
     /** Re-render the last data against a fresh clock, for stale transitions. */
-    refresh: (nowMs) => render(last.snapshots, nowMs ?? last.nowMs, { fixture: last.fixture }),
-    renderError() { container.replaceChildren(error); },
-    clear() { last = { snapshots: [], nowMs: 0, fixture: false }; container.replaceChildren(); },
-    dispose() { last = { snapshots: [], nowMs: 0, fixture: false }; container.replaceChildren(); },
+    refresh: (nowMs) => render(last.snapshots, nowMs ?? last.nowMs, { fixture: last.fixture, failed: last.failed }),
+    /* Keeps the cards. A denied read means nothing has been published, which is
+       what "No data yet" already says; the notice explains why it will not
+       change. Replacing the whole list with a banner hid that distinction. */
+    renderError(nowMs) { render([], nowMs ?? last.nowMs, { fixture: false, failed: true }); },
+    clear() { last = { snapshots: [], nowMs: 0, fixture: false, failed: false }; container.replaceChildren(); },
+    dispose() { last = { snapshots: [], nowMs: 0, fixture: false, failed: false }; container.replaceChildren(); },
   };
 }

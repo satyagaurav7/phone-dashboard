@@ -22,7 +22,7 @@ export function startWorkspace({ view, subscribe, now, tick, fixture = false, ti
     snapshots => { if (!stopped) view.render(snapshots, now(), { fixture }); },
     // The transport's error text can name a uid or a Firestore path, so it is
     // dropped here rather than passed to the view.
-    () => { if (!stopped) view.renderError(); },
+    () => { if (!stopped) view.renderError(now()); },
   );
 
   // Expiry is a clock event, not a data event: without this a card sits on

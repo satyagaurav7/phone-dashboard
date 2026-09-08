@@ -33,6 +33,7 @@ export const PUBLIC_FILES = [
   'integrations/contract.mjs',
   'integrations/view.mjs',
   'integrations/controller.mjs',
+  'integrations/firestore-transport.mjs',
   'assets/filament.svg',
   'fonts/newsreader.woff2',
   'icons',
@@ -47,7 +48,7 @@ export const REQUIRED_FILES = [
   'index.html', 'sw.js', 'manifest.json', 'schedule.json', 'rules.mjs', 'chores.mjs', 'day-plan.mjs',
   'ui/midnight.css', 'ui/midnight.mjs', 'assets/filament.svg', 'fonts/newsreader.woff2',
   'integrations/registry.mjs', 'integrations/contract.mjs', 'integrations/view.mjs',
-  'integrations/controller.mjs',
+  'integrations/controller.mjs', 'integrations/firestore-transport.mjs',
 ];
 
 async function exists(path) {

@@ -11,8 +11,8 @@ this work, and nothing here runs in CI or in the browser.
 |---|---|
 | Collect app status into JSON | **Working** |
 | Preview what would be published | **Working** |
-| Publish to Firestore | **Blocked** — no rules, no credentials |
-| Phone reads published snapshots | **Not wired** — deliberately |
+| Publish to Firestore | **Blocked** — no credentials |
+| Phone reads published snapshots | **Wired**, degrades to empty until rules land |
 
 The Workspace tab is live and shows every source as "No data yet". That is
 correct: the pipe from laptop to phone does not exist yet.
@@ -22,11 +22,24 @@ correct: the pipe from laptop to phone does not exist yet.
 Three things need the account holder. None can be worked around by an agent,
 and none should be.
 
-**1. The deployed Firestore rules have never been read.**
-Nobody writing this code has seen the live rules. `firestore.integration.rules`
-is therefore an **emulator file, not a production file** — deploying it as-is
-would replace whatever currently protects `dashboard/satya`. The production
-change is a delta to merge by hand; see below.
+**1. The Firestore rules delta has not been published.**
+The live rules WERE read on 2026-09-08 and are recorded verbatim in
+`firestore.production-baseline.rules`, which is also the rollback. They are:
+
+```
+match /dashboard/satya {
+  allow read, write: if request.auth != null;
+}
+```
+
+The merged file to publish is in that same document. Until it is published every
+integration read is denied, and the Workspace degrades to "No data yet" plus a
+one-line notice rather than an error banner — so the ordering does not matter.
+
+Recorded but deliberately NOT changed: `request.auth != null` lets any
+authenticated user of the project read and write the whole dashboard, not only
+its owner. Tightening it to compare against a uid is a separate decision with
+its own blast radius.
 
 **2. No Admin credentials exist here, and an agent must not handle them.**
 `publish.mjs --apply` exits with an error rather than pretending. Admin
@@ -146,31 +159,26 @@ wrong-uid read denied, owner read allowed, **all** browser writes denied, and
 the existing dashboard paths unchanged. Never point these at the production
 project.
 
-## Wiring the phone
+## The phone transport
 
-`integrations/firestore-transport.mjs` is built and tested but **not connected**.
-`index.html` still subscribes to an empty transport, which is why the cards read
-"No data yet".
+`integrations/firestore-transport.mjs` is wired into `syncWorkspace()` and
+published with the shell. It subscribes to `users/{uid}/integrations` for the
+signed-in user only.
 
-Connecting it is one change, and it must wait until the rules above are
-deployed — before that every read is denied and the Workspace would show a
-permanent error instead of an honest empty state.
-
-```js
-// in syncWorkspace(), replacing the empty transport:
-const { subscribeSnapshots, firestoreListen } = await import('./integrations/firestore-transport.mjs');
-const listen = firestoreListen({ db, collection, onSnapshot });
-const subscribe = (onSnapshots, onError) =>
-  subscribeSnapshots({ uid: auth.currentUser.uid, listen, onSnapshots, onError });
-```
-
-Also add `integrations/firestore-transport.mjs` to `PUBLIC_FILES` and
-`REQUIRED_FILES` in `scripts/build-site.mjs`, and to the service worker shell.
-
-The transport revalidates every stored document through the contract before the
-view sees it. A tampered document is dropped whole, never partially rendered —
+Every stored document is revalidated through the contract before the view sees
+it, and a document that fails is dropped whole rather than partially rendered.
 Admin bypasses rules on write, so "it is in the database" proves nothing about
 its shape.
+
+**A denied read degrades, it does not shout.** Until the rules delta is
+published every read fails, and the Workspace shows the same nine cards reading
+"No data yet" plus one quiet line explaining why they will not change. That is
+accurate — nothing has been published — and it means the rules and the code can
+land in either order. The raw Firestore error is never rendered: it names the
+uid and the denied path.
+
+If the user is signed out mid-navigation the transport is skipped entirely
+rather than subscribing with a guessed uid.
 
 ## Freshness and recovery
 

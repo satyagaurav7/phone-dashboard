@@ -55,7 +55,7 @@ self.addEventListener('notificationclick', (event) => {
 
 /* ---------------- app-shell cache ---------------- */
 const CACHE_PREFIX = 'flowstate-';
-const CACHE = CACHE_PREFIX + 'midnight-v10';
+const CACHE = CACHE_PREFIX + 'midnight-v11';
 const SHELL = [
   './',
   'index.html',
@@ -73,6 +73,7 @@ const SHELL = [
   'integrations/contract.mjs',
   'integrations/view.mjs',
   'integrations/controller.mjs',
+  'integrations/firestore-transport.mjs',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png'

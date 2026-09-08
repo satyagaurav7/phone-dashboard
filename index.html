@@ -509,7 +509,7 @@ import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, deleteField
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteField, collection, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import {
   getMessaging, getToken, isSupported as messagingSupported
@@ -2214,11 +2214,21 @@ async function initApp(){
         // origin can therefore never render sample data as if it were live.
         const fixture = location.hostname === 'localhost'
           && new URLSearchParams(location.search).get('fixtures') === '1';
-        const subscribe = fixture
-          ? (await import('./integrations/fixtures.mjs')).createFixtureTransport({ enabled: true })
-          // No transport yet — T6 supplies the authenticated one. Until then
-          // every source honestly reports that nothing has been published.
-          : (onSnapshots => { onSnapshots([]); return () => {}; });
+        let subscribe;
+        if(fixture){
+          subscribe = (await import('./integrations/fixtures.mjs')).createFixtureTransport({ enabled: true });
+        } else {
+          const { subscribeSnapshots, firestoreListen } =
+            await import('./integrations/firestore-transport.mjs');
+          const uid = auth.currentUser && auth.currentUser.uid;
+          // Signed out mid-navigation: read nothing rather than guessing a uid.
+          subscribe = uid
+            ? ((onSnapshots, onError) => subscribeSnapshots({
+                uid, listen: firestoreListen({ db, collection, onSnapshot }),
+                onSnapshots, onError,
+              }))
+            : (onSnapshots => { onSnapshots([]); return () => {}; });
+        }
 
         // Re-query rather than reusing `container`: a redraw during the import
         // above would have detached it, and mounting there renders into nothing.

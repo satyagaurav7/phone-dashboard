@@ -293,3 +293,32 @@ test('syncWorkspace does not reach for draw()-local variables', async () => {
   assert.ok(body.includes("document.getElementById('workspaceRoot')"),
     'the container must be looked up from document, not a draw() local');
 });
+
+test('a failed read keeps the cards and adds a quiet notice', () => {
+  const { container, document } = dom();
+  const view = mountWorkspace({ container, document });
+  const stop = startWorkspace({
+    view,
+    subscribe: (onSnapshots, onError) => { onError(new Error('permission-denied at users/abc/integrations')); return () => {}; },
+    now: () => NOW,
+  });
+  // Before the rules are published every read is denied, and that means exactly
+  // "nothing has been published" — which the cards already say.
+  assert.equal(container.querySelectorAll('[data-source]').length, SOURCES.length,
+    'a denied read must not replace the whole list with a banner');
+  assert.match(container.textContent, /nothing published yet/i);
+  assert.equal(container.textContent.includes('abc'), false, 'the uid must not reach the screen');
+  assert.equal(container.textContent.includes('permission-denied'), false);
+  stop();
+});
+
+test('the failure notice survives a clock tick but clears on new data', () => {
+  const { container, document } = dom();
+  const view = mountWorkspace({ container, document });
+  view.renderError(NOW);
+  view.refresh(NOW + 60000);
+  assert.match(container.textContent, /nothing published yet/i, 'a re-render must not silently drop the notice');
+
+  view.render([snap()], NOW);
+  assert.equal(/nothing published yet/i.test(container.textContent), false, 'real data clears it');
+});

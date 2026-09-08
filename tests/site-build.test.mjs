@@ -53,6 +53,7 @@ async function makeSourceTree({ omit = [] } = {}) {
     'integrations/contract.mjs': 'export const ok = true;',
     'integrations/view.mjs': 'export const ok = true;',
     'integrations/controller.mjs': 'export const ok = true;',
+    'integrations/firestore-transport.mjs': 'export const ok = true;',
     'assets/filament.svg': '<svg/>',
     'fonts/newsreader.woff2': 'WOFF2',
     'icons/icon-192.png': 'PNG',
