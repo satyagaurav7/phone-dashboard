@@ -1,8 +1,14 @@
 # Unified integration execution status
 
-Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T2 is unclaimed.
+Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T2 is committed at 3ad06bc (local only, not pushed); T3 and T4 are unclaimed.
 
 ## Current state
+
+### Visual simplicity and motion refresh (2026-09-07)
+
+- Codex continued from clean `5647209` in the shared checkout. Updated presentation only: neutral dark surfaces, clearer current action, compact typography, readable Next countdown, quieter routine status, tap feedback and 180ms disclosure reveals triggered by interaction. Reduced-motion preference disables reveals and transitions.
+- Verified 20 controller tests and a real Edge/Playwright run at 320/375/430/1280px: no horizontal overflow, Next visible, disclosure animation, logging preserves expansion, reduced-motion has zero animations, no runtime errors. Inspected phone screenshot. Public artifact build succeeded. Browser QA uses synthetic local state; physical-device testing remains with the user.
+- Service worker cache is `midnight-v9`. Publishing under the user's explicit request; no schedule or scoring changes in this refresh.
 
 ### Phases 2-3 complete: planner and unified Day board deployed (2026-09-07)
 
@@ -149,7 +155,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 |---|---|---|---|---|
 | P0 | Plan, spec, portable handoff, agent pointers | — | Done locally | Planning session |
 | T1 | Deployment artifact boundary and integration baseline | — | **Deployed** | Released (Claude, 2026-09-06) |
-| T2 | Versioned registry and snapshot contract | T1 | Pending | Unassigned |
+| T2 | Versioned registry and snapshot contract | T1 | **Committed 3ad06bc, not pushed** | Claude, 2026-09-07 |
 | T3 | Fixture-backed Workspace UI | T2 | Pending | Unassigned |
 | T4 | Local collector with Encore + trading adapters | T2 | Pending | Unassigned |
 | T5 | Sleepforge, downloader, references, Graphify metadata | T4 | Pending | Unassigned |
@@ -257,9 +263,52 @@ This makes T1 the fix for a live exposure, not only the next ledger item.
 **Next task and exact first action:** T2 — create `tests/integration-contract.test.mjs` and watch it fail before implementing the registry and snapshot contract.
 **Ownership released:** Yes. T1 owner field may be reassigned.
 
+## Session record — T2
+
+```text
+Task ID and state: T2 (registry, validation, freshness) — implemented and verified locally; NOT committed.
+Agent/session and UTC timestamp: Claude Code, 2026-09-07T23:59Z
+Checkout path, branch, starting commit (per repo):
+  phone-dashboard  C:/Users/Satya/Downloads/Projects/phone-dashboard  main  5647209
+  encore           main  3840e9c   (read-only, not touched)
+  ai-trading-lab   main  90ddc53   (read-only, not touched)
+File ownership / overlaps checked: created integrations/registry.mjs, integrations/contract.mjs,
+  tests/integration-contract.test.mjs — all new, no overlap. Pre-existing uncommitted work by Codex in
+  .gitignore, index.html, sw.js, ui/midnight.css, docs/integration/STATUS.md, tests/visual-motion.cjs was
+  left untouched; the STATUS diff was checked for a competing claim before editing (none present).
+Changes and decisions:
+  - SOURCES registry with the nine SPEC IDs. Phone Dashboard is deliberately absent: it is the shell.
+  - allowedHosts is [] for every source. No hosted URL has been verified, and SPEC requires unverified
+    URLs to stay absent. Encore and trading are laptop-local, so T3 shows "Available on laptop".
+  - validateSnapshot(input, nowMs?) rebuilds the value field by field; nothing is spread, so unknown
+    upstream keys cannot reach the browser. nowMs is optional and only gates the future-timestamp check,
+    keeping validation deterministic in tests.
+  - displayState derives `stale`; it is never a storable status. Reference entries never go stale.
+  - Source-data age is checked separately from observation age: a 200 response does not make old data current.
+  - Hashing deliberately omitted here — revision belongs to the collector (T4), not the view.
+Commands run and actual results:
+  node --test tests/integration-contract.test.mjs   -> 30 pass, 0 fail
+  node --test tests/*.test.mjs                      -> 141 pass, 0 fail (no regressions)
+  node scripts/build-site.mjs --out <temp>           -> 16 manifest entries; integrations/, tests/, docs/,
+                                                       scripts/ all absent from the artifact (T1 boundary holds)
+Commit(s), or explicit uncommitted state: 3ad06bc on main, local only. Staged just the four T2 files;
+  Codex's in-flight .gitignore/index.html/sw.js/ui/midnight.css remain unstaged and untouched.
+Remote and deployment state: NOT pushed, NOT deployed. origin/main is still at 5647209, so another
+  checkout will not see 3ad06bc until it is pushed.
+  integrations/ is intentionally not in the published artifact yet — T3 adds it to the allowlist.
+Phone verification: none, and none applicable. T2 ships no UI.
+Failures / configuration still needed: no test failures. Contract version 1. Host allowlists stay empty
+  until real URLs are verified during T4/T6.
+Next task and exact first action: T3 (fixture-backed Workspace view) or T4 (Encore + trading collector);
+  both now have satisfied dependencies. For T4, first action is to create
+  tests/integration-adapters.test.mjs with mocked GET /api/products and GET /api/status responses and watch
+  it fail before writing scripts/integrations/adapters/encore.mjs.
+Ownership released: yes.
+```
+
 ## Next action
 
-Commit and push T1 so the deployed artifact actually narrows, then start T2 per the implementation plan.
+Push 3ad06bc, then start T4 for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
 
 ## Evidence from planning
 
