@@ -1,6 +1,6 @@
 # Unified integration execution status
 
-Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T1-T5 and F1 done; T1-T4 deployed. T6 is partial: publisher and transport built and tested, rules and credentials outstanding.
+Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T1-T5 and F1 done and deployed. T6: transport wired and deployed, degrading safely; only the rules publish and Admin credentials remain, both with the account holder.
 
 ## Current state
 
@@ -159,7 +159,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 | T3 | Fixture-backed Workspace UI | T2 | **Deployed** | Claude, 2026-09-07 |
 | T4 | Local collector with Encore + trading adapters | T2 | **Deployed (collector is local-only by design)** | Claude, 2026-09-07 |
 | T5 | Sleepforge, downloader, references, Graphify metadata | T4 | **Done, local** | Claude, 2026-09-07 |
-| T6 | Authenticated snapshot transport and emulator tests | T3, T5 | **Partial: logic done, rules/credentials blocked** | Claude, 2026-09-07 |
+| T6 | Authenticated snapshot transport and emulator tests | T3, T5 | **Transport deployed; rules publish + credentials with owner** | Claude, 2026-09-08 |
 | T7 | Phone rollout, operations, agent handoff verification | T6 | Pending | Unassigned |
 | T8 | Graphify quality and refresh workflow | T7 | Pending | Unassigned |
 | F1 | Day windows, signed balance, notifications, and unarmed Beeminder reporter | — | **Deployed; stakes unarmed** | Released (Codex, 2026-09-07) |
@@ -608,9 +608,51 @@ Next task and exact first action: T6 remains blocked on the account holder readi
 Ownership released: yes.
 ```
 
+## Session record — T6 (transport wired)
+
+```text
+Task ID and state: T6 transport wired and deployed. Rules publish and Admin credentials remain open.
+Agent/session and UTC timestamp: Claude Code, 2026-09-08T03:09Z
+Checkout path, branch, starting commit: phone-dashboard, main, 826270d
+LIVE RULES READ. Via the account holder's own signed-in Chrome, Firebase console, project newt-90ca4.
+  Recorded verbatim in docs/integration/firestore.production-baseline.rules, which is the rollback:
+    match /dashboard/satya { allow read, write: if request.auth != null; }
+  Observed and deliberately NOT changed: request.auth != null lets ANY authenticated user of the
+  project read and write the whole dashboard, not only its owner. Tightening it to a uid comparison
+  is a separate decision - a wrong uid stops the dashboard loading entirely.
+RULES PUBLISH BLOCKED: editing production security config through the browser was refused by the
+  permission layer. Correct refusal; no workaround attempted. The merged file is in OPERATIONS.md for
+  the account holder to paste.
+Changes:
+  - firestore-transport wired into syncWorkspace, subscribing to users/{uid}/integrations for the
+    signed-in user only. Signed out mid-navigation skips the transport rather than guessing a uid.
+  - A denied read now DEGRADES instead of erroring: the nine cards stay, reading "No data yet", plus
+    one quiet line. Previously a banner replaced the whole list. The new behaviour is accurate -
+    nothing has been published - and it decouples the code from the rules, so either can land first.
+  - The raw Firestore error still never reaches the screen; the controller drops it and calls
+    renderError with only a clock.
+  - firestore-transport.mjs ships with the shell and is precached; service worker to midnight-v11.
+    fixtures.mjs remains excluded from the artifact.
+Commands run and actual results:
+  node --test tests/*.test.mjs        -> 228 pass, 0 fail
+  node --test tests/midnight.test.cjs -> 20 pass, 0 fail
+  build-site -> 21 entries, firestore-transport.mjs present, fixtures.mjs absent
+  Deploy run 34182446352 success. Live: firestore-transport.mjs 200, fixtures.mjs 404, sw midnight-v11.
+PRODUCTION VERIFICATION, in the owner's signed-in browser, real denied read:
+  Workspace shows all nine cards reading "No data yet" plus the line
+  "Could not load published data - showing nothing published yet".
+  An accessibility-tree search for a uid or permission-denied text found neither.
+  This is the genuine rules-denied path, not a simulation.
+Next task and exact first action: account holder pastes the merged rules from OPERATIONS.md into the
+  Firebase console and publishes. Then confirm the dashboard still loads and saves, and the Workspace
+  notice disappears. Publishing real data additionally needs Admin credentials, which an agent must
+  not handle.
+Ownership released: yes.
+```
+
 ## Next action
 
-Account holder: read the live Firestore rules and merge the delta in docs/integration/OPERATIONS.md. Agent work available meanwhile: T5 adds the remaining three collectors for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
+Account holder: publish the merged Firestore rules and merge the delta in docs/integration/OPERATIONS.md. Agent work available meanwhile: T5 adds the remaining three collectors for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
 
 ## Evidence from planning
 
