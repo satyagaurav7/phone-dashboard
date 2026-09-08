@@ -42,6 +42,29 @@ test('Adjust day is a read-only preview that explains fitted and unfitted work',
   assert.equal(JSON.stringify(a.dash.state),before,'opening a proposal writes nothing');
 });
 
+test('replacing completed focus preserves history and resets the new task',async t=>{
+  const a=await app(t,{windows:true,clock:'2026-09-05T10:15:00'});
+  a.type('[data-ci-text="firstStep"]','First result'); await settle();
+  a.click('[data-focus-start]'); a.click('[data-focus-done]');
+  a.type('[data-ci-text="firstStep"]','Second result'); await settle();
+  const ci=a.dash.state.checkIns[a.dash.today];
+  assert.notEqual(ci.focusDone,true);
+  assert.equal(ci.focusStartedAt,undefined);
+  assert.equal(ci.focusCompletedAt,undefined);
+  assert.ok(Object.values(ci.focusHistory).some(x=>x.title==='First result'&&x.completedAt));
+  assert.match(a.$('.executionNow').textContent,/Second result/);
+  a.click('[data-focus-done]');
+  assert.equal(a.dash.state.checkIns[a.dash.today].focusDone,true);
+});
+
+test('clearing focus removes its stale Now completion controls',async t=>{
+  const a=await app(t,{windows:true,clock:'2026-09-05T10:15:00'});
+  a.type('[data-ci-text="firstStep"]','Temporary result'); await settle();
+  a.type('[data-ci-text="firstStep"]',''); await settle();
+  assert.equal(a.$('[data-focus-done]'),null);
+  assert.doesNotMatch(a.$('.executionNow').textContent,/Temporary result/);
+});
+
 test('day board expands into working checklist and keeps the block open after logging',async t=>{
   const a=await app(t,{windows:true});
   assert.match(a.$('.executionNext').textContent,/Morning/);

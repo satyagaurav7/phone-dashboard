@@ -4,6 +4,12 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Focus replacement and reward-label repair (2026-09-08)
+
+- Replacing a focus title now assigns a new version and clears its start/completion state, preserving a prior started/completed task in private check-in history. Clearing focus refreshes Now and removes stale completion controls. Text saves retain the existing no-redraw behavior.
+- Chore reward copy derives from the actual constants, including +8 on-time credit and the daily penalty floor. No scoring policy changed.
+- Verified 252/252 module/controller tests and the 21-entry public build. New regression tests reproduced both replacement and clearing defects before repair. Cache midnight-v13. Publishing under existing authorization; physical-device testing not performed.
+
 ### Protected-time planner repair (2026-09-08)
 
 - Codex repaired Now selection and Adjust day using shared protected work, commute, and sleep intervals. Declared lunch blocks remain actionable. Flexible work respects ten-minute transitions and routine windows even after routine items are completed.

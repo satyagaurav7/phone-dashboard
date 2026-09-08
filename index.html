@@ -1430,7 +1430,7 @@ async function initApp(){
         ? `<div class="stakeLine${pending<=-25?' emergency':''}">${pending} to the balance at midnight if these stay open · ${led.outstandingToday.length} outstanding</div>`
         : '';
       return `<section id="upkeep"><div class="boardHeading"><h2>Home upkeep</h2><span>${board.outstanding} open · ${board.activeMinDue} min</span></div>`+
-        `<p class="boardNote">+3 done on time · +1 late · ${CHORES.CHORE_POINTS.outstandingPerDay} per chore per day it stays undone. Chores move the balance, never the day verdict — so they cannot reach the money stake.</p>${warn}${rows}</section>`;
+        `<p class="boardNote">+${CHORES.CHORE_POINTS.onTime} done on time · +${CHORES.CHORE_POINTS.late} late · ${CHORES.CHORE_POINTS.outstandingPerDay} per outstanding chore per day, capped at ${CHORES.CHORE_DAILY_FLOOR} daily. Chores affect your balance only.</p>${warn}${rows}</section>`;
     }
 
     function dayOffSettings(s){
@@ -2550,17 +2550,35 @@ async function initApp(){
         }
       };
       bindFocusActions();
-      root.querySelectorAll('[data-jump-target]').forEach(el=>el.addEventListener('click',()=>{
+      const bindJumpActions=()=>root.querySelectorAll('[data-jump-target]').forEach(el=>{
+        if(el.dataset.bound) return;
+        el.dataset.bound='1';
+        el.addEventListener('click',()=>{
         const full=root.querySelector('[data-disclosure="full-day"]');
         if(full) full.open=true;
         const target=root.querySelector(`[data-disclosure="${el.dataset.jumpTarget}"]`);
         if(target){ target.open=true; target.scrollIntoView?.({behavior:REDUCED?'auto':'smooth',block:'start'}); target.querySelector('summary')?.focus({preventScroll:true}); }
-      }));
+        });
+      });
+      bindJumpActions();
       root.querySelectorAll('[data-ci-text]').forEach(inp=>{
         const save=()=>{
           const v=inp.value.trim();
           if((getPath(Dash.state,`checkIns.${Dash.today}.${inp.dataset.ciText}`)||'')!==v) {
-            Dash.set(`checkIns.${Dash.today}.${inp.dataset.ciText}`, v || Dash.REMOVE, {render:false});
+            const base=`checkIns.${Dash.today}`;
+            const patch={[`${base}.${inp.dataset.ciText}`]:v || Dash.REMOVE};
+            if(inp.dataset.ciText==='firstStep'){
+              const previous=Dash.state.checkIns?.[Dash.today]||{};
+              const version=Number(previous.focusVersion||0);
+              if(previous.firstStep&&(previous.focusStartedAt||previous.focusDone)){
+                patch[`${base}.focusHistory.${version}`]={title:previous.firstStep,
+                  startedAt:previous.focusStartedAt||null,completedAt:previous.focusCompletedAt||null,
+                  done:previous.focusDone===true};
+              }
+              patch[`${base}.focusVersion`]=version+1;
+              for(const field of ['focusDone','focusStartedAt','focusCompletedAt']) patch[`${base}.${field}`]=Dash.REMOVE;
+            }
+            Dash.setMany(patch,{render:false});
             const step=root.querySelector('.step-title');
             if(step && inp.dataset.ciText==='firstStep') {
               const focus=v || (Dash.state.checkIns?.[Dash.today]?.focus==='rest'?'Make room for rest.':'');
@@ -2568,16 +2586,17 @@ async function initApp(){
               step.previousElementSibling.textContent=focus?'YOUR CHOSEN STEP':'A LITTLE DIRECTION';
               step.nextElementSibling.textContent=focus?'An intention you chose. Go at your own pace.':'Find your next action in your full checklist.';
               // Text fields save without a page redraw so the input and nav do
-              // not disappear under the user's pointer. Refresh only NOW when
-              // the newly chosen action genuinely fits the current gap.
+              // not disappear under the user's pointer. Refresh NOW and its
+              // controls after either replacing or clearing the chosen action.
               if(DAY_PLAN&&RULES&&CHORES&&SCHED_DATA){
                 const dt=new Date(), minute=dt.getHours()*60+dt.getMinutes();
                 const plan=DAY_PLAN.buildDayPlan({sched:SCHED_DATA,state:Dash.state,today:Dash.today,
                   dayKind:kindOf(todow(Dash.today)),nowMin:minute,nowTs:Date.now()});
                 const box=root.querySelector('.executionNow');
-                if(box&&plan.now?.source==='outcome'){
+                if(box){
                   box.innerHTML=executionNowBody(plan.now);
                   bindFocusActions();
+                  bindJumpActions();
                 }
               }
             }

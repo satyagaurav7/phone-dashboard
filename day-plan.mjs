@@ -41,7 +41,7 @@ const outcomeEntry = (state, today, nowMin) => {
   if (!title || checkIn.focusDone === true) return null;
   const activeMin = Number(checkIn.focusMinutes || 25);
   return {
-    id: `outcome:${today}`,
+    id: `outcome:${today}:${checkIn.focusVersion || 0}`,
     occurrence: today,
     source: 'outcome',
     title,
