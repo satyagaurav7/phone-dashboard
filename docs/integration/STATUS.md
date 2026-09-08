@@ -4,6 +4,11 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Per-task times (2026-09-08)
+
+- Every routine row displays its saved per-day-kind planned time beside its instructions, including accessible button labels. Hydration says start time plus throughout the day. Existing schedule and scoring windows are unchanged; Get ready steps share their parent's planned time.
+- Verified 23 controller tests including task-time mapping, browser checks at four widths, and public build. Cache midnight-v16; publishing under explicit user request.
+
 ### Bottle shortcuts (2026-09-08)
 
 - Inline hydration uses the existing bottle catalogue: sipper 890 ml, Stanley 1180 ml, black bottle 800 ml, cup 250 ml. Each named button logs its displayed volume; half-bottle options and Undo remain available. No goal changes.

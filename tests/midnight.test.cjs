@@ -24,6 +24,11 @@ test('Today opens with one execution board for now, next and the full checklist'
 test('routine guidance and get-ready steps are visible, water logs and undoes inline',async t=>{
   const a=await app(t,{windows:true});
   assert.match(a.$('#dayBoard [data-toggle$=".anchor"]').textContent,/Make the bed and fold the blanket/);
+  const schedule=JSON.parse(readFileSync(path.join(root,'schedule.json'),'utf8'));
+  for(const [key,time] of Object.entries(schedule.tapPlan.itemTimes.sat)){
+    const row=a.$(key==='water'?'#dayBoard .boardItem[data-hydro]':`#dayBoard [data-toggle$=".${key}"]`);
+    assert.equal(row.querySelector('time').getAttribute('datetime'),time,`${key} uses its saved task time`);
+  }
   assert.equal(a.$('[data-disclosure="steps-getready"]').open,true);
   assert.equal(a.w.document.querySelectorAll('[data-step^="getready:"]').length,4);
   assert.match(a.$('.inlineWater').textContent,/Saved daily target: 2500 ml/);
