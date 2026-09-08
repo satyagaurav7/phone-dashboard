@@ -1,6 +1,6 @@
 # Unified integration execution status
 
-Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T2, T3 and T4 are committed locally and not pushed. Next dependency-satisfied task is T5 or T6.
+Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T1-T4 and F1 are pushed and DEPLOYED (9645dca). T5 and T6 are unclaimed.
 
 ## Current state
 
@@ -155,9 +155,9 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 |---|---|---|---|---|
 | P0 | Plan, spec, portable handoff, agent pointers | — | Done locally | Planning session |
 | T1 | Deployment artifact boundary and integration baseline | — | **Deployed** | Released (Claude, 2026-09-06) |
-| T2 | Versioned registry and snapshot contract | T1 | **Committed 3ad06bc, not pushed** | Claude, 2026-09-07 |
-| T3 | Fixture-backed Workspace UI | T2 | **Committed, not pushed** | Claude, 2026-09-07 |
-| T4 | Local collector with Encore + trading adapters | T2 | **Committed, not pushed** | Claude, 2026-09-07 |
+| T2 | Versioned registry and snapshot contract | T1 | **Deployed** | Claude, 2026-09-07 |
+| T3 | Fixture-backed Workspace UI | T2 | **Deployed** | Claude, 2026-09-07 |
+| T4 | Local collector with Encore + trading adapters | T2 | **Deployed (collector is local-only by design)** | Claude, 2026-09-07 |
 | T5 | Sleepforge, downloader, references, Graphify metadata | T4 | Pending | Unassigned |
 | T6 | Authenticated snapshot transport and emulator tests | T3, T5 | Pending | Unassigned |
 | T7 | Phone rollout, operations, agent handoff verification | T6 | Pending | Unassigned |
@@ -466,9 +466,44 @@ Next task and exact first action: T5 (remaining apps and references) or T6 (auth
 Ownership released: yes.
 ```
 
+## Deployment record — T2, T3, T4
+
+```text
+Pushed 5647209..0987476, then 9645dca. Deployed by Pages run 34178891124 (success, 22s).
+
+FIRST ATTEMPT FAILED. Run 34178821329 failed on `node --test tests/*.test.mjs` with
+"Cannot find module 'jsdom'". The workflow had no install step; jsdom is pinned in
+tests/package.json, but until now nothing in the .mjs suite imported it — the existing DOM test is
+midnight.test.cjs, which this workflow does not run — so the gap was invisible.
+tests/integration-view.test.mjs was the first .mjs test to need it. Fixed by 9645dca, which adds
+`npm ci --prefix tests`. No new dependency; the DOM tests now genuinely run in CI instead of being
+silently skipped. No schedule trigger and no secrets were introduced. The failed run published
+nothing, so production was never in a broken state.
+
+Live verification against https://satyagaurav7.github.io/phone-dashboard/ :
+  200  index.html
+  200  integrations/{registry,contract,view,controller}.mjs
+  404  integrations/fixtures.mjs          sample data is not shippable
+  404  scripts/integrations/collect.mjs   collector stays local
+  404  tests/integration-view.test.mjs
+  404  docs/integration/STATUS.md
+  sw.js serves midnight-v10.
+  In-browser at 390x844: all four modules import from the production origin, fixtures.mjs rejects,
+  auth gate renders, no console errors.
+
+Phone verification still outstanding and still requires the account holder: the Workspace tab is
+behind Firebase auth. Expect nine cards reading "No data yet" or "Reference only" — correct until T6
+publishes anything, because no transport exists yet.
+
+Integration reality check for the ledger: 9 sources are registered and render. 2 have working
+collectors (encore, ai-trading-lab). 3 still need collectors (sleepforge, fanbox-downloader,
+graphify) and are T5. 4 are reference entries by design and will never have collectors. Nothing
+reaches the phone until T6.
+```
+
 ## Next action
 
-Push 962cb2a and the T2/T3/T4 commits, then start T5 or T6 for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
+T6 (authenticated snapshot transport) is the highest-value next task: without it every Workspace card stays empty. First action is to inspect the deployed Firestore rules baseline before writing any rule. T5 adds the remaining three collectors for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
 
 ## Evidence from planning
 
