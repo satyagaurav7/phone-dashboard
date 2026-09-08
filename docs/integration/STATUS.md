@@ -1,6 +1,6 @@
 # Unified integration execution status
 
-Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T2 and T4 are committed locally and not pushed; T3 is unclaimed.
+Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T2 and T4 are committed locally and not pushed; T3 is partially done and BLOCKED on the shell wiring.
 
 ## Current state
 
@@ -156,7 +156,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 | P0 | Plan, spec, portable handoff, agent pointers | — | Done locally | Planning session |
 | T1 | Deployment artifact boundary and integration baseline | — | **Deployed** | Released (Claude, 2026-09-06) |
 | T2 | Versioned registry and snapshot contract | T1 | **Committed 3ad06bc, not pushed** | Claude, 2026-09-07 |
-| T3 | Fixture-backed Workspace UI | T2 | Pending | Unassigned |
+| T3 | Fixture-backed Workspace UI | T2 | **Modules done; shell wiring blocked** | Claude, 2026-09-07 |
 | T4 | Local collector with Encore + trading adapters | T2 | **Committed, not pushed** | Claude, 2026-09-07 |
 | T5 | Sleepforge, downloader, references, Graphify metadata | T4 | Pending | Unassigned |
 | T6 | Authenticated snapshot transport and emulator tests | T3, T5 | Pending | Unassigned |
@@ -364,9 +364,61 @@ Next task and exact first action: T3 (fixture-backed Workspace view). First acti
 Ownership released: yes.
 ```
 
+## Session record — T3 (partial)
+
+```text
+Task ID and state: T3 — view, controller, fixtures and artifact allowlist done and tested. The
+  index.html / sw.js wiring is NOT done and is blocked; see below.
+Agent/session and UTC timestamp: Claude Code, 2026-09-08T01:06Z
+Checkout path, branch, starting commit: phone-dashboard, main, 7d5f063 (T4)
+File ownership / overlaps checked: created integrations/{view,controller,fixtures}.mjs and
+  tests/integration-view.test.mjs; modified scripts/build-site.mjs (not touched by Codex).
+  index.html and sw.js were deliberately NOT edited — see the blocker.
+Changes and decisions:
+  - mountWorkspace builds one section per registered source once, in registry order, and re-renders only
+    the variable regions, so a malformed snapshot cannot blank its siblings. Per-section render is
+    try/caught for the same reason.
+  - No innerHTML anywhere in view.mjs. The contract stores hostile text verbatim on purpose so the
+    escaping decision lives in exactly one place; a fixture carries <img src=x onerror=alert(1)> so that
+    path is exercised on every run, not only in the test that remembers.
+  - Links are re-validated in the view even though the contract already checked them: the contract guards
+    what is stored, the view guards what is clicked, and the two drift when a registry allowlist changes.
+  - No source has a verified host, so every live source renders "Available on laptop" rather than a
+    localhost link that would resolve to the phone itself.
+  - createFixtureTransport throws unless enabled:true is passed explicitly, and the view stamps a visible
+    "Sample data — not live" badge whenever it renders fixtures.
+  - Transport errors are swallowed in the controller and shown as fixed copy; a Firestore error naming a
+    uid or path must never reach the screen.
+  - The controller owns a ticker because expiry is a clock event, not a data event: without it a card sits
+    on "Ready" after the laptop sleeps. Cleanup is idempotent and clears the container.
+  - build-site publishes the four browser modules but NOT fixtures.mjs, so sample data is not shippable.
+    They were deliberately left OUT of REQUIRED_FILES: nothing imports them until the shell is wired, and
+    making them required now breaks the site-build fixture for no benefit. They join REQUIRED_FILES in the
+    same change that makes index.html depend on them.
+Commands run and actual results:
+  node --test tests/integration-view.test.mjs -> 18 pass, 0 fail
+  node --test tests/*.test.mjs                -> 195 pass, 0 fail
+  node --test tests/midnight.test.cjs         -> 20 pass, 0 fail
+  build-site --out <temp> -> 20 entries; integrations/{registry,contract,view,controller}.mjs present;
+    fixtures.mjs, scripts/, tests/, docs/ all absent.
+Commit(s): this session's T3 commit follows 7d5f063 on main, local only.
+Remote and deployment state: NOT pushed, NOT deployed. origin/main still 5647209.
+Phone verification: none yet — there is no Workspace entry to open until the shell wiring lands.
+BLOCKER — shell wiring: index.html and sw.js still carry Codex's uncommitted visual-refresh changes
+  (index.html +9, sw.js cache v8->v9, ui/midnight.css +26, .gitignore +1; 37 lines total). STATUS records
+  that refresh as finished and published, and lists no active owner, but the work was never committed.
+  Editing those files now would fold Codex's lines into a Claude commit, so the remaining T3 steps were
+  stopped rather than tangled. Unblock by committing Codex's change on its own first; then add the
+  Workspace nav entry, lazy-load on entry after auth, bump the cache version once, and add the four
+  modules to REQUIRED_FILES.
+Next task and exact first action: commit Codex's 37 uncommitted lines as their own attributed commit,
+  then add the Workspace entry to index.html leaving Today as default.
+Ownership released: yes, for the module work. The shell wiring is unclaimed and blocked.
+```
+
 ## Next action
 
-Push the T2 and T4 commits, then start T3 for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
+Commit Codex's uncommitted visual refresh, then finish the T3 shell wiring. Push T2/T4/T3 for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
 
 ## Evidence from planning
 

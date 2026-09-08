@@ -27,6 +27,12 @@ export const PUBLIC_FILES = [
   'day-plan.mjs',
   'ui/midnight.css',
   'ui/midnight.mjs',
+  // Workspace browser modules. fixtures.mjs is deliberately NOT here: sample
+  // data must not be shippable, so production cannot import it even by mistake.
+  'integrations/registry.mjs',
+  'integrations/contract.mjs',
+  'integrations/view.mjs',
+  'integrations/controller.mjs',
   'assets/filament.svg',
   'fonts/newsreader.woff2',
   'icons',
@@ -40,6 +46,9 @@ export const PUBLIC_FILES = [
 export const REQUIRED_FILES = [
   'index.html', 'sw.js', 'manifest.json', 'schedule.json', 'rules.mjs', 'chores.mjs', 'day-plan.mjs',
   'ui/midnight.css', 'ui/midnight.mjs', 'assets/filament.svg', 'fonts/newsreader.woff2',
+  // The integrations modules are published but not yet REQUIRED: nothing in
+  // index.html imports them until the Workspace entry is wired up. They join
+  // this list in the same change that makes the shell depend on them.
 ];
 
 async function exists(path) {
