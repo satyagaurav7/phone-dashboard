@@ -92,8 +92,70 @@ test('elapsed machine estimate becomes the immediate check action', async () => 
     state, nowMin: 14 * 60 + 56, nowTs: Date.parse('2026-09-06T14:56:00-04:00'),
   }));
   assert.equal(plan.now.source, 'handoff');
-  assert.equal(plan.now.title, 'Check Wash cycle');
+  assert.equal(plan.now.title, 'Check Wash cycle, then transfer to dryer');
   assert.equal(plan.now.choreId, 'laundry');
+});
+
+test('a staged chore is planned as the runs of work between waits', async () => {
+  const { buildDayPlan } = await import(PLAN_URL);
+  // Before its window, so the window governs the first run rather than "now".
+  const plan = buildDayPlan(base({ nowMin: 13 * 60, nowTs: Date.parse('2026-09-06T13:00:00-04:00') }));
+  const runs = plan.dueChores.filter(row => row.choreId === 'laundry').sort((a, b) => a.startMin - b.startMin);
+
+  // 10 minutes of sorting, an hour of washing, 5 to transfer, an hour of
+  // drying, 25 to fold. Asking for one 40-minute opening asked for something
+  // the day never had.
+  assert.deepEqual(runs.map(row => [row.startMin, row.activeMin]),
+    [[13 * 60 + 45, 10], [14 * 60 + 55, 5], [16 * 60, 25]]);
+  assert.equal(runs.reduce((n, row) => n + row.activeMin, 0), 40, 'the same work, not less of it');
+  assert.ok(runs.every(row => row.title.startsWith('Clothes laundry — ')), 'each run says what it is');
+});
+
+test('a running load never re-plans the stages already behind it', async () => {
+  const { buildDayPlan } = await import(PLAN_URL);
+  const startedAt = Date.parse('2026-09-06T13:55:00-04:00');
+  const state = {
+    config: { choresStart: '2026-09-06', windowsStart: '2026-09-06' },
+    chores: { laundry: { stage: { id: 'wash', startedAt, occurrence: '2026-09-06', done: ['sort'] } } },
+  };
+  const plan = buildDayPlan(base({ state }));
+  const laundry = [...plan.dueChores, ...plan.adjustment.fixed].filter(row => row.choreId === 'laundry');
+
+  assert.ok(laundry.length, 'the load is still on the plan while it runs');
+  assert.ok(laundry.every(row => !(row.stageIds || []).includes('sort')), 'sorting is done, not planned again');
+  // The whole load used to be one 40-minute task, which no opening could take:
+  // a wash that was physically spinning was reported as impossible today.
+  assert.ok(!plan.adjustment.unscheduled.some(row => /No 40-minute opening/.test(row.reason)),
+    'the load is not declared impossible while the machine is running');
+  assert.equal(laundry.reduce((n, row) => n + row.activeMin, 0), 30, 'transfer plus fold, sorting excluded');
+});
+
+test('the trip to the machine is reserved, and reserved once', async () => {
+  const { buildDayPlan } = await import(PLAN_URL);
+  const startedAt = Date.parse('2026-09-06T13:55:00-04:00');
+  const state = {
+    config: { choresStart: '2026-09-06', windowsStart: '2026-09-06' },
+    chores: { laundry: { stage: { id: 'wash', startedAt, occurrence: '2026-09-06', done: ['sort'] } } },
+  };
+  const plan = buildDayPlan(base({ state }));
+  const handoff = plan.adjustment.fixed.find(row => row.source === 'handoff');
+
+  // previewAdjustment's own comment promised the caller would pass handoffs as
+  // fixed. It did not, so a 25-minute task could sit straight across the
+  // moment the machine needed emptying.
+  assert.ok(handoff, 'the handoff occupies the plan');
+  assert.equal(handoff.startMin, 14 * 60 + 55);
+  assert.equal(handoff.endMin, 15 * 60);
+  assert.ok(plan.adjustment.scheduled.every(row =>
+    row.endMin + 10 <= handoff.startMin || row.startMin >= handoff.endMin + 10),
+    'nothing is placed over the handoff');
+
+  // Going back to the machine and doing the transfer is one trip. Booking a
+  // generic check AND the transfer separately let the transfer slide hours
+  // away from the wash it depends on.
+  assert.equal(handoff.activeMin, 5, 'the handoff carries the transfer it performs');
+  assert.equal(plan.dueChores.filter(row => (row.stageIds || []).includes('transfer')).length, 0,
+    'the transfer is not also booked as separate flexible work');
 });
 
 test('planner reports remaining active effort without counting machine wait', async () => {

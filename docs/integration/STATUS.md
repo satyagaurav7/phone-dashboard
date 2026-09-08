@@ -4,6 +4,14 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Staged laundry is planned as work, not as one impossible block (2026-09-08)
+
+- A staged chore is no longer scheduled as one contiguous chunk of its total active minutes. `stageChunks` splits the remaining stages into the runs of active work between machine waits: clothes laundry becomes 10 min sorting at 13:45, 5 min transfer at 14:55, 25 min folding at 16:00 — the same 40 minutes of attention, spread over the two and a half hours it actually occupies.
+- Reproduced first: with the wash physically running, `previewAdjustment` reported `chore:laundry` as "No 40-minute opening before 23:00" — the load was declared impossible to finish today while the machine was spinning, because the plan still demanded the ten minutes of sorting that were already done.
+- Handoffs are now passed to `previewAdjustment` as fixed intervals. Its own comment had promised the caller would do this; the caller never did, so a 25-minute task could be placed straight across the moment the dryer needed emptying.
+- The handoff and the next run of work were also double-booked: a generic 5-minute "check" plus the same stages again as flexible work, and the flexible copy was free to slide — a transfer that has to happen when the wash ends was being placed eight hours later. They are one trip now. The handoff carries the next run's real duration and reads "Check Wash cycle, then transfer to dryer"; the wording stays conditional because an elapsed estimate is a prompt to look, never proof the machine finished. Machine waiting is still never counted as personal effort.
+- Verified 257/257 tests. The three new guards plus the retitled handoff assertion were confirmed to FAIL against the pre-fix source (9/13) and pass after. Browser check at 375 px with a wash running: no overflow, Background shows "Wash cycle · check, never auto-complete · Check in 45:00", Adjust day lists "Clothes laundry — Fold, hang, put away · 25 active min". Cache stays midnight-v16; no shell file changed. Item 2 of the focused repair brief is closed, which closes the brief.
+
 ### One clock: board and scorer agree (2026-09-08)
 
 - Board rendering, Now/Next selection, the live countdown, evaluateDay calls, chore occurrence checks and the check-in phase all read `rules.zonedNow(Date.now(), schedule.timezone)` instead of the browser's own `getHours()/getMinutes()`. Scoring was already Toronto-aware, so on a device whose clock is set elsewhere the two disagreed silently: the board could call a window upcoming that the scorer had already failed, or roll the date early and file work under the wrong day. Date arithmetic on an explicit date stays local, because a date string has no zone to resolve.

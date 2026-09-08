@@ -35,6 +35,54 @@ const choreEntry = (row, today, nowMin) => {
   };
 };
 
+/* A staged chore is not one block of work. Laundry is 10 minutes of sorting,
+   an hour of the machine running, 5 minutes of transfer, another hour, then 25
+   minutes of folding — 40 minutes of attention spread over two and a half
+   hours. Planning it as one 40-minute chunk asked for an opening that does not
+   exist, and once the wash was already running it reported the load as
+   impossible to finish today while the machine was spinning.
+
+   Split the remaining stages into the runs of active work between waits. Times
+   past the current stage are estimates built from each stage's own waitMin —
+   the same estimate the handoff prompt already shows — and never a claim that
+   a stage has finished. */
+function stageChunks(stages, fromIndex, startMin) {
+  const chunks = [];
+  let cursor = startMin;
+  let run = null;
+  for (let i = fromIndex; i < stages.length; i++) {
+    const stage = stages[i];
+    const activeMin = stage.activeMin || 0;
+    if (activeMin > 0) {
+      if (!run) run = { startMin: cursor, activeMin: 0, stageIds: [], labels: [] };
+      run.activeMin += activeMin;
+      run.stageIds.push(stage.id);
+      run.labels.push(stage.label || stage.id);
+      cursor += activeMin;
+    }
+    if (stage.waitMin) {
+      if (run) { chunks.push(run); run = null; }
+      cursor += stage.waitMin;      // the machine's time, never the user's
+    }
+  }
+  if (run) chunks.push(run);
+  return chunks;
+}
+
+/* One entry per run of active work, so each can be placed on its own. */
+const stageEntries = (row, occurrence, chunks) => chunks.map(chunk => ({
+  id: `chore:${row.id}@${occurrence}:${chunk.stageIds[0]}`,
+  occurrence,
+  source: 'chore',
+  choreId: row.id,
+  stageIds: chunk.stageIds,
+  title: `${row.title} — ${chunk.labels.join(' + ')}`,
+  startMin: chunk.startMin,
+  endMin: chunk.startMin + chunk.activeMin,
+  activeMin: chunk.activeMin,
+  state: row.status,
+}));
+
 const outcomeEntry = (state, today, nowMin) => {
   const checkIn = state.checkIns?.[today] || {};
   const title = String(checkIn.firstStep || '').trim();
@@ -144,21 +192,39 @@ export function buildDayPlan({ sched, state = {}, today, dayKind, nowMin, nowTs 
 
   const upkeep = upkeepBoard({ sched, state, today });
   const dueRows = upkeep.rows.filter(row => row.status === STATUS.DUE || row.status === STATUS.OVERDUE);
-  const dueChores = dueRows.map(row => choreEntry(row, today, nowMin));
 
+  const dueChores = [];
   const background = [];
   const handoffs = [];
   for (const row of dueRows) {
-    if (!row.stages?.length) continue;
+    const occurrence = row.dueDate || today;
+    if (!row.stages?.length) { dueChores.push(choreEntry(row, today, nowMin)); continue; }
+
     const stage = stagePlan({
       chore: row,
       record: state.chores?.[row.id] || {},
-      occurrence: row.dueDate || today,
+      occurrence,
       nowTs,
     });
-    if (!stage.current || !stage.readyAt) continue;
+    const index = stage.current ? stage.stages.findIndex(s => s.id === stage.current.id) : -1;
+
+    // Nothing running: the whole chore is still ahead, starting at its window.
+    // Running: only what comes after the current stage, and not before the
+    // machine is estimated to be done with it.
+    const readyAtMin = stage.readyAt == null
+      ? null
+      : nowMin + Math.ceil((stage.readyAt - nowTs) / 60000);
+    const chunks = index === -1
+      ? stageChunks(stage.stages, 0, Math.max(parseClock(row.window) ?? nowMin, nowMin))
+      : stageChunks(stage.stages, index + 1, Math.max(nowMin, (readyAtMin ?? nowMin) + (stage.current.activeMin || 0)));
+
+    if (!stage.current || !stage.readyAt) {
+      dueChores.push(...stageEntries(row, occurrence, chunks));
+      continue;
+    }
+
     background.push({
-      id: `background:${row.id}@${row.dueDate || today}:${stage.current.id}`,
+      id: `background:${row.id}@${occurrence}:${stage.current.id}`,
       source: 'background',
       choreId: row.id,
       title: stage.current.label,
@@ -166,17 +232,41 @@ export function buildDayPlan({ sched, state = {}, today, dayKind, nowMin, nowTs 
       readyAt: stage.readyAt,
       autoCompletes: false,
     });
+
+    /* Going back to the machine and doing the next run of work are one trip,
+       not two. Emitting a generic five-minute "check" AND the same stages as a
+       separate flexible task booked the time twice, and the flexible copy was
+       then free to slide: a transfer that has to happen when the wash ends was
+       being placed eight hours later, with the clothes sitting wet. The
+       handoff carries the next run's real duration; only what comes after the
+       following wait stays flexible. The wording stays conditional because an
+       elapsed estimate is a prompt to look, not proof the machine finished. */
+    const atMachine = chunks[0];
+    const start = Math.max(nowMin, readyAtMin ?? nowMin);
+    const activeMin = atMachine?.activeMin ?? 5;
     handoffs.push({
-      id: `handoff:${row.id}@${row.dueDate || today}:${stage.current.id}`,
+      id: `handoff:${row.id}@${occurrence}:${stage.current.id}`,
       source: 'handoff',
       choreId: row.id,
-      title: `Check ${stage.current.label}`,
-      activeMin: 5,
-      startMin: nowMin + Math.max(0, Math.ceil((stage.readyAt - nowTs) / 60000)),
+      stageIds: atMachine?.stageIds || [],
+      title: atMachine
+        ? `Check ${stage.current.label}, then ${atMachine.labels.join(' + ').toLowerCase()}`
+        : `Check ${stage.current.label}`,
+      activeMin,
+      startMin: start,
+      endMin: start + activeMin,
       readyAt: stage.readyAt,
       ready: stage.overdueEstimate,
     });
+    dueChores.push(...stageEntries(row, occurrence, chunks.slice(1)));
   }
+
+  /* previewAdjustment deliberately ignores `background` — a washer runs while
+     you read, so it must not occupy the plan. But going to the machine when it
+     finishes IS active time, and the comment there promised the caller would
+     pass it as fixed. It never did, so the plan could put a 25-minute task
+     straight over the moment the dryer needed emptying. */
+  fixed.push(...handoffs);
 
   const outcome = outcomeEntry(state, today, nowMin);
   const readyHandoff = handoffs.find(row => row.ready);
