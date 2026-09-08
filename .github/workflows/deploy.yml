@@ -27,6 +27,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      # The DOM tests need jsdom. It lives in tests/package.json, and without
+      # this step CI silently skipped every test that imports it.
+      - name: Install test dependencies
+        run: npm ci --prefix tests
       - name: Run local contract tests
         run: node --test tests/*.test.mjs
       - name: Build the site artifact
