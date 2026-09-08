@@ -21,6 +21,24 @@ test('Today opens with one execution board for now, next and the full checklist'
   assert.equal(a.w.document.querySelectorAll('.step-title').length,1,'chosen work has one presentation');
 });
 
+test('routine guidance and get-ready steps are visible, water logs and undoes inline',async t=>{
+  const a=await app(t,{windows:true});
+  assert.match(a.$('#dayBoard [data-toggle$=".anchor"]').textContent,/Make the bed and fold the blanket/);
+  assert.equal(a.$('[data-disclosure="steps-getready"]').open,true);
+  assert.equal(a.w.document.querySelectorAll('[data-step^="getready:"]').length,4);
+  assert.match(a.$('.inlineWater').textContent,/Saved daily target: 2500 ml/);
+  a.click('[data-water-add="250"]');
+  a.click('[data-water-add="500"]');
+  assert.equal(a.dash.state.days[a.dash.today].hydro.reduce((n,x)=>n+x.ml,0),750);
+  assert.match(a.$('.inlineWater').textContent,/1750 ml remaining/);
+  assert.notEqual(a.dash.state.days[a.dash.today].water,true);
+  a.click('[data-water-undo]');
+  assert.equal(a.dash.state.days[a.dash.today].hydro.length,1);
+  a.click('[data-hydro]');
+  a.click('[data-sip="250"]');
+  assert.equal(a.dash.state.days[a.dash.today].hydro.reduce((n,x)=>n+x.ml,0),500);
+});
+
 test('chosen outcome starts without completing and completes from the execution board',async t=>{
   const a=await app(t,{windows:true,clock:'2026-09-05T10:15:00'});
   a.type('[data-ci-text="firstStep"]','Finish one practice exercise'); await settle();

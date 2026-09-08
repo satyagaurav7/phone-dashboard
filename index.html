@@ -1315,7 +1315,9 @@ async function initApp(){
           const checked=d[i.key]===true;
           const label=KEY_LABELS[i.key]||SCHED_DATA.tapPlan.labels?.[i.key]||i.key;
           const detail=i.key==='water'?`${hydroTotal(d)} / ${s.config.waterGoal||2500} ml`:checked?(i.state==='late'?'Logged late':'Logged'):b.state==='failed'?'Not logged · late credit available':'Not logged';
-          return `<button type="button" class="boardItem${checked?' checked':''}" ${i.key==='water'?'data-hydro="1"':`data-toggle="days.${Dash.today}.${i.key}" aria-pressed="${checked}"`} aria-label="${escAttr(label)}: ${checked?'logged':'not logged'}"><span class="boardCheck">${checked?icon('check'):''}</span><span><b>${escHtml(label)}</b><small>${escHtml(detail)}</small></span>${i.key==='water'?icon('drop'):''}</button>`+itemStepsHTML(i.key,d);
+          const guidance=SCHED_DATA.tapPlan.instructions?.[i.key]||'';
+          const waterControls=i.key==='water'?`<div class="inlineWater"><p>Saved daily target: ${s.config.waterGoal||2500} ml · ${Math.max(0,(s.config.waterGoal||2500)-hydroTotal(d))} ml remaining today</p><div><button type="button" class="outline-button" data-water-add="250">+250 ml</button><button type="button" class="outline-button" data-water-add="500">+500 ml</button><button type="button" class="quiet-link" data-hydro="1">Bottles / edit</button>${d.hydro?.length?'<button type="button" class="quiet-link" data-water-undo>Undo last drink</button>':''}</div></div>`:'';
+          return `<button type="button" class="boardItem${checked?' checked':''}" ${i.key==='water'?'data-hydro="1"':`data-toggle="days.${Dash.today}.${i.key}" aria-pressed="${checked}"`} aria-label="${escAttr(label)}: ${checked?'logged':'not logged'}"><span class="boardCheck">${checked?icon('check'):''}</span><span><b>${escHtml(label)}</b>${guidance?`<span class="routineInstruction">${escHtml(guidance)}</span>`:''}<small>${escHtml(detail)}</small></span>${i.key==='water'?icon('drop'):''}</button>`+waterControls+itemStepsHTML(i.key,d);
         }).join('');
         return `<details class="boardBlock ${b.state}" data-disclosure="block-${b.id}" ${b.id===focus?.id?'open':''}><summary><span class="boardBlockName">${escHtml(b.title)}<small>${fmt(b.startMin)}–${fmt(b.endMin)}</small></span><span class="boardProgress">${done}/${b.items.length}<small>${b.state==='failed'?'Failed · -8':b.state==='passed'?'Passed · +5':b.state==='open'?'Open':'Upcoming'}</small></span><span class="boardChevron">⌄</span><span class="windowPips">${b.items.map(i=>`<i class="windowPip ${i.state}"></i>`).join('')}</span></summary>${b.state==='open'?`<div class="windowCount" data-countdown data-end-min="${b.endMin}"></div>`:''}${b.state==='failed'?'<p class="boardNote">Late logs earn credit. This window stays failed.</p>':''}<div class="boardItems">${items}</div></details>`;
       }).join('');
@@ -1373,7 +1375,7 @@ async function initApp(){
       if(!steps||!steps.length) return '';
       const done=(d.steps&&d.steps[key])||{};
       const n=steps.filter((_,i)=>done[i]===true).length;
-      return `<details class="stepWrap" data-disclosure="steps-${key}"><summary>${n}/${steps.length} steps</summary>`+
+      return `<details class="stepWrap" data-disclosure="steps-${key}" open><summary>${n}/${steps.length} steps</summary>`+
         steps.map((label,i)=>`<button type="button" class="stepItem${done[i]===true?' checked':''}" data-step="${escAttr(key)}:${i}" aria-pressed="${done[i]===true}"><span class="boardCheck">${done[i]===true?icon('check'):''}</span><span>${escHtml(label)}</span></button>`).join('')+
         `</details>`;
     }
@@ -1888,10 +1890,7 @@ async function initApp(){
         </div>`;
     }
 
-    function openHydroModal(){
-      const ov=document.createElement('div'); ov.className='overlay'; ov.id='dashModal';
-      const hhmm=()=>new Date().toTimeString().slice(0,5);
-      const applyHydro=(arr)=>{
+    function applyHydro(arr){
         // Writes only hydro/water/log.water rather than replacing the whole day.
         // Replacing it meant a sip logged here would wipe a gym tap made on
         // another device in the same day — the read-modify-write P0.2 exists to
@@ -1906,8 +1905,11 @@ async function initApp(){
         patch[`${base}.log.water`] = hit ? (was ? (day.log&&day.log.water)||Date.now() : Date.now()) : Dash.REMOVE;
         if(hit&&!was) flowToast('💧 Goal hit — Hydrate stamped');
         Dash.setMany(patch);
-        render();
-      };
+    }
+    function openHydroModal(){
+      const ov=document.createElement('div'); ov.className='overlay'; ov.id='dashModal';
+      const hhmm=()=>new Date().toTimeString().slice(0,5);
+      const updateHydro=arr=>{applyHydro(arr);render();};
       const render=()=>{
         const d=Dash.state.days[Dash.today]||{};
         const hyd=d.hydro||[];
@@ -1939,8 +1941,8 @@ async function initApp(){
           </div></div>`;
         ov.querySelector('[data-mclose]').onclick=()=>ov.remove();
         const hg=ov.querySelector('[data-hgoal]'); if(hg) hg.onclick=()=>{ ov.remove(); openModal('waterGoal'); };
-        const hu=ov.querySelector('[data-hundo]'); if(hu) hu.onclick=()=>applyHydro(hyd.slice(0,-1));
-        ov.querySelectorAll('[data-sip]').forEach(b=>{ b.onclick=()=>applyHydro(hyd.concat([{t:hhmm(),ml:+b.dataset.sip}])); });
+        const hu=ov.querySelector('[data-hundo]'); if(hu) hu.onclick=()=>updateHydro(hyd.slice(0,-1));
+        ov.querySelectorAll('[data-sip]').forEach(b=>{ b.onclick=()=>updateHydro(hyd.concat([{t:hhmm(),ml:+b.dataset.sip}])); });
       };
       ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
       render();
@@ -2410,7 +2412,15 @@ async function initApp(){
          in the SAME write, with the timestamp Dash.set would have added, so a
          step-completed item and a directly-tapped one are indistinguishable to
          the scoring engine. */
+      root.querySelectorAll('[data-water-add]').forEach(el=>el.addEventListener('click',()=>{
+        const drinks=Dash.state.days[Dash.today]?.hydro||[];
+        applyHydro(drinks.concat([{t:new Date().toTimeString().slice(0,5),ml:Number(el.dataset.waterAdd)}]));
+      }));
+      root.querySelectorAll('[data-water-undo]').forEach(el=>el.addEventListener('click',()=>{
+        applyHydro((Dash.state.days[Dash.today]?.hydro||[]).slice(0,-1));
+      }));
       root.querySelectorAll('[data-step]').forEach(el=>{
+        // Individual steps still complete their single parent routine.
         el.addEventListener('click',()=>{
           const [key,idx]=el.dataset.step.split(':');
           const steps=SCHED_DATA?.tapPlan?.steps?.[key]||[];

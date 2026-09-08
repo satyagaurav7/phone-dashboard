@@ -4,6 +4,12 @@ Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and
 
 ## Current state
 
+### Inline routine guidance (2026-09-08)
+
+- Added concise instructions for all 22 routine keys in schedule.json, displayed directly on Day board rows. Anchor follows the existing bed/blanket definition. Get ready opens its brush/shower/dress/skincare checklist by default and retains existing parent completion behavior.
+- Hydration shows the saved daily target and remaining amount, with inline +250/+500 ml and Undo. The inline controls and bottle editor use one shared hydration update function. No target, medication dosage, timing, or scoring policy changed.
+- Verified 253/253 module/controller tests, build, and Edge browser checks at 320/375/430/1280px: inline logging/undo, visible steps, overflow, motion and reduced motion. Inspected narrow-phone screenshot. Cache midnight-v14; publishing under user authorization.
+
 ### Focus replacement and reward-label repair (2026-09-08)
 
 - Replacing a focus title now assigns a new version and clears its start/completion state, preserving a prior started/completed task in private check-in history. Clearing focus refreshes Now and removes stale completion controls. Text saves retain the existing no-redraw behavior.

@@ -29,6 +29,30 @@
     "sun": "Plan Sunday 5 pm \u00b7 prep for Monday"
   },
   "tapPlan": {
+    "instructions": {
+      "anchor": "Make the bed and fold the blanket. About 2 minutes.",
+      "walk": "Stretch, then fill your water bottles for the day.",
+      "water": "Log what you drink throughout the day.",
+      "meditate": "Sit comfortably, put distractions aside, and spend a few quiet minutes breathing naturally.",
+      "getready": "Brush teeth, shower, dress, and skincare.",
+      "breakfast": "Prepare and eat breakfast.",
+      "lunch": "Take your lunch break and eat your packed or prepared meal.",
+      "dinner": "Sit down and eat dinner.",
+      "cookmeal": "Choose a meal, prepare it, and put the ingredients away.",
+      "cooked": "Mark when every meal today was home-made.",
+      "gym": "Pack your kit, go to the gym, and complete your planned session.",
+      "read5": "Open your book and read a few pages.",
+      "language": "Spend 20 minutes on CELPIP practice: reading, listening, writing, or speaking.",
+      "study": "Choose one upskill exercise, work through it, and save your next step.",
+      "money": "Finish one concrete money task: review spending, check a bill, or work on side income.",
+      "phonedown": "Set your alarm, put the phone away, and begin winding down.",
+      "smokefree": "At the end of the day, mark whether today was smoke-free.",
+      "insulin": "Record only after completing your prescribed insulin routine.",
+      "omega3": "Check your usual instructions; record after taking it.",
+      "bonehealth": "Check your usual instructions; record after taking it.",
+      "vitcd": "Check your usual instructions; record after taking it.",
+      "creatine": "Check your usual instructions; record after taking it."
+    },
     "itemTimes": {
       "office": {
         "anchor": "06:15",

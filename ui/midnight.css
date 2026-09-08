@@ -49,6 +49,7 @@ h1{font:400 clamp(40px,5vw,62px)/1.04 var(--editorial);letter-spacing:-.045em;ma
 @media(max-width:360px){#executionBoard>.boardHeading{align-items:flex-start}#executionBoard>.boardHeading h1{font-size:33px}.executionLoad{flex-direction:column;gap:5px}.executionNow h2{font-size:25px}}
 
 /* Quiet execution surface: color signals state, motion confirms interaction. */
+.routineInstruction{display:block;font-size:13px;line-height:1.5;color:var(--text-2);margin:5px 0;overflow-wrap:anywhere}.inlineWater{padding:0 0 14px 36px}.inlineWater p{font-size:12px;color:var(--text-2);line-height:1.5;margin:0 0 8px}.inlineWater>div{display:flex;flex-wrap:wrap;gap:8px}.inlineWater .outline-button{padding:9px 12px;min-height:44px;font-size:13px}.stepWrap>summary{min-height:44px;display:flex;align-items:center}
 :root{--surface-0:#131719;--surface-1:#1c2224;--surface-2:#272e30;--hairline:#353f41;--hairline-hi:#647477;--text-1:#f0f4f2;--text-2:#b2bfbd;--accent-flow:#a5dfb6;--accent-warn:#edc58d}
 #appRoot{max-width:860px}#appRoot *,#authGate h2{letter-spacing:0}
 h1{font-size:42px}.card,.cover{border-radius:8px}
