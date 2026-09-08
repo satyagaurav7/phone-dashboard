@@ -2185,15 +2185,25 @@ async function initApp(){
        are never left on screen or parked in a closure. */
     let workspaceStop = null;
     let workspaceBusy = false;
+    let workspaceContainer = null;   // the node the live view is actually bound to
 
     function stopWorkspace(){
       if(workspaceStop){ workspaceStop(); workspaceStop = null; }
+      workspaceContainer = null;
     }
 
     async function syncWorkspace(currentTab){
       if(currentTab !== 'workspace'){ stopWorkspace(); return; }
-      const container = root.querySelector('#workspaceRoot');
-      if(!container || workspaceStop || workspaceBusy) return;
+      const container = document.getElementById('workspaceRoot');
+      if(!container) return;
+      // Already mounted into THIS node — nothing to do.
+      if(workspaceStop && workspaceContainer === container) return;
+      // draw() replaces root.innerHTML on every render, so a redraw while the
+      // modules were still importing left the view bound to a detached node
+      // while a fresh, empty #workspaceRoot sat on screen. Tear down and rebind
+      // whenever the container identity changes.
+      stopWorkspace();
+      if(workspaceBusy) return;
       workspaceBusy = true;
       try{
         const [{ mountWorkspace }, { startWorkspace }] = await Promise.all([
@@ -2210,13 +2220,23 @@ async function initApp(){
           // every source honestly reports that nothing has been published.
           : (onSnapshots => { onSnapshots([]); return () => {}; });
 
-        if(tab !== 'workspace'){ return; } // the user left while we were importing
-        const view = mountWorkspace({ container });
+        // Re-query rather than reusing `container`: a redraw during the import
+        // above would have detached it, and mounting there renders into nothing.
+        const live = document.getElementById('workspaceRoot');
+        if(tab !== 'workspace' || !live){ return; } // the user left, or it redrew away
+        const view = mountWorkspace({ container: live });
+        workspaceContainer = live;
         workspaceStop = startWorkspace({ view, subscribe, now: Date.now, fixture });
       }catch(e){
-        container.textContent = 'Could not load workspace data';
+        const live = document.getElementById('workspaceRoot');
+        if(live) live.textContent = 'Could not load workspace data';
       }finally{
         workspaceBusy = false;
+      }
+      // A redraw may have landed while we were mounting. Re-check once so the
+      // Workspace cannot be left permanently bound to a stale node.
+      if(tab === 'workspace' && document.getElementById('workspaceRoot') !== workspaceContainer){
+        syncWorkspace(tab);
       }
     }
 

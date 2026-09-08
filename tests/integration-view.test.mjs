@@ -272,3 +272,24 @@ test('the derived state is exposed for styling and reset between renders', () =>
   view.render([snap({ status: 'unavailable', reasonCode: 'unreachable', metrics: [] })], NOW);
   assert.equal(attr('encore'), 'unavailable', 'a stale attribute would keep the old colour');
 });
+
+/* Source guard for the bug that shipped: syncWorkspace() lives OUTSIDE draw(),
+   but referenced draw()'s local `root`, so it threw ReferenceError before its
+   own try/catch and the Workspace silently rendered nothing. jsdom tests of the
+   view could not catch it — the view was fine; the caller never ran. */
+test('syncWorkspace does not reach for draw()-local variables', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('async function syncWorkspace');
+  assert.ok(start > 0, 'syncWorkspace not found — rename the test with the function');
+  const body = html.slice(start, html.indexOf('\n    }', start));
+
+  // Comments in this function legitimately mention draw()'s root while
+  // explaining the bug, so only executable lines are checked.
+  const code = body.replace(new RegExp('//[^' + String.fromCharCode(10) + ']*', 'g'), '');
+  const identifiers = new Set(code.split(/[^A-Za-z_$]+/));
+  assert.equal(identifiers.has('root'), false,
+    'syncWorkspace referenced `root`, which is local to draw() and undefined here');
+  assert.ok(body.includes("document.getElementById('workspaceRoot')"),
+    'the container must be looked up from document, not a draw() local');
+});
