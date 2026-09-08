@@ -55,7 +55,7 @@ self.addEventListener('notificationclick', (event) => {
 
 /* ---------------- app-shell cache ---------------- */
 const CACHE_PREFIX = 'flowstate-';
-const CACHE = CACHE_PREFIX + 'midnight-v9';
+const CACHE = CACHE_PREFIX + 'midnight-v10';
 const SHELL = [
   './',
   'index.html',
@@ -67,6 +67,12 @@ const SHELL = [
   'rules.mjs',
   'chores.mjs',
   'day-plan.mjs',
+  // Workspace modules: static code, cached with the shell. Snapshot DATA is
+  // never cached here — it is private and must not outlive a sign-out.
+  'integrations/registry.mjs',
+  'integrations/contract.mjs',
+  'integrations/view.mjs',
+  'integrations/controller.mjs',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png'

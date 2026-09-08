@@ -46,9 +46,8 @@ export const PUBLIC_FILES = [
 export const REQUIRED_FILES = [
   'index.html', 'sw.js', 'manifest.json', 'schedule.json', 'rules.mjs', 'chores.mjs', 'day-plan.mjs',
   'ui/midnight.css', 'ui/midnight.mjs', 'assets/filament.svg', 'fonts/newsreader.woff2',
-  // The integrations modules are published but not yet REQUIRED: nothing in
-  // index.html imports them until the Workspace entry is wired up. They join
-  // this list in the same change that makes the shell depend on them.
+  'integrations/registry.mjs', 'integrations/contract.mjs', 'integrations/view.mjs',
+  'integrations/controller.mjs',
 ];
 
 async function exists(path) {

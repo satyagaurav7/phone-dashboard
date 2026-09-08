@@ -432,6 +432,28 @@
        lives on #moodLayer::before, so the pseudo selectors are load-bearing. */
     *,*::before,*::after{animation:none !important;transition:none !important}
   }
+
+  /* Workspace panels. Deliberately plain: this surface reports machine state,
+     so it should read as a status list, not compete with the execution board. */
+  .ws-root{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .ws-card{background:var(--surface-2);border-radius:8px;padding:12px 13px}
+  .ws-name{font:600 15px/1.3 var(--body);margin:0 0 3px}
+  .ws-state{font:600 12px/1.4 var(--body);color:var(--text-2);margin:0}
+  /* Colour is additive — the wording already says the state on its own. */
+  .ws-state[data-state="ready"]{color:var(--accent-flow)}
+  .ws-state[data-state="degraded"],.ws-state[data-state="stale"]{color:var(--accent-warn)}
+  .ws-detail:empty,.ws-links:empty{display:none}
+  .ws-detail{font-size:12px;color:var(--text-2);margin:5px 0 0}
+  .ws-metrics{display:grid;gap:3px;margin:8px 0 0}
+  .ws-metric{display:flex;justify-content:space-between;gap:12px;font-size:13px}
+  .ws-metric dt{color:var(--text-2);min-width:0;overflow-wrap:anywhere}
+  .ws-metric dd{margin:0;font-variant-numeric:tabular-nums}
+  .ws-links{margin:8px 0 0;display:flex;flex-wrap:wrap;gap:10px}
+  .ws-link{color:var(--accent-flow);font-size:13px;min-height:44px;display:inline-flex;align-items:center}
+  .ws-local{font-size:12px;color:var(--text-2)}
+  .ws-badge{background:var(--accent-warn);color:#20160a;font:600 12px/1.4 var(--body);
+    padding:8px 11px;border-radius:6px;margin:0 0 4px}
+  .ws-error{font-size:13px;color:var(--accent-warn);margin:0}
 </style>
 <link rel="stylesheet" href="ui/midnight.css">
 </head>
@@ -2137,7 +2159,66 @@ async function initApp(){
     }
     function todayHTML(s,d){ return executionHTML(s,d)+stakeHTML(s)+midnight.today({state:s,date:Dash.today,checkIn:checkInCard(s,d),activity:activityHTML(s,d)}); }
     function schedHTML(){ return midnight.plan(); }
-    function moreHTML(s){ return dayOffSettings(s)+midnight.more({reminders:reminderCard(s),push:pushSetupHTML()}); }
+    function moreHTML(s){ return dayOffSettings(s)+workspaceEntryHTML()+midnight.more({reminders:reminderCard(s),push:pushSetupHTML()}); }
+
+    function workspaceEntryHTML(){
+      return `<section class="card"><button type="button" class="outline-button" data-tab="workspace" style="width:100%">Workspace &mdash; app status</button></section>`;
+    }
+
+    /* The Workspace shell. The panels themselves are rendered by
+       integrations/view.mjs, which is imported lazily on first entry. This page
+       never reaches out to the laptop: a local collector writes snapshots and a
+       separate publisher uploads them, so all this view can do is show what has
+       already been published, or say plainly that nothing has. */
+    function workspaceHTML(){
+      return `<section class="card">
+        <h2 class="boardBlockName">Workspace</h2>
+        <p class="boardNote">Status published by the local collector. This page does not read your laptop &mdash; when the laptop is off, these go out of date visibly.</p>
+        <div id="workspaceRoot" class="ws-root"></div>
+      </section>`;
+    }
+
+    /* Workspace lifecycle. The modules are fetched on first entry and never
+       before, so Today's cost is unchanged; draw() only runs after auth, so
+       this cannot load for a signed-out visitor. Leaving the tab or signing out
+       tears the subscription down and clears the container — private snapshots
+       are never left on screen or parked in a closure. */
+    let workspaceStop = null;
+    let workspaceBusy = false;
+
+    function stopWorkspace(){
+      if(workspaceStop){ workspaceStop(); workspaceStop = null; }
+    }
+
+    async function syncWorkspace(currentTab){
+      if(currentTab !== 'workspace'){ stopWorkspace(); return; }
+      const container = root.querySelector('#workspaceRoot');
+      if(!container || workspaceStop || workspaceBusy) return;
+      workspaceBusy = true;
+      try{
+        const [{ mountWorkspace }, { startWorkspace }] = await Promise.all([
+          import('./integrations/view.mjs'),
+          import('./integrations/controller.mjs'),
+        ]);
+        // Fixtures require localhost AND an explicit ?fixtures=1. The deployed
+        // origin can therefore never render sample data as if it were live.
+        const fixture = location.hostname === 'localhost'
+          && new URLSearchParams(location.search).get('fixtures') === '1';
+        const subscribe = fixture
+          ? (await import('./integrations/fixtures.mjs')).createFixtureTransport({ enabled: true })
+          // No transport yet — T6 supplies the authenticated one. Until then
+          // every source honestly reports that nothing has been published.
+          : (onSnapshots => { onSnapshots([]); return () => {}; });
+
+        if(tab !== 'workspace'){ return; } // the user left while we were importing
+        const view = mountWorkspace({ container });
+        workspaceStop = startWorkspace({ view, subscribe, now: Date.now, fixture });
+      }catch(e){
+        container.textContent = 'Could not load workspace data';
+      }finally{
+        workspaceBusy = false;
+      }
+    }
 
     const EDITS={
       permit:{title:'Work Permit Expiry',fields:[{path:'config.permit',label:'Expiry date',type:'date'}]},
@@ -2233,10 +2314,12 @@ async function initApp(){
         :tab==='health'?healthHTML()
         :tab==='schedule'?legacyScheduleHTML(s)
         :tab==='history'?midnight.record({state:s,history:historyHTML(s)})
+        :tab==='workspace'?workspaceHTML()
         :moreHTML(s);
       const reference=['pr','money','health','schedule'].includes(tab)
         ? '<p class="reference-note">Saved reference material. Verify dates, figures, and guidance before relying on them. This is not live Google data.</p>' : '';
       root.innerHTML = midnight.header(Dash.today,tab)+`<main id="viewContent" tabindex="-1" class="${tab==='more'?'more-view':''}">${reference}${content}</main>`+navHTML();
+      syncWorkspace(tab);
       root.querySelectorAll('details[data-disclosure]').forEach(el=>{
         if(openDisclosures.has(el.dataset.disclosure)) el.open=openDisclosures.get(el.dataset.disclosure);
         el.addEventListener('toggle',()=>openDisclosures.set(el.dataset.disclosure,el.open));

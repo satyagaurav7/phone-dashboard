@@ -62,6 +62,6 @@ export function record({state,history}) {
   return `<section class="record-view">${caption('YOUR RECORD')}<h1>Small things.<br>Real life.</h1><p class="muted">A record of what you logged, never a verdict on your day.</p><div class="record-reflections"><h2>In your words</h2>${reflection}${entries.length?'<button type="button" class="quiet-link" data-ci-act="delete">Delete reflection data</button>':''}</div><details class="plain-details" data-disclosure="history" open><summary>Activity history</summary>${history}</details></section>`;
 }
 export function nav(tab,icon){
-  const active=['pr','money','health','schedule'].includes(tab)?'more':tab;
+  const active=['pr','money','health','schedule','workspace'].includes(tab)?'more':tab;
   return `<nav class="bottomNav" aria-label="Main navigation"><div class="navIn">${[['today','check','Today'],['plan','calendar','Plan'],['history','file','Record'],['more','spark','More']].map(([key,i,label])=>`<button type="button" class="navBtn${key===active?' on':''}" data-tab="${key}"${key===active?' aria-current="page"':''}>${icon(i)}<span class="nLbl">${label}</span></button>`).join('')}</div></nav>`;
 }

@@ -91,14 +91,20 @@ export function mountWorkspace({ container, sources = SOURCES, document = global
     metrics.replaceChildren();
     links.replaceChildren();
     detail.textContent = '';
+    state.dataset.state = '';
 
     if (!snapshot || typeof snapshot !== 'object' || !snapshot.status) {
-      state.textContent = STATE_COPY['no-data'];
+      // A reference entry never gets a published snapshot and never will — it
+      // is a pointer, not a service. "No data yet" would imply it is pending.
+      const fallback = source.mode === 'reference' ? 'reference-only' : 'no-data';
+      state.textContent = STATE_COPY[fallback];
+      state.dataset.state = fallback;
       return;
     }
 
     const derived = displayState(snapshot, nowMs);
     state.textContent = STATE_COPY[derived] ?? STATE_COPY['no-data'];
+    state.dataset.state = derived;
 
     if (snapshot.reasonCode && REASON_COPY[snapshot.reasonCode]) {
       detail.textContent = REASON_COPY[snapshot.reasonCode];

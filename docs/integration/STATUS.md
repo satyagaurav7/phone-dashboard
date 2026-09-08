@@ -1,6 +1,6 @@
 # Unified integration execution status
 
-Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T2 and T4 are committed locally and not pushed; T3 is partially done and BLOCKED on the shell wiring.
+Updated: 2026-09-07. Active implementation owner: none. T1 and F1 are pushed and deployed; T2, T3 and T4 are committed locally and not pushed. Next dependency-satisfied task is T5 or T6.
 
 ## Current state
 
@@ -156,7 +156,7 @@ Phone Dashboard was clean before documentation changes (`git -C phone-dashboard 
 | P0 | Plan, spec, portable handoff, agent pointers | — | Done locally | Planning session |
 | T1 | Deployment artifact boundary and integration baseline | — | **Deployed** | Released (Claude, 2026-09-06) |
 | T2 | Versioned registry and snapshot contract | T1 | **Committed 3ad06bc, not pushed** | Claude, 2026-09-07 |
-| T3 | Fixture-backed Workspace UI | T2 | **Modules done; shell wiring blocked** | Claude, 2026-09-07 |
+| T3 | Fixture-backed Workspace UI | T2 | **Committed, not pushed** | Claude, 2026-09-07 |
 | T4 | Local collector with Encore + trading adapters | T2 | **Committed, not pushed** | Claude, 2026-09-07 |
 | T5 | Sleepforge, downloader, references, Graphify metadata | T4 | Pending | Unassigned |
 | T6 | Authenticated snapshot transport and emulator tests | T3, T5 | Pending | Unassigned |
@@ -416,9 +416,59 @@ Next task and exact first action: commit Codex's 37 uncommitted lines as their o
 Ownership released: yes, for the module work. The shell wiring is unclaimed and blocked.
 ```
 
+## Session record — T3 (completed)
+
+```text
+Task ID and state: T3 complete. Blocker cleared, shell wired, verified in a real browser at 390px.
+Agent/session and UTC timestamp: Claude Code, 2026-09-08T01:22Z
+Checkout path, branch, starting commit: phone-dashboard, main, 29bcc3c (T3 part 1)
+Blocker resolution: Codex's visual refresh was committed first, on its own, as 962cb2a, attributed to
+  Codex in the message with no lines changed. That freed index.html and sw.js for this task.
+Changes and decisions:
+  - Workspace is reached from More, not a fifth nav button: the phone nav has four slots and Today stays
+    the default. ui/midnight.mjs maps the workspace tab to the More highlight.
+  - Modules are imported dynamically on first entry, so Today's load cost is unchanged. draw() only runs
+    after auth, so a signed-out visitor cannot trigger the import. Leaving the tab or signing out calls
+    the controller cleanup, which clears the container: private snapshots are not left on screen.
+  - There is no transport yet (T6). Rather than showing fixtures, production subscribes to an empty
+    transport and every source honestly reports that nothing has been published.
+  - Fixtures require BOTH location.hostname === 'localhost' AND ?fixtures=1. The deployed origin can
+    therefore never render sample data as live, and the badge is shown whenever they do render.
+  - Reference sources now read "Reference only" even with no snapshot. They are pointers, not services;
+    "No data yet" implied one was pending.
+  - The derived state is exposed as a data attribute so CSS can colour it. Colour is additive only — the
+    wording already distinguishes every state, which the tests assert independently.
+  - sw.js precaches the four browser modules and moves to midnight-v10 (one bump). Snapshot DATA is
+    deliberately not cached: it is private and must not outlive a sign-out.
+  - build-site now REQUIRES the four modules, since the shell imports them; the site-build fixture was
+    extended to match. fixtures.mjs is still excluded from the artifact.
+Commands run and actual results:
+  node --test tests/integration-view.test.mjs -> 20 pass, 0 fail
+  node --test tests/*.test.mjs                -> 197 pass, 0 fail
+  node --test tests/midnight.test.cjs         -> 20 pass, 0 fail
+  index.html module script parse-checked as ESM -> OK
+  build-site --out <temp> -> 20 entries; four modules present; fixtures.mjs, scripts/, tests/, docs/ absent
+  Browser, 390x844, temporary same-origin harness with fixtures, deleted afterwards:
+    no console errors; no horizontal overflow; hostile label rendered as literal text with 0 <img>
+    elements; 0 anchors because no host is allowlisted, "Available on laptop" shown instead;
+    computed state colours distinct — ready rgb(79,216,235), degraded rgb(232,161,60),
+    unavailable/not-configured/reference-only rgb(138,148,173).
+Commit(s): T3 shell wiring commit follows 962cb2a on main, local only.
+Remote and deployment state: NOT pushed, NOT deployed. origin/main still 5647209.
+Phone verification: NOT done. The Workspace tab is behind Firebase auth and the agent does not hold the
+  password. Browser verification used a same-origin harness mounting the real modules, not the authed tab.
+  Satya should open More > Workspace on the phone and confirm nine cards, all reading "No data yet" or
+  "Reference only" until T6 publishes anything.
+Failures / configuration still needed: none failing. Local preview port moved 63350 -> 8123 in the
+  workspace .claude/launch.json because 63350 is in a Windows reserved range; that file is outside Git.
+Next task and exact first action: T5 (remaining apps and references) or T6 (authenticated transport).
+  T6 first action is to inspect the deployed Firestore rules baseline before writing any rule.
+Ownership released: yes.
+```
+
 ## Next action
 
-Commit Codex's uncommitted visual refresh, then finish the T3 shell wiring. Push T2/T4/T3 for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
+Push 962cb2a and the T2/T3/T4 commits, then start T5 or T6 for the Encore and trading adapters, or T3 for the Workspace UI. Both dependencies are now met.
 
 ## Evidence from planning
 

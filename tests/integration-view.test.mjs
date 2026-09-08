@@ -251,3 +251,24 @@ test('a transport error is shown without leaking the error text', () => {
   assert.match(container.textContent, /could not load/i);
   stop();
 });
+
+test('a reference source reads "Reference only" even with nothing published', () => {
+  const { container, document } = dom();
+  mountWorkspace({ container, document }).render([], NOW);
+  // These are pointers, not services. "No data yet" would imply one is pending.
+  for (const id of ['pr-documents', 'personal-hub', 'anchor-context', 'ai-memory-portability']) {
+    assert.equal(stateText(container, id), STATE_COPY['reference-only'], id);
+  }
+  assert.equal(stateText(container, 'encore'), STATE_COPY['no-data'], 'a live source still says no data');
+});
+
+test('the derived state is exposed for styling and reset between renders', () => {
+  const { container, document } = dom();
+  const view = mountWorkspace({ container, document });
+  const attr = id => sectionFor(container, id).querySelector('[data-state]').dataset.state;
+
+  view.render([snap()], NOW);
+  assert.equal(attr('encore'), 'ready');
+  view.render([snap({ status: 'unavailable', reasonCode: 'unreachable', metrics: [] })], NOW);
+  assert.equal(attr('encore'), 'unavailable', 'a stale attribute would keep the old colour');
+});
